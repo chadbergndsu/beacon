@@ -39,7 +39,21 @@ Demo logins (shared test accounts):
 | Teacher | `teacher@lighthouse.test` | `BeaconDemo2026!` |
 | Parent | `parent@lighthouse.test` | `BeaconDemo2026!` |
 
-Principal shortcut: https://beacon-beta-lemon.vercel.app/login?as=principal
+Principal shortcut: https://beacon-beta-lemon.vercel.app/login?as=principal  
+Principal office (after login): https://beacon-beta-lemon.vercel.app/principal  
+
+### QuickBooks (principal payments)
+
+Optional env vars for live Intuit OAuth:
+
+```
+INTUIT_CLIENT_ID=
+INTUIT_CLIENT_SECRET=
+INTUIT_REDIRECT_URI=https://beacon-beta-lemon.vercel.app/api/quickbooks/callback
+INTUIT_ENVIRONMENT=sandbox
+```
+
+Without these, **Connect QuickBooks** activates a sandbox demo company so the principal can tour invoices and sync UI.
 
 In Supabase → Authentication → URL configuration, set:
 

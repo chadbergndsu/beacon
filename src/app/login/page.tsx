@@ -29,7 +29,7 @@ export default async function LoginPage({
           {asPrincipal ? (
             <div className="mt-5 rounded-xl bg-white/10 border border-white/10 p-4">
               <LoginForm
-                nextPath={nextPath}
+                nextPath={nextPath === '/dashboard' ? '/principal' : nextPath}
                 defaultEmail={PRINCIPAL_EMAIL}
                 defaultPassword={PRINCIPAL_PASSWORD}
                 submitLabel="Enter as Principal"

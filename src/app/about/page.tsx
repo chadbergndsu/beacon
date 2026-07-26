@@ -112,6 +112,8 @@ export default function AboutPage() {
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Badge variant="sky">Transparent grades</Badge>
                   <Badge variant="sky">Teacher-first entry</Badge>
+                  <Badge variant="sky">Principal office</Badge>
+                  <Badge variant="sky">QuickBooks payments</Badge>
                   <Badge variant="sky">Built for Lighthouse</Badge>
                 </div>
               </div>

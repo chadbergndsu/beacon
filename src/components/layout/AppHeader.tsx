@@ -6,6 +6,7 @@ import type { Profile } from '@/lib/types'
 export function AppHeader({ profile }: { profile: Profile | null }) {
   const staff =
     profile && ['admin', 'staff', 'teacher', 'principal'].includes(profile.role)
+  const isPrincipal = profile?.role === 'principal'
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-navy/95 text-navy-foreground backdrop-blur-md shadow-[var(--shadow-soft)]">
@@ -27,6 +28,9 @@ export function AppHeader({ profile }: { profile: Profile | null }) {
           <nav className="hidden md:flex items-center gap-1 text-sm">
             {[
               { href: '/dashboard', label: 'Dashboard' },
+              ...(isPrincipal
+                ? [{ href: '/principal', label: 'Principal office' }]
+                : []),
               { href: '/announcements', label: 'Announcements' },
               ...(staff ? [{ href: '/admin/emails', label: 'Emails' }] : []),
               { href: '/about', label: 'About' },
@@ -72,6 +76,11 @@ export function AppHeader({ profile }: { profile: Profile | null }) {
         {staff && (
           <Link href="/admin/emails" className="rounded-lg bg-white/10 px-3 py-1.5 whitespace-nowrap">
             Emails
+          </Link>
+        )}
+        {isPrincipal && (
+          <Link href="/principal" className="rounded-lg bg-sky-500/90 px-3 py-1.5 whitespace-nowrap font-semibold">
+            Principal office
           </Link>
         )}
         <Link href="/about" className="rounded-lg bg-white/10 px-3 py-1.5 whitespace-nowrap">

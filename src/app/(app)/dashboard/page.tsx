@@ -128,16 +128,22 @@ export default async function DashboardPage() {
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
-              href="/about"
+              href="/principal"
               className="rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-400"
             >
-              About Beacon
+              Open principal office
             </Link>
             <Link
-              href="/announcements"
+              href="/principal/payments"
               className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/15"
             >
-              Announcements
+              Payments & QuickBooks
+            </Link>
+            <Link
+              href="/about"
+              className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/15"
+            >
+              About Beacon
             </Link>
           </div>
         </div>
