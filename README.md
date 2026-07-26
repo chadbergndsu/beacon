@@ -35,8 +35,11 @@ Demo logins (shared test accounts):
 
 | Role | Email | Password |
 |------|--------|----------|
+| **Principal (Chris Cowan)** | `principal@lighthouse.test` | `BeaconPrincipal2026!` |
 | Teacher | `teacher@lighthouse.test` | `BeaconDemo2026!` |
 | Parent | `parent@lighthouse.test` | `BeaconDemo2026!` |
+
+Principal shortcut: https://beacon-beta-lemon.vercel.app/login?as=principal
 
 In Supabase → Authentication → URL configuration, set:
 

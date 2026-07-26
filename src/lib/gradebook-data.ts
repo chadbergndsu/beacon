@@ -15,7 +15,11 @@ export type ClassRow = {
 
 function canAccessClass(profile: Profile | null, user: User, classRow: ClassRow) {
   if (!profile) return false
-  if (profile.role === 'admin' || profile.role === 'staff') {
+  if (
+    profile.role === 'admin' ||
+    profile.role === 'staff' ||
+    profile.role === 'principal'
+  ) {
     return !profile.school_id || profile.school_id === classRow.school_id
   }
   if (profile.role === 'teacher') {

@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export default async function NewAnnouncementPage() {
   const { profile, user } = await getProfile()
-  if (!profile || !['admin', 'staff', 'teacher'].includes(profile.role)) {
+  if (!profile || !['admin', 'staff', 'teacher', 'principal'].includes(profile.role)) {
     redirect('/announcements')
   }
 

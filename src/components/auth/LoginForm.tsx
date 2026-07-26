@@ -2,11 +2,26 @@
 
 import { useActionState } from 'react'
 import { login, type AuthState } from '@/app/actions/auth'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 const initial: AuthState = {}
 
-export function LoginForm({ nextPath = '/dashboard' }: { nextPath?: string }) {
+export function LoginForm({
+  nextPath = '/dashboard',
+  defaultEmail = '',
+  defaultPassword = '',
+  submitLabel = 'Sign in',
+  variant = 'default',
+}: {
+  nextPath?: string
+  defaultEmail?: string
+  defaultPassword?: string
+  submitLabel?: string
+  variant?: 'default' | 'principal'
+}) {
   const [state, formAction, pending] = useActionState(login, initial)
+  const isPrincipal = variant === 'principal'
 
   return (
     <form action={formAction} className="space-y-4">
@@ -21,7 +36,12 @@ export function LoginForm({ nextPath = '/dashboard' }: { nextPath?: string }) {
           type="email"
           autoComplete="email"
           required
-          className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          defaultValue={defaultEmail}
+          className={cn(
+            'w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm',
+            'focus:outline-none focus:ring-2 focus:ring-ring',
+            isPrincipal && 'border-sky-200 bg-sky-50/50 dark:bg-sky-950/20'
+          )}
           placeholder="you@school.org"
         />
       </div>
@@ -35,21 +55,28 @@ export function LoginForm({ nextPath = '/dashboard' }: { nextPath?: string }) {
           type="password"
           autoComplete="current-password"
           required
-          className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          defaultValue={defaultPassword}
+          className={cn(
+            'w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm',
+            'focus:outline-none focus:ring-2 focus:ring-ring',
+            isPrincipal && 'border-sky-200 bg-sky-50/50 dark:bg-sky-950/20'
+          )}
         />
       </div>
       {state?.error && (
-        <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg px-3 py-2">
+        <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl px-3 py-2">
           {state.error}
         </p>
       )}
-      <button
+      <Button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-primary text-primary-foreground font-semibold py-2.5 text-sm hover:opacity-90 disabled:opacity-50"
+        size="lg"
+        variant={isPrincipal ? 'navy' : 'primary'}
+        className="w-full"
       >
-        {pending ? 'Signing in…' : 'Sign in'}
-      </button>
+        {pending ? 'Signing in…' : submitLabel}
+      </Button>
     </form>
   )
 }

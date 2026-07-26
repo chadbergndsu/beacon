@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import { logout } from '@/app/actions/auth'
+import { roleLabel } from '@/lib/roles'
 import type { Profile } from '@/lib/types'
 
 export function AppHeader({ profile }: { profile: Profile | null }) {
-  const staff = profile && ['admin', 'staff', 'teacher'].includes(profile.role)
+  const staff =
+    profile && ['admin', 'staff', 'teacher', 'principal'].includes(profile.role)
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-navy/95 text-navy-foreground backdrop-blur-md shadow-[var(--shadow-soft)]">
@@ -46,7 +48,7 @@ export function AppHeader({ profile }: { profile: Profile | null }) {
                 {profile.full_name || profile.email}
               </p>
               <p className="text-[10px] uppercase tracking-[0.14em] text-sky-300/80 font-semibold">
-                {profile.role}
+                {roleLabel(profile.role)}
               </p>
             </div>
           )}

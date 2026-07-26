@@ -33,6 +33,7 @@ export default async function ClassGradebookPage({
   const canEnter =
     profile?.role === 'admin' ||
     profile?.role === 'staff' ||
+    profile?.role === 'principal' ||
     (profile?.role === 'teacher' && classRow.teacher_id === user.id)
 
   const [students, assignments, categories] = await Promise.all([

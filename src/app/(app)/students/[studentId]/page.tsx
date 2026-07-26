@@ -23,7 +23,10 @@ export default async function StudentOverviewPage({
   let allowed = false
   if (profile?.role === 'parent') {
     allowed = await parentCanViewStudent(user.id, studentId)
-  } else if (profile && ['admin', 'staff', 'teacher'].includes(profile.role)) {
+  } else if (
+    profile &&
+    ['admin', 'staff', 'teacher', 'principal'].includes(profile.role)
+  ) {
     allowed = !profile.school_id || profile.school_id === student.school_id
   }
   if (!allowed) notFound()

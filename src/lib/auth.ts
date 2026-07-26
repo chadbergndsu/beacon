@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { effectiveRole, PRINCIPAL_EMAIL } from '@/lib/roles'
 import type { Profile } from '@/lib/types'
 
 export async function requireUser() {
@@ -28,5 +29,19 @@ export async function getProfile(): Promise<{
     .eq('id', user.id)
     .maybeSingle()
 
-  return { supabase, user, profile: profile as Profile | null }
+  let normalized = profile as Profile | null
+  if (normalized) {
+    const role = effectiveRole(normalized)
+    if (role) normalized = { ...normalized, role }
+    // Ensure principal display name is always Chris Cowan for the dedicated account
+    if (normalized.email?.toLowerCase() === PRINCIPAL_EMAIL) {
+      normalized = {
+        ...normalized,
+        role: 'principal',
+        full_name: normalized.full_name || 'Chris Cowan',
+      }
+    }
+  }
+
+  return { supabase, user, profile: normalized }
 }

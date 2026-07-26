@@ -31,6 +31,7 @@ export async function GET(
   const allowed =
     profile?.role === 'admin' ||
     profile?.role === 'staff' ||
+    profile?.role === 'principal' ||
     (profile?.role === 'teacher' && classRow.teacher_id === user.id)
 
   if (!allowed) {

@@ -47,7 +47,7 @@ export default async function AnnouncementDetailPage({
   }
 
   const canSeeEmails =
-    profile && ['admin', 'staff', 'teacher'].includes(profile.role)
+    profile && ['admin', 'staff', 'teacher', 'principal'].includes(profile.role)
 
   let relatedEmails: Awaited<ReturnType<typeof listEmailOutbox>> = []
   if (canSeeEmails) {

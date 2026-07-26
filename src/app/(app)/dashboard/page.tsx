@@ -41,7 +41,7 @@ export default async function DashboardPage() {
       .eq('active', true)
       .order('name')
     classes = data ?? []
-  } else if (role === 'admin' || role === 'staff') {
+  } else if (role === 'admin' || role === 'staff' || role === 'principal') {
     let q = admin
       .from('classes')
       .select('id, name, subject, grade_level, term, teacher_id')
@@ -109,10 +109,40 @@ export default async function DashboardPage() {
     announcements = data ?? []
   }
 
-  const canPost = ['admin', 'staff', 'teacher'].includes(role)
+  const canPost = ['admin', 'staff', 'teacher', 'principal'].includes(role)
+  const isPrincipal = role === 'principal'
 
   return (
     <div className="space-y-8">
+      {isPrincipal && (
+        <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-navy via-slate-900 to-sky-900 px-5 py-5 text-white shadow-[var(--shadow-lift)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-300">
+            Principal access
+          </p>
+          <h2 className="mt-1 text-xl font-bold tracking-tight">
+            Welcome, Chris — this login is just for you
+          </h2>
+          <p className="mt-2 text-sm text-slate-300 max-w-2xl leading-relaxed">
+            Full school view of classes, transparent grades, announcements, and system email.
+            Beacon was built under your direction for Lighthouse families and teachers.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href="/about"
+              className="rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-400"
+            >
+              About Beacon
+            </Link>
+            <Link
+              href="/announcements"
+              className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/15"
+            >
+              Announcements
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
@@ -121,7 +151,9 @@ export default async function DashboardPage() {
           <p className="text-muted-foreground text-sm mt-1">
             {role === 'parent'
               ? 'Announcements and transparent grades for your children.'
-              : 'Classes, announcements, and system tools.'}
+              : isPrincipal
+                ? 'School-wide gradebook overview for Lighthouse Christian Academy.'
+                : 'Classes, announcements, and system tools.'}
           </p>
         </div>
         {canPost && (
@@ -144,7 +176,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-8">
-          {(role === 'teacher' || role === 'admin' || role === 'staff') && (
+          {(role === 'teacher' || role === 'admin' || role === 'staff' || role === 'principal') && (
             <section>
               <h2 className="text-lg font-semibold mb-3">Classes</h2>
               {classes.length === 0 ? (

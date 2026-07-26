@@ -78,7 +78,9 @@ export async function resolveAnnouncementRecipients(opts: {
 
   if (wantStaff) {
     const roles =
-      audience === 'teachers' ? ['teacher'] : ['admin', 'staff', 'teacher']
+      audience === 'teachers'
+        ? ['teacher']
+        : ['admin', 'staff', 'teacher', 'principal']
     const { data: staff } = await admin
       .from('profiles')
       .select('id, email, full_name, role')

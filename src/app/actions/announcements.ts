@@ -27,7 +27,7 @@ async function requireStaff() {
   if (!profile?.school_id) {
     return { ok: false as const, error: 'Profile or school not set up.' }
   }
-  if (!['admin', 'staff', 'teacher'].includes(profile.role)) {
+  if (!['admin', 'staff', 'teacher', 'principal'].includes(profile.role)) {
     return { ok: false as const, error: 'Only staff can manage announcements.' }
   }
 
@@ -172,8 +172,8 @@ export async function sendSystemEmail(input: {
 }): Promise<ActionResult> {
   const access = await requireStaff()
   if (!access.ok) return access
-  if (!['admin', 'staff'].includes(access.profile.role)) {
-    return { ok: false, error: 'Only admin/staff can send freeform system emails.' }
+  if (!['admin', 'staff', 'principal'].includes(access.profile.role)) {
+    return { ok: false, error: 'Only leadership can send freeform system emails.' }
   }
 
   const to = input.to_email.trim()

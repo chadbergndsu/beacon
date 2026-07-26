@@ -7,12 +7,13 @@ import { listEmailOutbox } from '@/lib/email/send'
 
 export default async function EmailOutboxPage() {
   const { profile } = await getProfile()
-  if (!profile || !['admin', 'staff', 'teacher'].includes(profile.role)) {
+  if (!profile || !['admin', 'staff', 'teacher', 'principal'].includes(profile.role)) {
     redirect('/dashboard')
   }
 
   const emails = await listEmailOutbox(profile.school_id, 100)
-  const canManual = profile.role === 'admin' || profile.role === 'staff'
+  const canManual =
+    profile.role === 'admin' || profile.role === 'staff' || profile.role === 'principal'
 
   return (
     <div className="space-y-8">

@@ -6,7 +6,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export default async function AnnouncementsPage() {
   const { profile, user } = await getProfile()
   const admin = createAdminClient()
-  const canPost = profile && ['admin', 'staff', 'teacher'].includes(profile.role)
+  const canPost =
+    profile && ['admin', 'staff', 'teacher', 'principal'].includes(profile.role)
 
   let query = admin
     .from('announcements')
