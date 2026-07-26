@@ -1,26 +1,128 @@
 @import "tailwindcss";
 
+/* Beacon design system — modern Jupiter + Blackbaud polish */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --primary: #0369a1;
+  --primary-foreground: #f0f9ff;
+  --secondary: #e0f2fe;
+  --secondary-foreground: #0c4a6e;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #0ea5e9;
+  --accent-foreground: #0c4a6e;
+  --navy: #0b1f3a;
+  --navy-foreground: #f8fafc;
+  --success: #059669;
+  --success-soft: #ecfdf5;
+  --warning: #d97706;
+  --warning-soft: #fffbeb;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --ring: #38bdf8;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --radius: 0.75rem;
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px rgb(15 23 42 / 0.06);
+  --shadow-lift: 0 4px 6px -1px rgb(15 23 42 / 0.06), 0 12px 32px -4px rgb(14 165 233 / 0.12);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-navy: var(--navy);
+  --color-navy-foreground: var(--navy-foreground);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-ring: var(--ring);
+  --color-border: var(--border);
+  --color-input: var(--input);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --radius-lg: var(--radius);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #07111f;
+    --foreground: #e2e8f0;
+    --card: #0f1c2e;
+    --card-foreground: #e2e8f0;
+    --primary: #38bdf8;
+    --primary-foreground: #082f49;
+    --secondary: #132337;
+    --secondary-foreground: #bae6fd;
+    --muted: #132337;
+    --muted-foreground: #94a3b8;
+    --accent: #0ea5e9;
+    --accent-foreground: #e0f2fe;
+    --navy: #020617;
+    --navy-foreground: #f8fafc;
+    --success: #34d399;
+    --success-soft: #064e3b;
+    --warning: #fbbf24;
+    --warning-soft: #78350f;
+    --danger: #f87171;
+    --danger-soft: #7f1d1d;
+    --ring: #38bdf8;
+    --border: #1e3a5f;
+    --input: #1e3a5f;
   }
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Spreadsheet grade cells */
+.grade-cell-input {
+  transition: box-shadow 0.12s ease, background-color 0.12s ease, border-color 0.12s ease;
+}
+.grade-cell-input:focus {
+  z-index: 2;
+  position: relative;
+}
+
+/* Subtle page texture */
+.beacon-shell {
+  background:
+    radial-gradient(1200px 400px at 10% -10%, rgb(14 165 233 / 0.08), transparent 60%),
+    radial-gradient(900px 360px at 90% 0%, rgb(3 105 161 / 0.06), transparent 55%),
+    var(--background);
+}
+
+@keyframes beacon-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-beacon-in {
+  animation: beacon-fade-in 0.28s ease-out both;
 }
