@@ -113,7 +113,7 @@ export async function createAnnouncement(input: {
         `— ${author}`,
         schoolName,
         '',
-        'Sent by Beacon gradebook system.',
+        'Sent by Beacon · Lighthouse Christian Academy.',
       ].join('\n')
 
       const html = `

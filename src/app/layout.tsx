@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Beacon · Lighthouse Christian Academy',
-  description: 'Transparent gradebook for Lighthouse Christian Academy',
+  title: 'Beacon · School Suite · Lighthouse Christian Academy',
+  description:
+    'Beacon — the full school suite for Lighthouse Christian Academy: academics, families, communications, payments, and principal operations.',
 }
 
 export default function RootLayout({

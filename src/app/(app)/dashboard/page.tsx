@@ -123,8 +123,8 @@ export default async function DashboardPage() {
             Welcome, Chris — this login is just for you
           </h2>
           <p className="mt-2 text-sm text-slate-300 max-w-2xl leading-relaxed">
-            Full school view of classes, transparent grades, announcements, and system email.
-            Beacon was built under your direction for Lighthouse families and teachers.
+            Full Beacon suite: academics, families, communications, tuition, and QuickBooks.
+            Built under your direction for Lighthouse.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
@@ -156,10 +156,10 @@ export default async function DashboardPage() {
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {role === 'parent'
-              ? 'Announcements and transparent grades for your children.'
+              ? 'Your family’s home in Beacon — announcements, grades, and class links.'
               : isPrincipal
-                ? 'School-wide gradebook overview for Lighthouse Christian Academy.'
-                : 'Classes, announcements, and system tools.'}
+                ? 'School-wide hub for Lighthouse Christian Academy.'
+                : 'Your home in the Beacon school suite.'}
           </p>
         </div>
         {canPost && (
@@ -203,7 +203,7 @@ export default async function DashboardPage() {
                             'Class'}
                         </p>
                         <p className="text-xs text-sky-800 mt-3 font-medium">
-                          {rosterCount.get(c.id) || 0} students · Open gradebook →
+                          {rosterCount.get(c.id) || 0} students · Open class →
                         </p>
                       </Link>
                     </li>
@@ -284,9 +284,9 @@ export default async function DashboardPage() {
             <section className="rounded-xl border border-sky-100 bg-sky-50 p-4 text-sm text-sky-950">
               <p className="font-semibold">Quick tips</p>
               <ul className="mt-2 space-y-1 text-sky-900/90 list-disc ml-4">
-                <li>Use Class setup to add assignments</li>
-                <li>Check “Email parents on save” for grade notices</li>
-                <li>Export CSV from the gradebook</li>
+                <li>Classes · setup · transparent grades</li>
+                <li>Announcements &amp; family email</li>
+                <li>Principal office · tuition · QuickBooks</li>
               </ul>
             </section>
           )}

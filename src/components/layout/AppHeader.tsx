@@ -20,7 +20,7 @@ export function AppHeader({ profile }: { profile: Profile | null }) {
               <div>
                 <p className="font-bold tracking-tight text-[15px] leading-none">Beacon</p>
                 <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-300/90 mt-1">
-                  Lighthouse Christian Academy
+                  School suite · LCA
                 </p>
               </div>
             </div>

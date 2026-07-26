@@ -93,8 +93,8 @@ export default async function ClassGradebookPage({
 
       {!canEnter ? (
         <p className="text-sm text-muted-foreground rounded-xl border bg-background p-4">
-          You can view student transparent grades via the student links above. Grade entry is limited
-          to the class teacher, admins, and staff.
+          You can view transparent grades via the student links above. Score entry is limited to the
+          class teacher and school leadership.
         </p>
       ) : activeTab === 'setup' ? (
         <ClassSetupPanel

@@ -29,12 +29,12 @@ export default function AboutPage() {
             About Beacon
           </p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-navy dark:text-sky-50">
-            Built for Lighthouse — under the direction of Chris Cowan
+            Beacon is the full school suite — under the direction of Chris Cowan
           </h1>
           <p className="mt-3 text-muted-foreground leading-relaxed">
-            Beacon is a modern gradebook designed for schools that want Jupiter-level simplicity,
-            cleaner speed, and something Blackbaud never quite nailed: grades parents can actually
-            understand.
+            Not “just another gradebook.” Beacon is the operating system for Lighthouse: academics,
+            family communications, principal operations, and tuition payments — Jupiter-familiar where
+            teachers need speed, cleaner than Blackbaud where families need clarity.
           </p>
         </div>
 
@@ -47,7 +47,7 @@ export default function AboutPage() {
               <div>
                 <p className="font-bold text-lg leading-tight">Beacon</p>
                 <p className="text-xs text-sky-200/90 mt-0.5">
-                  Lighthouse Christian Academy · Gradebook
+                  Lighthouse Christian Academy · Full school suite
                 </p>
               </div>
             </div>
@@ -60,10 +60,10 @@ export default function AboutPage() {
               <div>
                 <h2 className="font-semibold text-navy dark:text-sky-50">Leadership</h2>
                 <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                  This app was built under the direction of{' '}
-                  <strong className="text-foreground">Chris Cowan</strong> — the vision,
-                  priorities, and push to make grades transparent for families and effortless for
-                  teachers.
+                  This suite was built under the direction of{' '}
+                  <strong className="text-foreground">Chris Cowan</strong> — vision and priorities
+                  for a single platform: transparent academics, clear family comms, and a real
+                  principal office with payments.
                 </p>
               </div>
             </div>
@@ -105,13 +105,13 @@ export default function AboutPage() {
               <Heart className="h-5 w-5 text-sky-600 mt-0.5 shrink-0" />
               <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
                 <p>
-                  <strong className="text-foreground">What makes Beacon different:</strong> teachers
-                  get a fast, familiar gradebook; parents get a crystal-clear “how this grade was
-                  calculated” view — not a black box.
+                  <strong className="text-foreground">The full suite:</strong> teachers get fast
+                  grade entry; parents get transparent calculations; the principal gets operations,
+                  tuition, and QuickBooks — one Beacon, not five logins.
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
-                  <Badge variant="sky">Transparent grades</Badge>
-                  <Badge variant="sky">Teacher-first entry</Badge>
+                  <Badge variant="sky">Academics</Badge>
+                  <Badge variant="sky">Families &amp; comms</Badge>
                   <Badge variant="sky">Principal office</Badge>
                   <Badge variant="sky">QuickBooks payments</Badge>
                   <Badge variant="sky">Built for Lighthouse</Badge>

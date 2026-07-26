@@ -23,8 +23,8 @@ export default async function LoginPage({
           </p>
           <h2 className="mt-1 text-xl font-bold tracking-tight">Chris Cowan</h2>
           <p className="mt-2 text-sm text-slate-300 leading-relaxed">
-            A dedicated principal login for reviewing Beacon — full school view of grades,
-            announcements, and the transparent parent experience.
+            A dedicated principal login for the full Beacon suite — academics, families,
+            announcements, tuition, and QuickBooks.
           </p>
           {asPrincipal ? (
             <div className="mt-5 rounded-xl bg-white/10 border border-white/10 p-4">
@@ -63,7 +63,7 @@ export default async function LoginPage({
               </p>
               <h1 className="text-2xl font-bold mt-1 text-navy dark:text-sky-50">Beacon</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Teachers, staff &amp; parents
+                School suite · Teachers, staff &amp; parents
               </p>
             </div>
             <LoginForm nextPath={nextPath} />

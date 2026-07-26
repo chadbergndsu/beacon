@@ -18,8 +18,8 @@ export default async function PrincipalLayout({ children }: { children: React.Re
                 {profile.full_name || 'Principal'} · School operations
               </h1>
               <p className="mt-1 text-sm text-slate-300 max-w-2xl">
-                Grades for families. Payments & QuickBooks for the office. Built under your
-                direction — profit supports LBC teachers, tuition, and well-earned rest.
+                The operations side of the Beacon school suite — tuition, QuickBooks, and schoolwide
+                oversight. Academics and families live alongside this office in one platform.
               </p>
             </div>
             <Link

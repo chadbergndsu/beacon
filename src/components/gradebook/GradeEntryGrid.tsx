@@ -209,7 +209,7 @@ export function GradeEntryGrid({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-300/90">
-                Gradebook
+                Academics · Class
               </p>
               <h2 className="mt-0.5 text-xl font-bold tracking-tight truncate">{classTitle}</h2>
               <p className="mt-1 text-sm text-slate-300">

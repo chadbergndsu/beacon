@@ -152,7 +152,7 @@ export default async function PrincipalOverviewPage() {
               </Link>
               <Link href="/dashboard">
                 <Button variant="ghost" size="sm">
-                  Gradebook dashboard
+                  School dashboard
                 </Button>
               </Link>
             </div>
@@ -165,8 +165,8 @@ export default async function PrincipalOverviewPage() {
           <CardContent className="pt-5 text-sm text-muted-foreground leading-relaxed">
             <p>
               <strong className="text-foreground">Principal layer</strong> is exclusive to{' '}
-              {profile.full_name || 'you'}. Teachers enter grades; you oversee academics and the
-              business office — including QuickBooks-linked tuition.
+              {profile.full_name || 'you'}. Beacon is the full school suite: teachers run classes,
+              families get clarity, and you run the office — including QuickBooks-linked tuition.
             </p>
           </CardContent>
         </Card>
