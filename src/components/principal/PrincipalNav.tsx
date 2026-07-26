@@ -9,6 +9,7 @@ const links = [
   { href: '/principal/payments', label: 'Payments & QuickBooks' },
   { href: '/principal/billing', label: 'Tuition products' },
   { href: '/principal/invoices', label: 'Invoices & payments' },
+  { href: '/principal/break', label: 'Coffee break 🎮' },
 ]
 
 export function PrincipalNav() {

@@ -160,15 +160,30 @@ export default async function PrincipalOverviewPage() {
         </Card>
       </div>
 
-      <Card className="border-dashed border-sky-200 bg-sky-50/40 dark:bg-sky-950/20">
-        <CardContent className="pt-5 text-sm text-muted-foreground leading-relaxed">
-          <p>
-            <strong className="text-foreground">Principal layer</strong> is exclusive to{' '}
-            {profile.full_name || 'you'}. Teachers enter grades; you oversee academics and the
-            business office — including QuickBooks-linked tuition.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="border-dashed border-sky-200 bg-sky-50/40 dark:bg-sky-950/20">
+          <CardContent className="pt-5 text-sm text-muted-foreground leading-relaxed">
+            <p>
+              <strong className="text-foreground">Principal layer</strong> is exclusive to{' '}
+              {profile.full_name || 'you'}. Teachers enter grades; you oversee academics and the
+              business office — including QuickBooks-linked tuition.
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-violet-200 bg-violet-50/50 dark:bg-violet-950/20 dark:border-violet-800">
+          <CardContent className="pt-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold text-navy dark:text-sky-50">Coffee break</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Private Tetris — principal only. No teachers. No parents. No judgment.
+              </p>
+            </div>
+            <Link href="/principal/break">
+              <Button size="md">Play Beacon Blocks</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
