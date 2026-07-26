@@ -67,8 +67,20 @@ export default async function LoginPage({
               </p>
             </div>
             <LoginForm nextPath={nextPath} />
-            <p className="mt-6 text-center text-xs text-muted-foreground">
-              Built under the direction of Chris Cowan ·{' '}
+            <p className="mt-6 text-center text-xs text-muted-foreground space-x-2">
+              <Link href="/school" className="font-medium text-sky-700 hover:underline">
+                School website
+              </Link>
+              <span>·</span>
+              <a
+                href="https://lcadawsonville.com"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-sky-700 hover:underline"
+              >
+                lcadawsonville.com
+              </a>
+              <span>·</span>
               <Link href="/about" className="font-medium text-sky-700 hover:underline">
                 About Beacon
               </Link>

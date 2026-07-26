@@ -33,7 +33,8 @@ export function AppHeader({ profile }: { profile: Profile | null }) {
                 : []),
               { href: '/announcements', label: 'Announcements' },
               ...(staff ? [{ href: '/admin/emails', label: 'Emails' }] : []),
-              { href: '/about', label: 'About' },
+              { href: '/school', label: 'School site' },
+              { href: '/about', label: 'About Beacon' },
             ].map((item) => (
               <Link
                 key={item.href}
@@ -83,8 +84,11 @@ export function AppHeader({ profile }: { profile: Profile | null }) {
             Principal office
           </Link>
         )}
+        <Link href="/school" className="rounded-lg bg-white/10 px-3 py-1.5 whitespace-nowrap">
+          School site
+        </Link>
         <Link href="/about" className="rounded-lg bg-white/10 px-3 py-1.5 whitespace-nowrap">
-          About
+          About Beacon
         </Link>
       </nav>
     </header>

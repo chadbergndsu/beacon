@@ -7,5 +7,6 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  redirect(user ? '/dashboard' : '/login')
+  // Logged-in users go to the suite; public visitors see the modern school site
+  redirect(user ? '/dashboard' : '/school')
 }

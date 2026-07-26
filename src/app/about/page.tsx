@@ -121,7 +121,18 @@ export default function AboutPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-sm">
+        <p className="text-center text-sm flex flex-wrap justify-center gap-4">
+          <Link href="/school" className="font-semibold text-sky-700 hover:underline">
+            LCA school site
+          </Link>
+          <a
+            href="https://lcadawsonville.com"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-sky-700 hover:underline"
+          >
+            Official lcadawsonville.com
+          </a>
           <Link href="/login" className="font-semibold text-sky-700 hover:underline">
             Sign in to Beacon →
           </Link>

@@ -21,7 +21,11 @@ Modern JupiterEd familiarity where it helps teachers, cleaner than Blackbaud whe
 
 ## Live demo
 
-**Production:** https://beacon-beta-lemon.vercel.app
+**Production:** https://beacon-beta-lemon.vercel.app  
+
+**Modern LCA school site (same info as official site):** https://beacon-beta-lemon.vercel.app/school  
+
+**Official school website:** https://lcadawsonville.com
 
 | Role | Email | Password |
 |------|--------|----------|
