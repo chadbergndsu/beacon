@@ -19,6 +19,12 @@ export default async function LoginPage({
           <p className="text-sm text-muted-foreground mt-1">Sign in to the gradebook</p>
         </div>
         <LoginForm nextPath={nextPath} />
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          Built under the direction of Chris Cowan ·{' '}
+          <a href="/about" className="font-medium text-sky-700 hover:underline">
+            About Beacon
+          </a>
+        </p>
       </div>
     </div>
   )

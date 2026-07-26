@@ -27,6 +27,7 @@ export function AppHeader({ profile }: { profile: Profile | null }) {
               { href: '/dashboard', label: 'Dashboard' },
               { href: '/announcements', label: 'Announcements' },
               ...(staff ? [{ href: '/admin/emails', label: 'Emails' }] : []),
+              { href: '/about', label: 'About' },
             ].map((item) => (
               <Link
                 key={item.href}
@@ -71,6 +72,9 @@ export function AppHeader({ profile }: { profile: Profile | null }) {
             Emails
           </Link>
         )}
+        <Link href="/about" className="rounded-lg bg-white/10 px-3 py-1.5 whitespace-nowrap">
+          About
+        </Link>
       </nav>
     </header>
   )
