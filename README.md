@@ -27,6 +27,22 @@ npm run dev
 
 Apply SQL migrations in `supabase/migrations/` via the Supabase SQL Editor (in order).
 
+## Live demo
+
+**Production:** https://beacon-beta-lemon.vercel.app
+
+Demo logins (shared test accounts):
+
+| Role | Email | Password |
+|------|--------|----------|
+| Teacher | `teacher@lighthouse.test` | `BeaconDemo2026!` |
+| Parent | `parent@lighthouse.test` | `BeaconDemo2026!` |
+
+In Supabase → Authentication → URL configuration, set:
+
+- **Site URL:** `https://beacon-beta-lemon.vercel.app`
+- **Redirect URLs:** `https://beacon-beta-lemon.vercel.app/**`
+
 ## Repo
 
 https://github.com/chadbergndsu/beacon
