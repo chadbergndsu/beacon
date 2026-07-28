@@ -6,6 +6,11 @@ import { cn } from '@/lib/utils'
 
 const tabs = [
   { id: 'grades', label: 'Grade entry', href: (id: string) => `/classes/${id}` },
+  {
+    id: 'attendance',
+    label: 'Attendance',
+    href: (id: string) => `/classes/${id}?tab=attendance`,
+  },
   { id: 'lessons', label: 'Lesson plans', href: (id: string) => `/classes/${id}?tab=lessons` },
   { id: 'pulse', label: 'Beacon Pulse', href: (id: string) => `/classes/${id}?tab=pulse` },
   { id: 'setup', label: 'Class setup', href: (id: string) => `/classes/${id}?tab=setup` },
@@ -15,7 +20,9 @@ export function ClassTabs({ classId }: { classId: string }) {
   const searchParams = useSearchParams()
   const raw = searchParams.get('tab')
   const tab =
-    raw === 'setup' || raw === 'lessons' || raw === 'pulse' ? raw : 'grades'
+    raw === 'setup' || raw === 'lessons' || raw === 'pulse' || raw === 'attendance'
+      ? raw
+      : 'grades'
 
   return (
     <nav className="flex flex-wrap gap-2" aria-label="Class modules">

@@ -2,51 +2,26 @@
 
 **The full school suite for Lighthouse Christian Academy** — academics, family communications, principal operations, and payments.
 
-Modern JupiterEd familiarity where it helps teachers, cleaner than Blackbaud where it matters, and transparent grades parents can actually understand. Built under the direction of Chris Cowan; profits help fund LBC teacher salaries, student tuition, and well-earned rest.
+Modern JupiterEd familiarity where it helps teachers, cleaner than Blackbaud where it matters, and transparent grades parents can actually understand. Built under the direction of Chris Cowan.
 
 ## Modules
 
 | Area | What it does |
 |------|----------------|
-| **Academics** | Class grade entry, categories, transparent parent grade views, CSV export |
-| **Families** | Announcements, parent portal, system email notices |
-| **Principal office** | School ops overview, tuition products, invoices, QuickBooks |
-| **Coffee break** | Principal-only Tetris (because leadership is hard) |
+| **Academics** | Grade entry, lesson plans, transparent parent views, CSV export, report cards |
+| **Attendance** | Daily roster with optional parent absent/tardy email |
+| **Beacon Pulse** | Whole-child check-ins (unique to Beacon) |
+| **Families** | Announcements, parent feed, system email |
+| **Principal office** | Tuition, QuickBooks, videos, pulse board |
+| **Public** | Modern LCA school site at `/school` |
 
-## Stack
-
-- Next.js (App Router) + TypeScript + Tailwind  
-- Supabase (Auth, Postgres)  
-- Optional: Resend (email), Intuit QuickBooks Online (payments)
-
-## Live demo
+## Live
 
 **Production:** https://beacon-beta-lemon.vercel.app  
+**School site:** https://beacon-beta-lemon.vercel.app/school  
+**Official LCA site:** https://lcadawsonville.com  
 
-**Modern LCA school site (same info as official site):** https://beacon-beta-lemon.vercel.app/school  
-
-**Official school website:** https://lcadawsonville.com
-
-| Role | Email | Password |
-|------|--------|----------|
-| **Principal (Chris Cowan)** | `principal@lighthouse.test` | `BeaconPrincipal2026!` |
-| Teacher | `teacher@lighthouse.test` | `BeaconDemo2026!` |
-| Parent | `parent@lighthouse.test` | `BeaconDemo2026!` |
-
-Principal shortcut: https://beacon-beta-lemon.vercel.app/login?as=principal  
-Principal office: https://beacon-beta-lemon.vercel.app/principal  
-About: https://beacon-beta-lemon.vercel.app/about  
-
-### QuickBooks (principal payments)
-
-```
-INTUIT_CLIENT_ID=
-INTUIT_CLIENT_SECRET=
-INTUIT_REDIRECT_URI=https://beacon-beta-lemon.vercel.app/api/quickbooks/callback
-INTUIT_ENVIRONMENT=sandbox
-```
-
-Without Intuit keys, Connect QuickBooks activates a sandbox demo company for the full payment tour.
+Demo accounts are issued privately (not listed in this public README). Contact the Beacon operator for principal / teacher / parent demo credentials.
 
 ## Local setup
 
@@ -57,7 +32,32 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Apply SQL migrations in `supabase/migrations/` via the Supabase SQL Editor (in order).
+### Quality automation
+
+```bash
+npm test          # unit tests (grade engine, roles, redirects, report cards)
+npm run lint
+npm run build
+npm run ci        # lint + test + build
+```
+
+GitHub Actions runs `lint`, `test`, and `build` on every push to `main`.
+
+### Database
+
+Apply SQL migrations in `supabase/migrations/` **in order** via the Supabase SQL Editor.
+
+Optional CLI (requires DB password):
+
+```bash
+POSTGRES_PASSWORD='…' node scripts/apply-migration-007.mjs
+```
+
+Migration `007_suite_hardening.sql` adds attendance, lesson_plans, pulse_entries, and school_videos tables with non-recursive RLS helpers. App stores **fall back to `schools.settings` JSON** if tables are not applied yet.
+
+### QuickBooks / email (optional)
+
+See `.env.example` for `INTUIT_*` and `RESEND_*` variables.
 
 ## Repo
 

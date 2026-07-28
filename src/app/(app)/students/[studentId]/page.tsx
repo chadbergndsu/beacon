@@ -84,8 +84,15 @@ export default async function StudentOverviewPage({
         </p>
         <h1 className="text-2xl font-bold tracking-tight mt-1">{name}</h1>
         <p className="text-sm text-muted-foreground">
-          {student.grade_level ? `Grade ${student.grade_level}` : 'Student'} · Academics + Beacon Pulse
+          {student.grade_level ? `Grade ${student.grade_level}` : 'Student'} · Academics + Beacon
+          Pulse
         </p>
+        <Link
+          href={`/students/${studentId}/report-card`}
+          className="mt-3 inline-flex rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+        >
+          Open report card →
+        </Link>
       </div>
 
       <StudentPulseTimeline pulses={pulses} studentName={name} />

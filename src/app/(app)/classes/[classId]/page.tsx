@@ -6,6 +6,7 @@ import { ClassSetupPanel } from '@/components/gradebook/ClassSetupPanel'
 import { ClassTabs } from '@/components/gradebook/ClassTabs'
 import { LessonPlansPanel } from '@/components/lessons/LessonPlansPanel'
 import { PulsePanel } from '@/components/pulse/PulsePanel'
+import { AttendancePanel } from '@/components/attendance/AttendancePanel'
 import { getProfile } from '@/lib/auth'
 import { validateCategoryWeights } from '@/lib/grades'
 import {
@@ -17,18 +18,23 @@ import {
 } from '@/lib/gradebook-data'
 import { canEnterGrades } from '@/lib/roles'
 import { listLessonPlans, listPulsesForClass } from '@/lib/school-modules/store'
+import { loadAttendanceForClassDate } from '@/lib/attendance/store'
 
 export default async function ClassGradebookPage({
   params,
   searchParams,
 }: {
   params: Promise<{ classId: string }>
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; date?: string }>
 }) {
   const { classId } = await params
-  const { tab } = await searchParams
+  const sp = await searchParams
+  const tab = sp.tab
   const activeTab =
-    tab === 'setup' || tab === 'lessons' || tab === 'pulse' ? tab : 'grades'
+    tab === 'setup' || tab === 'lessons' || tab === 'pulse' || tab === 'attendance'
+      ? tab
+      : 'grades'
+  const attendanceDate = sp.date || new Date().toISOString().slice(0, 10)
 
   const { profile, user } = await getProfile()
 
@@ -46,13 +52,14 @@ export default async function ClassGradebookPage({
   const weights = validateCategoryWeights(categories)
 
   const schoolId = classRow.school_id
-  const [lessonPlans, pulses] =
+  const [lessonPlans, pulses, attendanceRecords] =
     canEnter && schoolId
       ? await Promise.all([
           listLessonPlans(schoolId, classId),
           listPulsesForClass(schoolId, classId),
+          loadAttendanceForClassDate(classId, attendanceDate),
         ])
-      : [[], []]
+      : [[], [], []]
 
   return (
     <div className="space-y-6">
@@ -112,6 +119,13 @@ export default async function ClassGradebookPage({
           categories={categories}
           assignments={assignments}
           students={students}
+        />
+      ) : activeTab === 'attendance' ? (
+        <AttendancePanel
+          classId={classId}
+          students={students}
+          initialDate={attendanceDate}
+          initialRecords={attendanceRecords}
         />
       ) : activeTab === 'lessons' ? (
         <LessonPlansPanel classId={classId} plans={lessonPlans} />

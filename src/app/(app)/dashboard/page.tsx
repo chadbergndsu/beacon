@@ -3,6 +3,8 @@ import { format } from 'date-fns'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateTransparentGrade } from '@/lib/grades'
+import { buildParentFeed } from '@/lib/parent-feed'
+import { ParentFeed } from '@/components/parent/ParentFeed'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
 export default async function DashboardPage() {
@@ -214,38 +216,57 @@ export default async function DashboardPage() {
           )}
 
           {role === 'parent' && (
-            <section>
-              <h2 className="text-lg font-semibold mb-3">Your children</h2>
-              {children.length === 0 ? (
-                <p className="text-sm text-muted-foreground rounded-xl border bg-background p-4">
-                  No students linked.
-                </p>
-              ) : (
-                <ul className="space-y-3">
-                  {children.map((child) => (
-                    <li key={child.id} className="rounded-xl border bg-background p-4">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <p className="font-semibold">
-                            {child.last_name}, {child.first_name}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {child.grade_level || 'Student'}
-                          </p>
+            <>
+              <section>
+                <h2 className="text-lg font-semibold mb-3">Your children</h2>
+                {children.length === 0 ? (
+                  <p className="text-sm text-muted-foreground rounded-xl border bg-background p-4">
+                    No students linked.
+                  </p>
+                ) : (
+                  <ul className="space-y-3">
+                    {children.map((child) => (
+                      <li key={child.id} className="rounded-2xl border bg-card p-4 shadow-[var(--shadow-soft)]">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className="font-semibold">
+                              {child.last_name}, {child.first_name}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {child.grade_level || 'Student'}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Link
+                              href={`/students/${child.id}`}
+                              className="text-sm font-medium text-sky-700 hover:underline"
+                            >
+                              Overview →
+                            </Link>
+                            <Link
+                              href={`/students/${child.id}/report-card`}
+                              className="text-sm font-medium text-sky-700 hover:underline"
+                            >
+                              Report card →
+                            </Link>
+                          </div>
                         </div>
-                        <Link
-                          href={`/students/${child.id}`}
-                          className="text-sm font-medium text-sky-700 hover:underline"
-                        >
-                          Full overview →
-                        </Link>
-                      </div>
-                      <ParentClassLinksWithGrades studentId={child.id} />
-                    </li>
-                  ))}
-                </ul>
+                        <ParentClassLinksWithGrades studentId={child.id} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+              {schoolId && children.length > 0 && (
+                <section className="mt-8">
+                  <ParentFeedSection
+                    parentId={user.id}
+                    schoolId={schoolId}
+                    children={children}
+                  />
+                </section>
               )}
-            </section>
+            </>
           )}
         </div>
 
@@ -294,6 +315,19 @@ export default async function DashboardPage() {
       </div>
     </div>
   )
+}
+
+async function ParentFeedSection({
+  parentId,
+  schoolId,
+  children,
+}: {
+  parentId: string
+  schoolId: string
+  children: { id: string; first_name: string; last_name: string }[]
+}) {
+  const items = await buildParentFeed(parentId, schoolId, children)
+  return <ParentFeed items={items} />
 }
 
 async function ParentClassLinksWithGrades({ studentId }: { studentId: string }) {
