@@ -14,6 +14,7 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react'
+import { SchoolSiteHeader } from '@/components/school/SchoolSiteHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -45,64 +46,19 @@ const extracurricular = [
 
 export default function SchoolWebsitePage() {
   return (
-    <div className="min-h-screen beacon-shell text-foreground">
-      {/* Top bar */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-navy/95 text-navy-foreground backdrop-blur-md">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500 text-sm font-black text-white shadow-lg shadow-sky-500/25">
-              L
-            </span>
-            <div>
-              <p className="font-bold tracking-tight text-[15px] leading-none">
-                Lighthouse Christian Academy
-              </p>
-              <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-300/90 mt-1">
-                Dawsonville, Georgia · K4–12
-              </p>
-            </div>
-          </div>
-          <nav className="flex flex-wrap items-center gap-2 text-sm">
-            <a href="#about" className="rounded-lg px-3 py-2 text-slate-200 hover:bg-white/10">
-              About
-            </a>
-            <a href="#tuition" className="rounded-lg px-3 py-2 text-slate-200 hover:bg-white/10">
-              Tuition
-            </a>
-            <a href="#enroll" className="rounded-lg px-3 py-2 text-slate-200 hover:bg-white/10">
-              Enroll
-            </a>
-            <a href="#contact" className="rounded-lg px-3 py-2 text-slate-200 hover:bg-white/10">
-              Contact
-            </a>
-            <a
-              href={OFFICIAL}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-lg px-3 py-2 text-slate-200 hover:bg-white/10 inline-flex items-center gap-1"
-            >
-              Official site <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-            <Link
-              href="/login"
-              className="rounded-xl bg-sky-500 px-3.5 py-2 font-semibold text-white hover:bg-sky-400"
-            >
-              Beacon portal
-            </Link>
-          </nav>
-        </div>
-      </header>
+    <div className="min-h-screen min-h-[100dvh] overflow-x-hidden beacon-shell text-foreground">
+      <SchoolSiteHeader />
 
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-navy via-slate-900 to-sky-900" />
-        <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-sky-400/20 blur-3xl" />
-        <div className="absolute -left-16 bottom-0 h-64 w-64 rounded-full bg-sky-600/15 blur-3xl" />
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 py-16 sm:py-24 text-white">
+        <div className="mobile-safe-blur absolute -right-10 -top-10 h-48 w-48 rounded-full bg-sky-400/20 blur-3xl sm:h-80 sm:w-80 sm:-right-20 sm:-top-20" />
+        <div className="mobile-safe-blur absolute -left-8 bottom-0 h-40 w-40 rounded-full bg-sky-600/15 blur-3xl sm:h-64 sm:w-64 sm:-left-16" />
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-24 text-white">
           <Badge className="bg-sky-500/20 text-sky-100 border-sky-400/30 mb-4">
             Ministry of Lighthouse Baptist Church
           </Badge>
-          <h1 className="max-w-3xl text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]">
+          <h1 className="max-w-3xl text-3xl sm:text-5xl font-bold tracking-tight leading-[1.1]">
             Lighthouse Christian Academy
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-slate-200 leading-relaxed">

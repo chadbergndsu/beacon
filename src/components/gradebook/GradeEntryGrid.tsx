@@ -271,17 +271,24 @@ export function GradeEntryGrid({
         </div>
       </Card>
 
-      {/* Spreadsheet */}
+      {/* Spreadsheet — horizontal scroll on phones; sticky name col stays usable */}
       <Card className="overflow-hidden p-0">
-        <div className="max-h-[min(70vh,720px)] overflow-auto">
-          <table className="w-full border-separate border-spacing-0 text-sm">
+        <p className="border-b border-border bg-sky-50/80 px-3 py-2 text-xs font-medium text-sky-900 sm:hidden dark:bg-sky-950/40 dark:text-sky-100">
+          Swipe sideways for more assignments · or use{' '}
+          <a href="/teacher/quick" className="font-bold underline">
+            Quick mode
+          </a>{' '}
+          on phone
+        </p>
+        <div className="max-h-[min(70vh,720px)] overflow-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+          <table className="w-full min-w-[520px] border-separate border-spacing-0 text-sm">
             <thead className="sticky top-0 z-30">
               <tr>
                 <th
                   className={cn(
-                    'sticky left-0 z-40 min-w-[200px] border-b border-r border-border',
+                    'sticky left-0 z-40 min-w-[120px] max-w-[140px] border-b border-r border-border sm:min-w-[200px] sm:max-w-none',
                     'bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md',
-                    'px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground'
+                    'px-2 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground sm:px-4'
                   )}
                 >
                   Student
@@ -292,20 +299,20 @@ export function GradeEntryGrid({
                     <th
                       key={a.id}
                       className={cn(
-                        'min-w-[104px] max-w-[120px] border-b border-border',
+                        'min-w-[88px] max-w-[104px] border-b border-border sm:min-w-[104px] sm:max-w-[120px]',
                         'bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md',
-                        'px-2 py-2.5 text-center font-semibold text-navy dark:text-sky-50',
+                        'px-1 py-2.5 text-center font-semibold text-navy dark:text-sky-50 sm:px-2',
                         focused?.c === ci && 'bg-sky-50/95 dark:bg-sky-950/80'
                       )}
                       title={a.title}
                     >
-                      <div className="truncate text-[13px] leading-tight px-0.5">{a.title}</div>
+                      <div className="truncate text-[12px] leading-tight px-0.5 sm:text-[13px]">{a.title}</div>
                       <div className="mt-0.5 flex items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground">
                         <span>{a.max_points} pts</span>
                         {a.is_extra_credit && <Badge variant="sky" className="px-1.5 py-0 text-[9px]">XC</Badge>}
                       </div>
                       {fill && (
-                        <div className="mt-1.5 mx-2 h-1 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                        <div className="mt-1.5 mx-1 h-1 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden sm:mx-2">
                           <div
                             className="h-full rounded-full bg-sky-500/80 transition-all"
                             style={{
@@ -319,9 +326,9 @@ export function GradeEntryGrid({
                 })}
                 <th
                   className={cn(
-                    'sticky right-0 z-40 min-w-[88px] border-b border-l border-border',
+                    'sticky right-0 z-40 min-w-[64px] border-b border-l border-border sm:min-w-[88px]',
                     'bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md',
-                    'px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground'
+                    'px-1.5 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground sm:px-3'
                   )}
                 >
                   Avg
@@ -339,10 +346,10 @@ export function GradeEntryGrid({
                         'sticky left-0 z-20 border-b border-r border-border',
                         'bg-card group-hover:bg-sky-50/50 dark:group-hover:bg-sky-950/30',
                         rowHot && 'bg-sky-50/80 dark:bg-sky-950/40',
-                        'px-4 py-1.5'
+                        'px-2 py-1.5 sm:px-4'
                       )}
                     >
-                      <div className="font-semibold text-[13px] text-navy dark:text-sky-50 leading-tight">
+                      <div className="font-semibold text-[12px] text-navy dark:text-sky-50 leading-tight sm:text-[13px]">
                         {student.last_name}, {student.first_name}
                       </div>
                       {student.grade_level && (
@@ -372,7 +379,7 @@ export function GradeEntryGrid({
                             data-row={ri}
                             data-col={ci}
                             className={cn(
-                              'grade-cell-input w-full rounded-lg border px-1.5 py-2 text-center text-[13px] tabular-nums font-medium',
+                              'grade-cell-input w-full min-h-[44px] rounded-lg border px-1 py-2 text-center text-[14px] tabular-nums font-medium sm:min-h-0 sm:px-1.5 sm:text-[13px]',
                               'bg-transparent border-transparent hover:border-border hover:bg-white dark:hover:bg-slate-900',
                               'focus:outline-none focus:ring-2 focus:ring-sky-400/70 focus:border-sky-300 focus:bg-white dark:focus:bg-slate-900',
                               isMissing &&
@@ -398,7 +405,7 @@ export function GradeEntryGrid({
                         'sticky right-0 z-20 border-b border-l border-border',
                         'bg-card group-hover:bg-sky-50/50 dark:group-hover:bg-sky-950/30',
                         rowHot && 'bg-sky-50/80 dark:bg-sky-950/40',
-                        'px-3 py-2 text-center'
+                        'px-1.5 py-2 text-center sm:px-3'
                       )}
                     >
                       {summary?.overall != null ? (
@@ -425,7 +432,7 @@ export function GradeEntryGrid({
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/30 px-4 py-3">
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
+            <span className="hidden sm:inline-flex items-center gap-1.5">
               <Keyboard className="h-3.5 w-3.5" />
               Arrows / Enter / Tab move cells
             </span>

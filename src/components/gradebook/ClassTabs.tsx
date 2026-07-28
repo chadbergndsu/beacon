@@ -25,18 +25,18 @@ export function ClassTabs({ classId }: { classId: string }) {
       : 'grades'
 
   return (
-    <nav className="flex flex-wrap gap-2" aria-label="Class modules">
+    <nav className="mobile-scroll-x gap-2 sm:flex-wrap" aria-label="Class modules">
       {tabs.map((t) => (
         <Link
           key={t.id}
           href={t.href(classId)}
           className={cn(
-            'rounded-xl px-4 py-2.5 text-sm font-semibold transition-all border shadow-sm',
+            'shrink-0 rounded-xl border px-3.5 py-2.5 text-sm font-semibold shadow-sm transition-all sm:px-4',
             tab === t.id
               ? t.id === 'pulse'
-                ? 'bg-violet-600 text-white border-violet-600 shadow-violet-500/20'
-                : 'bg-primary text-primary-foreground border-primary shadow-sky-500/20'
-              : 'bg-card text-foreground border-border hover:border-sky-300 hover:bg-sky-50/50'
+                ? 'border-violet-600 bg-violet-600 text-white shadow-violet-500/20'
+                : 'border-primary bg-primary text-primary-foreground shadow-sky-500/20'
+              : 'border-border bg-card text-foreground hover:border-sky-300 hover:bg-sky-50/50'
           )}
         >
           {t.label}

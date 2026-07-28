@@ -14,16 +14,16 @@ export default async function LoginPage({
   const asPrincipal = params.as === 'principal'
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* Cinematic background */}
+    <div className="relative min-h-screen min-h-[100dvh] overflow-x-hidden">
+      {/* Cinematic background — constrained blurs so phones don't sideways-scroll */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#06101f] via-[#0b1f3a] to-[#0c4a6e]" />
-      <div className="absolute inset-0 opacity-40">
-        <div className="absolute -left-24 top-0 h-[28rem] w-[28rem] rounded-full bg-sky-500/25 blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-[32rem] w-[32rem] rounded-full bg-cyan-400/15 blur-3xl" />
-        <div className="absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 rounded-full bg-indigo-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-40">
+        <div className="mobile-safe-blur absolute -left-16 top-0 h-48 w-48 rounded-full bg-sky-500/25 blur-3xl sm:h-[28rem] sm:w-[28rem] sm:-left-24" />
+        <div className="mobile-safe-blur absolute bottom-0 right-0 h-56 w-56 rounded-full bg-cyan-400/15 blur-3xl sm:h-[32rem] sm:w-[32rem]" />
+        <div className="mobile-safe-blur absolute left-1/2 top-1/3 h-40 w-40 -translate-x-1/2 rounded-full bg-indigo-500/10 blur-3xl sm:h-64 sm:w-64" />
       </div>
       <div
-        className="absolute inset-0 opacity-[0.07]"
+        className="pointer-events-none absolute inset-0 opacity-[0.07]"
         style={{
           backgroundImage:
             'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
@@ -31,22 +31,22 @@ export default async function LoginPage({
         }}
       />
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-4 py-12 sm:px-6">
-        <div className="mb-10 text-center sm:text-left">
-          <Link href="/school" className="inline-flex items-center gap-2.5 group">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500 text-base font-black text-white shadow-xl shadow-sky-500/30 group-hover:scale-105 transition">
+      <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-6xl flex-col justify-center px-4 py-8 sm:px-6 sm:py-12">
+        <div className="mb-6 text-center sm:mb-10 sm:text-left">
+          <Link href="/school" className="inline-flex max-w-full items-center gap-2.5 group">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-500 text-base font-black text-white shadow-xl shadow-sky-500/30 transition group-hover:scale-105">
               B
             </span>
-            <div className="text-left">
+            <div className="min-w-0 text-left">
               <p className="text-lg font-bold tracking-tight text-white">Beacon</p>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/90">
-                School suite · Lighthouse Christian Academy
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/90">
+                School suite · LCA
               </p>
             </div>
           </Link>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
+        <div className="grid w-full max-w-lg gap-6 mx-auto lg:mx-0 lg:max-w-none lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
           {/* Brand panel */}
           <div className="hidden lg:flex flex-col justify-between rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-10 text-white backdrop-blur-md shadow-2xl">
             <div>
@@ -84,14 +84,14 @@ export default async function LoginPage({
           </div>
 
           {/* Auth card */}
-          <div className="space-y-4">
+          <div className="w-full min-w-0 space-y-4">
             {asPrincipal ? (
-              <div className="rounded-[1.75rem] border border-sky-400/20 bg-white p-8 shadow-2xl shadow-sky-900/20 dark:bg-slate-900">
+              <div className="rounded-2xl border border-sky-400/20 bg-white p-5 shadow-2xl shadow-sky-900/20 sm:rounded-[1.75rem] sm:p-8 dark:bg-slate-900">
                 <div className="mb-6 flex items-start gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-navy text-white">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-navy text-white">
                     <Shield className="h-5 w-5" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-600">
                       Principal access
                     </p>
@@ -114,7 +114,7 @@ export default async function LoginPage({
                 </p>
               </div>
             ) : (
-              <div className="rounded-[1.75rem] border border-white/60 bg-white/95 p-8 shadow-2xl shadow-slate-900/20 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+              <div className="rounded-2xl border border-white/60 bg-white/95 p-5 shadow-2xl shadow-slate-900/20 backdrop-blur sm:rounded-[1.75rem] sm:p-8 dark:border-slate-700 dark:bg-slate-900/95">
                 <div className="mb-6 text-center">
                   <h1 className="text-2xl font-bold tracking-tight text-navy dark:text-sky-50">
                     Sign in to Beacon

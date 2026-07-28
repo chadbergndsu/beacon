@@ -113,9 +113,26 @@ export default async function DashboardPage() {
 
   const canPost = ['admin', 'staff', 'teacher', 'principal'].includes(role)
   const isPrincipal = role === 'principal'
+  const showQuick = canPost
 
   return (
     <div className="space-y-8">
+      {showQuick && (
+        <Link
+          href="/teacher/quick"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-600 to-sky-600 px-4 py-3.5 text-white shadow-[var(--shadow-lift)] sm:hidden"
+        >
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-100">
+              On your phone
+            </p>
+            <p className="truncate font-bold">Teacher Quick Mode</p>
+            <p className="text-xs text-white/85">Attendance · scores · pulse</p>
+          </div>
+          <span className="shrink-0 rounded-xl bg-white/20 px-3 py-2 text-sm font-bold">Open →</span>
+        </Link>
+      )}
+
       {isPrincipal && (
         <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-navy via-slate-900 to-sky-900 px-5 py-5 text-white shadow-[var(--shadow-lift)]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-300">
@@ -166,6 +183,12 @@ export default async function DashboardPage() {
         </div>
         {canPost && (
           <div className="flex flex-wrap gap-2">
+            <Link
+              href="/teacher/quick"
+              className="hidden rounded-lg bg-emerald-600 text-white px-3 py-2 text-sm font-semibold sm:inline-flex"
+            >
+              Quick mode
+            </Link>
             <Link
               href="/announcements/new"
               className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold"
@@ -305,6 +328,12 @@ export default async function DashboardPage() {
             <section className="rounded-xl border border-sky-100 bg-sky-50 p-4 text-sm text-sky-950">
               <p className="font-semibold">Quick tips</p>
               <ul className="mt-2 space-y-1 text-sky-900/90 list-disc ml-4">
+                <li>
+                  <Link href="/teacher/quick" className="font-semibold underline">
+                    Quick mode
+                  </Link>{' '}
+                  on phone — attendance &amp; scores
+                </li>
                 <li>Classes · setup · transparent grades</li>
                 <li>Announcements &amp; family email</li>
                 <li>Principal office · tuition · QuickBooks</li>
