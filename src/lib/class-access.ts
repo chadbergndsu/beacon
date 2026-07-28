@@ -25,13 +25,8 @@ export async function requireClassManager(classId: string) {
     return { ok: false as const, error: 'Class not found.' }
   }
 
-  const allowed =
-    profile?.role === 'admin' ||
-    profile?.role === 'staff' ||
-    profile?.role === 'principal' ||
-    (profile?.role === 'teacher' && classRow.teacher_id === user.id)
-
-  if (!allowed) {
+  const { canEnterGrades } = await import('@/lib/roles')
+  if (!canEnterGrades(profile?.role, classRow.teacher_id, user.id)) {
     return { ok: false as const, error: 'You do not have permission to manage this class.' }
   }
 

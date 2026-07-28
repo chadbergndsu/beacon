@@ -3,6 +3,8 @@
 import { useActionState } from 'react'
 import { login, type AuthState } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 
 const initial: AuthState = {}
@@ -10,13 +12,11 @@ const initial: AuthState = {}
 export function LoginForm({
   nextPath = '/dashboard',
   defaultEmail = '',
-  defaultPassword = '',
   submitLabel = 'Sign in',
   variant = 'default',
 }: {
   nextPath?: string
   defaultEmail?: string
-  defaultPassword?: string
   submitLabel?: string
   variant?: 'default' | 'principal'
 }) {
@@ -27,53 +27,44 @@ export function LoginForm({
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="next" value={nextPath} />
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-muted-foreground mb-1">
-          Email
-        </label>
-        <input
+        <Label htmlFor="email">Email</Label>
+        <Input
           id="email"
           name="email"
           type="email"
           autoComplete="email"
           required
           defaultValue={defaultEmail}
-          className={cn(
-            'w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm',
-            'focus:outline-none focus:ring-2 focus:ring-ring',
-            isPrincipal && 'border-sky-200 bg-sky-50/50 dark:bg-sky-950/20'
-          )}
           placeholder="you@school.org"
+          className={cn(isPrincipal && 'border-sky-300/50 bg-white/95 dark:bg-slate-900')}
         />
       </div>
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-muted-foreground mb-1">
-          Password
-        </label>
-        <input
+        <Label htmlFor="password">Password</Label>
+        <Input
           id="password"
           name="password"
           type="password"
           autoComplete="current-password"
           required
-          defaultValue={defaultPassword}
-          className={cn(
-            'w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm',
-            'focus:outline-none focus:ring-2 focus:ring-ring',
-            isPrincipal && 'border-sky-200 bg-sky-50/50 dark:bg-sky-950/20'
-          )}
+          placeholder="••••••••"
+          className={cn(isPrincipal && 'border-sky-300/50 bg-white/95 dark:bg-slate-900')}
         />
       </div>
       {state?.error && (
-        <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl px-3 py-2">
+        <div
+          role="alert"
+          className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
+        >
           {state.error}
-        </p>
+        </div>
       )}
       <Button
         type="submit"
         disabled={pending}
         size="lg"
         variant={isPrincipal ? 'navy' : 'primary'}
-        className="w-full"
+        className="w-full shadow-lg shadow-sky-500/15"
       >
         {pending ? 'Signing in…' : submitLabel}
       </Button>

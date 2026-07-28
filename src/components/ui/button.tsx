@@ -5,13 +5,13 @@ type Size = 'sm' | 'md' | 'lg'
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-primary text-primary-foreground shadow-sm hover:bg-sky-700 dark:hover:bg-sky-400 focus-visible:ring-ring',
+    'bg-gradient-to-b from-sky-500 to-sky-600 text-white shadow-md shadow-sky-500/20 hover:from-sky-400 hover:to-sky-600 focus-visible:ring-ring',
   secondary:
     'bg-secondary text-secondary-foreground hover:bg-sky-100 dark:hover:bg-sky-900/40 focus-visible:ring-ring',
   outline:
-    'border border-border bg-card text-foreground hover:bg-muted/80 focus-visible:ring-ring',
+    'border border-border bg-card/90 text-foreground shadow-sm hover:bg-muted/80 hover:border-sky-300/60 focus-visible:ring-ring',
   ghost: 'text-foreground hover:bg-muted focus-visible:ring-ring',
-  navy: 'bg-navy text-navy-foreground hover:bg-slate-800 focus-visible:ring-sky-400',
+  navy: 'bg-gradient-to-b from-slate-800 to-navy text-navy-foreground shadow-md hover:from-slate-700 focus-visible:ring-sky-400',
   danger: 'bg-danger text-white hover:bg-red-700 focus-visible:ring-red-400',
 }
 

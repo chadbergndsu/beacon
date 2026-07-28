@@ -37,13 +37,8 @@ export async function saveGrades(
     .eq('id', user.id)
     .maybeSingle()
 
-  const allowed =
-    profile?.role === 'admin' ||
-    profile?.role === 'staff' ||
-    profile?.role === 'principal' ||
-    (profile?.role === 'teacher' && classRow.teacher_id === user.id)
-
-  if (!allowed) {
+  const { canEnterGrades } = await import('@/lib/roles')
+  if (!canEnterGrades(profile?.role, classRow.teacher_id, user.id)) {
     return { ok: false, error: 'You do not have permission to save grades for this class.' }
   }
 

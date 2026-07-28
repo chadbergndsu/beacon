@@ -195,7 +195,7 @@ export default async function DashboardPage() {
                     <li key={c.id}>
                       <Link
                         href={`/classes/${c.id}`}
-                        className="block rounded-xl border bg-background p-4 shadow-sm hover:border-sky-400 hover:shadow transition h-full"
+                        className="card-interactive block h-full rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]"
                       >
                         <p className="font-semibold">{c.name}</p>
                         <p className="text-sm text-muted-foreground mt-1">

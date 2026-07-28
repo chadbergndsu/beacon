@@ -28,13 +28,11 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  const allowed =
-    profile?.role === 'admin' ||
-    profile?.role === 'staff' ||
-    profile?.role === 'principal' ||
-    (profile?.role === 'teacher' && classRow.teacher_id === user.id)
-
-  if (!allowed) {
+  const { canEnterGrades, effectiveRole } = await import('@/lib/roles')
+  const role = effectiveRole(
+    profile as { role: 'admin' | 'teacher' | 'parent' | 'staff' | 'principal'; email: string | null } | null
+  )
+  if (!canEnterGrades(role, classRow.teacher_id, user.id)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
