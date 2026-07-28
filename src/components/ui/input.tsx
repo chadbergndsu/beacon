@@ -9,7 +9,8 @@ export function Input({
     <input
       type={type}
       className={cn(
-        'flex h-11 w-full rounded-xl border border-border bg-card px-3.5 py-2 text-sm text-foreground',
+        // text-base (16px) on phones — smaller than 16px triggers iOS zoom on focus
+        'flex h-11 w-full rounded-xl border border-border bg-card px-3.5 py-2 text-base sm:text-sm text-foreground',
         'shadow-sm transition-all duration-150',
         'placeholder:text-muted-foreground/70',
         'hover:border-sky-300/80',
