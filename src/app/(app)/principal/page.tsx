@@ -173,14 +173,26 @@ export default async function PrincipalOverviewPage() {
         <Card className="border-violet-200 bg-violet-50/50 dark:bg-violet-950/20 dark:border-violet-800">
           <CardContent className="pt-5 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="font-semibold text-navy dark:text-sky-50">Coffee break</p>
+              <p className="font-semibold text-navy dark:text-sky-50">Leadership tools</p>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Private Tetris — principal only. No teachers. No parents. No judgment.
+                Videos, whole-child Pulse board, and a private coffee-break game.
               </p>
             </div>
-            <Link href="/principal/break">
-              <Button size="md">Play Beacon Blocks</Button>
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/principal/videos">
+                <Button size="md">Video module</Button>
+              </Link>
+              <Link href="/principal/pulse">
+                <Button size="md" variant="outline">
+                  Pulse board
+                </Button>
+              </Link>
+              <Link href="/principal/break">
+                <Button size="md" variant="ghost">
+                  Tetris
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>

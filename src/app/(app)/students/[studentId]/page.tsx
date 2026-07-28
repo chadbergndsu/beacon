@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { TransparentGradeView } from '@/components/gradebook/TransparentGradeView'
+import { StudentPulseTimeline } from '@/components/pulse/StudentPulseTimeline'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateTransparentGrade } from '@/lib/grades'
 import { parentCanViewStudent } from '@/lib/gradebook-data'
+import { listPulsesForStudent } from '@/lib/school-modules/store'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
 export default async function StudentOverviewPage({
@@ -65,6 +67,10 @@ export default async function StudentOverviewPage({
   )
 
   const name = `${student.first_name} ${student.last_name}`
+  const pulses =
+    profile?.school_id || student.school_id
+      ? await listPulsesForStudent(profile?.school_id || student.school_id, studentId)
+      : []
 
   return (
     <div className="space-y-8">
@@ -78,9 +84,11 @@ export default async function StudentOverviewPage({
         </p>
         <h1 className="text-2xl font-bold tracking-tight mt-1">{name}</h1>
         <p className="text-sm text-muted-foreground">
-          {student.grade_level ? `Grade ${student.grade_level}` : 'Student'} · All classes
+          {student.grade_level ? `Grade ${student.grade_level}` : 'Student'} · Academics + Beacon Pulse
         </p>
       </div>
+
+      <StudentPulseTimeline pulses={pulses} studentName={name} />
 
       {sections.length === 0 ? (
         <p className="rounded-xl border p-4 text-sm text-muted-foreground">No class enrollments.</p>

@@ -18,7 +18,7 @@ export async function requireClassManager(classId: string) {
       .select('id, teacher_id, school_id, name')
       .eq('id', classId)
       .maybeSingle(),
-    admin.from('profiles').select('role, school_id').eq('id', user.id).maybeSingle(),
+    admin.from('profiles').select('role, school_id, full_name, email').eq('id', user.id).maybeSingle(),
   ])
 
   if (!classRow) {
