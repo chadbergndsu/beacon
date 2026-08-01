@@ -175,9 +175,9 @@ export default async function DashboardPage() {
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {role === 'parent'
-              ? 'Your family’s home in Beacon — announcements, grades, and class links.'
+              ? 'Your family’s home — Dinner Table Digest, grades, Pulse, and conference briefs.'
               : isPrincipal
-                ? 'School-wide hub for Lighthouse Christian Academy.'
+                ? 'School-wide hub — Beacon Signal climate, tuition, and academics.'
                 : 'Your home in the Beacon school suite.'}
           </p>
         </div>

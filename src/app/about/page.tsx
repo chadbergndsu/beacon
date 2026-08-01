@@ -110,11 +110,13 @@ export default function AboutPage() {
                   tuition, and QuickBooks — one Beacon, not five logins.
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
-                  <Badge variant="sky">Academics &amp; lesson plans</Badge>
+                  <Badge variant="sky">Transparent grades</Badge>
                   <Badge variant="sky">Beacon Pulse</Badge>
-                  <Badge variant="sky">Families &amp; comms</Badge>
-                  <Badge variant="sky">Principal videos</Badge>
-                  <Badge variant="sky">QuickBooks payments</Badge>
+                  <Badge variant="warning">Dinner Table Digest</Badge>
+                  <Badge variant="warning">Conference Brief</Badge>
+                  <Badge variant="warning">Beacon Signal</Badge>
+                  <Badge variant="sky">Teacher Quick Mode</Badge>
+                  <Badge variant="sky">QuickBooks tuition</Badge>
                   <Badge variant="sky">Built for Lighthouse</Badge>
                 </div>
               </div>

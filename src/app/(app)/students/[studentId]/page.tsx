@@ -2,11 +2,13 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { TransparentGradeView } from '@/components/gradebook/TransparentGradeView'
 import { StudentPulseTimeline } from '@/components/pulse/StudentPulseTimeline'
+import { DinnerTableCard } from '@/components/insights/DinnerTableCard'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateTransparentGrade } from '@/lib/grades'
 import { parentCanViewStudent } from '@/lib/gradebook-data'
 import { listPulsesForStudent } from '@/lib/school-modules/store'
+import { buildStudentDinnerAndConference } from '@/lib/insights/load-student-insights'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
 export default async function StudentOverviewPage({
@@ -72,6 +74,14 @@ export default async function StudentOverviewPage({
       ? await listPulsesForStudent(profile?.school_id || student.school_id, studentId)
       : []
 
+  const { dinner } = await buildStudentDinnerAndConference({
+    id: student.id,
+    school_id: student.school_id,
+    first_name: student.first_name,
+    last_name: student.last_name,
+    grade_level: student.grade_level,
+  })
+
   return (
     <div className="space-y-8">
       <div>
@@ -87,13 +97,23 @@ export default async function StudentOverviewPage({
           {student.grade_level ? `Grade ${student.grade_level}` : 'Student'} · Academics + Beacon
           Pulse
         </p>
-        <Link
-          href={`/students/${studentId}/report-card`}
-          className="mt-3 inline-flex rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-        >
-          Open report card →
-        </Link>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link
+            href={`/students/${studentId}/report-card`}
+            className="inline-flex rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            Report card →
+          </Link>
+          <Link
+            href={`/students/${studentId}/conference`}
+            className="inline-flex rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-900 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
+          >
+            Conference brief →
+          </Link>
+        </div>
       </div>
+
+      <DinnerTableCard digest={dinner} />
 
       <StudentPulseTimeline pulses={pulses} studentName={name} />
 

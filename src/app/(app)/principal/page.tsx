@@ -9,6 +9,8 @@ import {
 import { requirePrincipal } from '@/lib/principal'
 import { loadBillingState, formatMoney } from '@/lib/billing/store'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { loadSchoolBeaconSignal } from '@/lib/insights/load-beacon-signal'
+import { BeaconSignalCard } from '@/components/insights/BeaconSignalCard'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,7 +18,10 @@ import { Button } from '@/components/ui/button'
 export default async function PrincipalOverviewPage() {
   const { schoolId, profile } = await requirePrincipal()
   const admin = createAdminClient()
-  const billing = await loadBillingState(schoolId)
+  const [billing, signal] = await Promise.all([
+    loadBillingState(schoolId),
+    loadSchoolBeaconSignal(schoolId),
+  ])
 
   const [{ count: classCount }, { count: studentCount }, { data: announcements }] =
     await Promise.all([
@@ -48,6 +53,8 @@ export default async function PrincipalOverviewPage() {
 
   return (
     <div className="space-y-6">
+      <BeaconSignalCard signal={signal} />
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: 'Active classes', value: String(classCount ?? 0), icon: BookOpen },

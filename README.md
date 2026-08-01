@@ -11,8 +11,12 @@ Modern JupiterEd familiarity where it helps teachers, cleaner than Blackbaud whe
 | **Academics** | Grade entry, lesson plans, transparent parent views, CSV export, report cards |
 | **Attendance** | Daily roster with optional parent absent/tardy email |
 | **Beacon Pulse** | Whole-child check-ins (unique to Beacon) |
+| **Dinner Table Digest** | 60-second plain-English parent story + conversation starters (unique) |
+| **Conference Brief** | One-page PTC sheet from grades + pulse + attendance (unique) |
+| **Beacon Signal** | Principal school climate heart-rate + pastoral watch list (unique) |
 | **Families** | Announcements, parent feed, system email |
 | **Principal office** | Tuition, QuickBooks, videos, pulse board |
+| **Teacher Quick Mode** | Phone-first attendance / scores / pulse |
 | **Public** | Modern LCA school site at `/school` |
 
 ## Live
