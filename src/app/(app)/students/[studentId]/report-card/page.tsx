@@ -88,7 +88,7 @@ export default async function ReportCardPage({
 
   const report = buildReportCard({
     student: student as Student,
-    schoolName: school?.name || 'Lighthouse Christian Academy',
+    schoolName: school?.name || 'School',
     classBlocks,
     pulses,
     attendance,

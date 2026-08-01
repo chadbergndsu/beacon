@@ -4,16 +4,23 @@ import { canAccessEmailOutbox, isSchoolStaff, roleLabel } from '@/lib/roles'
 import type { Profile } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-export function AppHeader({ profile }: { profile: Profile | null }) {
+export function AppHeader({
+  profile,
+  schoolShortName = 'School',
+}: {
+  profile: Profile | null
+  schoolShortName?: string
+}) {
   const role = profile?.role ?? null
   const staff = canAccessEmailOutbox(role)
-  const isPrincipal = role === 'principal'
+  const isPrincipal = role === 'principal' || role === 'admin'
   const showQuick = isSchoolStaff(role)
 
   const nav = [
     { href: '/dashboard', label: 'Home' },
     ...(showQuick ? [{ href: '/teacher/quick', label: 'Quick mode', highlight: true }] : []),
     ...(isPrincipal ? [{ href: '/principal', label: 'Principal office' }] : []),
+    ...(isPrincipal ? [{ href: '/principal/release', label: 'Go-live' }] : []),
     { href: '/announcements', label: 'Announcements' },
     ...(staff ? [{ href: '/admin/emails', label: 'Emails' }] : []),
     { href: '/school', label: 'School site' },
@@ -31,7 +38,7 @@ export function AppHeader({ profile }: { profile: Profile | null }) {
             <div className="min-w-0">
               <p className="text-[15px] font-bold leading-none tracking-tight">Beacon</p>
               <p className="mt-0.5 hidden text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300/85 sm:mt-1 sm:block">
-                School suite · LCA
+                School suite · {schoolShortName}
               </p>
             </div>
           </Link>

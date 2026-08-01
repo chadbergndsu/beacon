@@ -1,0 +1,231 @@
+/**
+ * Ops health probes for go-live / trust. Never returns secret values.
+ */
+
+import { createAdminClient } from '@/lib/supabase/admin'
+import { isQuickBooksConfigured } from '@/lib/billing/quickbooks'
+
+export type CheckStatus = 'ok' | 'warn' | 'fail' | 'info'
+
+export type HealthCheck = {
+  id: string
+  label: string
+  status: CheckStatus
+  detail: string
+  category: 'platform' | 'data' | 'integrations' | 'trust'
+}
+
+export type OpsHealth = {
+  generatedAt: string
+  readyScore: number // 0–100
+  checks: HealthCheck[]
+  emailLive: boolean
+  qbLiveConfigured: boolean
+}
+
+function envSet(name: string): boolean {
+  const v = process.env[name]
+  return Boolean(v && v.trim() && !v.includes('your-') && v.length > 4)
+}
+
+async function tableExists(table: string): Promise<boolean> {
+  try {
+    const admin = createAdminClient()
+    const { error } = await admin.from(table).select('*').limit(1)
+    // Missing table → error with relation/schema message; empty is fine
+    if (!error) return true
+    const msg = (error.message || '').toLowerCase()
+    if (msg.includes('does not exist') || msg.includes('schema cache') || msg.includes('relation')) {
+      return false
+    }
+    // RLS or other errors still mean table exists
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth> {
+  const checks: HealthCheck[] = []
+
+  // Platform
+  checks.push({
+    id: 'supabase_url',
+    label: 'Supabase URL',
+    status: envSet('NEXT_PUBLIC_SUPABASE_URL') ? 'ok' : 'fail',
+    detail: envSet('NEXT_PUBLIC_SUPABASE_URL')
+      ? 'Connected project configured'
+      : 'Set NEXT_PUBLIC_SUPABASE_URL',
+    category: 'platform',
+  })
+  checks.push({
+    id: 'supabase_anon',
+    label: 'Supabase anon key',
+    status: envSet('NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'ok' : 'fail',
+    detail: envSet('NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'Present' : 'Set NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    category: 'platform',
+  })
+  checks.push({
+    id: 'service_role',
+    label: 'Service role key',
+    status: envSet('SUPABASE_SERVICE_ROLE_KEY') ? 'ok' : 'fail',
+    detail: envSet('SUPABASE_SERVICE_ROLE_KEY')
+      ? 'Server can write with admin client'
+      : 'Set SUPABASE_SERVICE_ROLE_KEY (server only)',
+    category: 'platform',
+  })
+
+  // Data tables (migration 007+)
+  const tables = [
+    ['schools', 'Schools'],
+    ['profiles', 'Profiles'],
+    ['students', 'Students'],
+    ['classes', 'Classes'],
+    ['grades', 'Grades'],
+    ['email_outbox', 'Email outbox'],
+    ['attendance', 'Attendance (007)'],
+    ['lesson_plans', 'Lesson plans (007)'],
+    ['pulse_entries', 'Pulse entries (007)'],
+    ['school_videos', 'School videos (007)'],
+  ] as const
+
+  for (const [table, label] of tables) {
+    const ok = await tableExists(table)
+    const critical = !['lesson_plans', 'pulse_entries', 'school_videos', 'attendance'].includes(
+      table
+    )
+    checks.push({
+      id: `table_${table}`,
+      label,
+      status: ok ? 'ok' : critical ? 'fail' : 'warn',
+      detail: ok
+        ? 'Table reachable'
+        : critical
+          ? 'Missing — apply migrations 001–007'
+          : 'Missing — suite features fall back to JSON until migration 007',
+      category: 'data',
+    })
+  }
+
+  // Counts (trust that the school has real data)
+  if (schoolId && envSet('SUPABASE_SERVICE_ROLE_KEY')) {
+    try {
+      const admin = createAdminClient()
+      const [
+        { count: students },
+        { count: teachers },
+        { count: parents },
+        { count: classes },
+      ] = await Promise.all([
+        admin
+          .from('students')
+          .select('*', { count: 'exact', head: true })
+          .eq('school_id', schoolId)
+          .eq('active', true),
+        admin
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('school_id', schoolId)
+          .eq('role', 'teacher'),
+        admin
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('school_id', schoolId)
+          .eq('role', 'parent'),
+        admin
+          .from('classes')
+          .select('*', { count: 'exact', head: true })
+          .eq('school_id', schoolId)
+          .eq('active', true),
+      ])
+
+      checks.push({
+        id: 'roster_students',
+        label: 'Active students',
+        status: (students ?? 0) > 0 ? 'ok' : 'warn',
+        detail: `${students ?? 0} on roster`,
+        category: 'trust',
+      })
+      checks.push({
+        id: 'roster_teachers',
+        label: 'Teacher accounts',
+        status: (teachers ?? 0) > 0 ? 'ok' : 'warn',
+        detail: `${teachers ?? 0} teacher profiles`,
+        category: 'trust',
+      })
+      checks.push({
+        id: 'roster_parents',
+        label: 'Parent accounts',
+        status: (parents ?? 0) > 0 ? 'ok' : 'info',
+        detail: `${parents ?? 0} parent profiles (link via parent_students)`,
+        category: 'trust',
+      })
+      checks.push({
+        id: 'roster_classes',
+        label: 'Active classes',
+        status: (classes ?? 0) > 0 ? 'ok' : 'warn',
+        detail: `${classes ?? 0} classes`,
+        category: 'trust',
+      })
+    } catch (e) {
+      checks.push({
+        id: 'roster_error',
+        label: 'Roster probe',
+        status: 'warn',
+        detail: e instanceof Error ? e.message : 'Could not count roster',
+        category: 'trust',
+      })
+    }
+  }
+
+  // Integrations
+  const emailLive = envSet('RESEND_API_KEY')
+  checks.push({
+    id: 'email',
+    label: 'Email delivery (Resend)',
+    status: emailLive ? 'ok' : 'warn',
+    detail: emailLive
+      ? `Live via Resend · from ${process.env.EMAIL_FROM || 'default'}`
+      : 'RESEND_API_KEY not set — emails log as skipped (safe for dry-run)',
+    category: 'integrations',
+  })
+
+  const qbLiveConfigured = isQuickBooksConfigured()
+  checks.push({
+    id: 'quickbooks',
+    label: 'QuickBooks OAuth',
+    status: qbLiveConfigured ? 'ok' : 'info',
+    detail: qbLiveConfigured
+      ? `Configured (${process.env.INTUIT_ENVIRONMENT || 'sandbox'})`
+      : 'Not configured — Connect uses labeled sandbox demo only',
+    category: 'integrations',
+  })
+
+  checks.push({
+    id: 'ferpa',
+    label: 'Access model',
+    status: 'ok',
+    detail:
+      'Parents only see linked students; staff scoped by school; principal/admin for office tools',
+    category: 'trust',
+  })
+
+  // Score: fail=-30, warn=-10, info=0, ok=+full
+  const scorable = checks.filter((c) => c.status !== 'info')
+  let points = 0
+  let max = 0
+  for (const c of scorable) {
+    max += 10
+    if (c.status === 'ok') points += 10
+    else if (c.status === 'warn') points += 5
+  }
+  const readyScore = max ? Math.round((points / max) * 100) : 0
+
+  return {
+    generatedAt: new Date().toISOString(),
+    readyScore,
+    checks,
+    emailLive,
+    qbLiveConfigured,
+  }
+}

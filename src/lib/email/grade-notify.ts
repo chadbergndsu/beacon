@@ -84,7 +84,6 @@ export async function notifyParentsOfGradeSave(opts: {
         'Open Beacon to see the full transparent breakdown.',
         '',
         '— Beacon system notice',
-        'Lighthouse Christian Academy',
       ].join('\n')
 
       const r = await queueAndSendEmail({

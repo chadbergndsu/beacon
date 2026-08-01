@@ -55,8 +55,8 @@ export async function startQuickBooksConnect(): Promise<
     await updateQuickBooks(schoolId, {
       status: 'connected',
       environment: 'sandbox',
-      realmId: 'demo-realm-lighthouse',
-      companyName: 'Lighthouse Christian Academy (Sandbox)',
+      realmId: 'demo-realm-sandbox',
+      companyName: 'Sandbox Demo Company (not live QuickBooks)',
       connectedAt: new Date().toISOString(),
       lastSyncAt: new Date().toISOString(),
       lastError: null,

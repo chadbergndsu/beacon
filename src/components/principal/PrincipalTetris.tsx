@@ -376,7 +376,7 @@ export function PrincipalTetris() {
                 {paused && !gameOver && <p className="text-lg font-bold">Paused</p>}
                 {!playing && !gameOver && (
                   <>
-                    <p className="text-lg font-bold">Ready, Chris?</p>
+                    <p className="text-lg font-bold">Ready for a break?</p>
                     <p className="text-xs text-slate-400 mt-1">A tiny break between decisions</p>
                   </>
                 )}

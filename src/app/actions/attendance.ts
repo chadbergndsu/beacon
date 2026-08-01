@@ -90,7 +90,6 @@ export async function saveAttendance(
             row.note ? `Note: ${row.note}` : '',
             '',
             '— Beacon school suite',
-            'Lighthouse Christian Academy',
           ]
             .filter(Boolean)
             .join('\n'),

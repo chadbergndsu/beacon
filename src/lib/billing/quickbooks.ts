@@ -34,6 +34,10 @@ export function getQuickBooksConfig() {
   }
 }
 
+export function isQuickBooksConfigured(): boolean {
+  return getQuickBooksConfig().configured
+}
+
 /** Build Intuit OAuth authorize URL for principal Connect flow. */
 export function buildQuickBooksAuthorizeUrl(state: string) {
   const cfg = getQuickBooksConfig()

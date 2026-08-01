@@ -1,17 +1,28 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import {
   canEnterGrades,
+  demoPrincipalEmail,
   effectiveRole,
   homePathForRole,
   isLeadership,
-  PRINCIPAL_EMAIL,
 } from './roles'
 
 describe('effectiveRole', () => {
-  it('elevates principal email', () => {
-    expect(
-      effectiveRole({ role: 'admin', email: PRINCIPAL_EMAIL })
-    ).toBe('principal')
+  afterEach(() => {
+    delete process.env.BEACON_PRINCIPAL_EMAIL
+    delete process.env.BEACON_DEMO_PRINCIPAL_EMAIL
+  })
+
+  it('uses profile role by default', () => {
+    expect(effectiveRole({ role: 'principal', email: 'p@school.org' })).toBe('principal')
+    expect(effectiveRole({ role: 'teacher', email: 't@school.org' })).toBe('teacher')
+  })
+
+  it('elevates configured principal email when env set', () => {
+    process.env.BEACON_PRINCIPAL_EMAIL = 'head@school.org'
+    expect(demoPrincipalEmail()).toBe('head@school.org')
+    expect(effectiveRole({ role: 'admin', email: 'head@school.org' })).toBe('principal')
+    expect(effectiveRole({ role: 'admin', email: 'other@school.org' })).toBe('admin')
   })
 })
 

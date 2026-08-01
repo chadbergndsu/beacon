@@ -11,7 +11,7 @@ export default async function PrincipalBillingPage() {
       <div>
         <h2 className="text-xl font-bold text-navy dark:text-sky-50">Tuition products</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Fee catalog for Lighthouse. These map to QuickBooks items when connected.
+          Fee catalog for your school. These map to QuickBooks items when connected.
         </p>
       </div>
       <BillingProductsForm products={state.products} />

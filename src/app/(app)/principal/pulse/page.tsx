@@ -42,7 +42,7 @@ export default async function PrincipalPulsePage() {
         </div>
         <h2 className="mt-1 text-xl font-bold text-navy dark:text-sky-50">Beacon Pulse board</h2>
         <p className="mt-1 text-sm text-muted-foreground max-w-2xl">
-          Whole-child signals across LCA — not a grade spreadsheet. See who is thriving and who
+          Whole-child signals across your school — not a grade spreadsheet. See who is thriving and who
           needs pastoral or academic care this week.
         </p>
       </div>

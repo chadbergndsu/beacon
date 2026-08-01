@@ -1,6 +1,5 @@
--- Beacon by Lighthouse Christian Academy
+-- Beacon school suite
 -- Initial schema - multi-tenant, secure, adjustable grades
--- Ready for GrokBuild
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";

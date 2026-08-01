@@ -22,27 +22,39 @@ export default async function EmailOutboxPage() {
         <p className="text-sm text-muted-foreground mt-1">
           Every announcement/system email is recorded here. Delivery uses{' '}
           <code className="text-xs bg-muted px-1 rounded">RESEND_API_KEY</code> when set; otherwise
-          messages are logged as <strong>skipped</strong> (safe for demo).
+          messages are logged as <strong>skipped</strong> (safe dry-run — no accidental parent spam).
         </p>
       </div>
 
-      <div className="rounded-xl border border-sky-200 bg-sky-50 text-sky-950 p-4 text-sm space-y-1">
-        <p className="font-semibold">How real email works</p>
-        <ol className="list-decimal ml-5 space-y-1">
+      <div
+        className={
+          process.env.RESEND_API_KEY
+            ? 'rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-950 p-4 text-sm'
+            : 'rounded-xl border border-amber-200 bg-amber-50 text-amber-950 p-4 text-sm'
+        }
+      >
+        <p className="font-semibold">
+          Mode:{' '}
+          {process.env.RESEND_API_KEY ? 'Live delivery (Resend)' : 'Log-only (not delivered)'}
+        </p>
+        <ol className="list-decimal ml-5 space-y-1 mt-2">
           <li>
-            Create a free account at{' '}
+            Create an account at{' '}
             <a className="underline" href="https://resend.com" target="_blank" rel="noreferrer">
               resend.com
-            </a>
+            </a>{' '}
+            and verify your school domain
           </li>
           <li>
-            Add to <code className="text-xs">.env.local</code>:{' '}
+            Set on Vercel / <code className="text-xs">.env.local</code>:{' '}
             <code className="text-xs">RESEND_API_KEY=re_...</code>
           </li>
           <li>
-            Optional: <code className="text-xs">EMAIL_FROM=Beacon &lt;you@yourdomain.com&gt;</code>
+            Set <code className="text-xs">EMAIL_FROM=Beacon &lt;office@yourschool.org&gt;</code>
           </li>
-          <li>Restart <code className="text-xs">npm run dev</code></li>
+          <li>
+            Confirm on <a className="underline font-medium" href="/principal/release">Go-live</a>
+          </li>
         </ol>
       </div>
 

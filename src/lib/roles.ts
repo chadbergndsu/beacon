@@ -1,13 +1,24 @@
 import type { Profile, Role } from '@/lib/types'
 
-/** Demo principal account — always treated as principal in the app. */
-export const PRINCIPAL_EMAIL = 'principal@lighthouse.test'
+/**
+ * Optional principal email elevation via env (for a seed account).
+ * Do not hardcode any one school’s principal.
+ *
+ *   BEACON_PRINCIPAL_EMAIL=principal@yourschool.org
+ */
+export function demoPrincipalEmail(): string | null {
+  const v =
+    process.env.BEACON_PRINCIPAL_EMAIL?.trim() ||
+    process.env.BEACON_DEMO_PRINCIPAL_EMAIL?.trim()
+  return v ? v.toLowerCase() : null
+}
 
 export function effectiveRole(
   profile: Pick<Profile, 'role' | 'email'> | null | undefined
 ): Role | null {
   if (!profile) return null
-  if (profile.email?.toLowerCase() === PRINCIPAL_EMAIL) return 'principal'
+  const demo = demoPrincipalEmail()
+  if (demo && profile.email?.toLowerCase() === demo) return 'principal'
   return profile.role
 }
 

@@ -139,11 +139,12 @@ export default async function DashboardPage() {
             Principal access
           </p>
           <h2 className="mt-1 text-xl font-bold tracking-tight">
-            Welcome, Chris — this login is just for you
+            Welcome{profile.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''} — leadership
+            workspace
           </h2>
           <p className="mt-2 text-sm text-slate-300 max-w-2xl leading-relaxed">
-            Full Beacon suite: academics, families, communications, tuition, and QuickBooks.
-            Built under your direction for Lighthouse.
+            Full Beacon suite for your school: academics, families, communications, tuition, and
+            QuickBooks. Use Go-live to finish ops and trust before wider rollout.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
@@ -153,16 +154,16 @@ export default async function DashboardPage() {
               Open principal office
             </Link>
             <Link
+              href="/principal/release"
+              className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-400"
+            >
+              Go-live checklist
+            </Link>
+            <Link
               href="/principal/payments"
               className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/15"
             >
               Payments & QuickBooks
-            </Link>
-            <Link
-              href="/about"
-              className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/15"
-            >
-              About Beacon
             </Link>
           </div>
         </div>
@@ -177,7 +178,7 @@ export default async function DashboardPage() {
             {role === 'parent'
               ? 'Your family’s home — Dinner Table Digest, grades, Pulse, and conference briefs.'
               : isPrincipal
-                ? 'School-wide hub — Beacon Signal climate, tuition, and academics.'
+                ? 'School-wide hub — Beacon Signal, tuition, go-live, and academics.'
                 : 'Your home in the Beacon school suite.'}
           </p>
         </div>

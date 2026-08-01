@@ -2,7 +2,7 @@
  * Beacon Signal — unique to Beacon.
  *
  * Enterprise SIS tools bury climate in 40-column analytics.
- * Small Christian academies need one honest "heart rate" for the building:
+ * Schools need one honest "heart rate" for the building:
  * pulse care load + attendance friction + missing-work pressure.
  */
 

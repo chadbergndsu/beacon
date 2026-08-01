@@ -1,9 +1,12 @@
 import Link from 'next/link'
-import { Heart, School, Sparkles, Umbrella } from 'lucide-react'
+import { Heart, School, Shield, Sparkles } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { loadSchoolBrand } from '@/lib/school-brand'
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const brand = await loadSchoolBrand(null)
+
   return (
     <div className="min-h-screen beacon-shell">
       <header className="border-b border-border/80 bg-navy text-navy-foreground">
@@ -29,12 +32,12 @@ export default function AboutPage() {
             About Beacon
           </p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-navy dark:text-sky-50">
-            Beacon is the full school suite — under the direction of Chris Cowan
+            The full school suite — for any school
           </h1>
           <p className="mt-3 text-muted-foreground leading-relaxed">
-            Not “just another gradebook.” Beacon is the operating system for Lighthouse: academics,
-            family communications, principal operations, and tuition payments — Jupiter-familiar where
-            teachers need speed, cleaner than Blackbaud where families need clarity.
+            Not “just another gradebook.” Beacon is the operating system for schools: academics,
+            family communications, principal operations, and tuition payments — Jupiter-familiar
+            where teachers need speed, cleaner than Blackbaud where families need clarity.
           </p>
         </div>
 
@@ -47,7 +50,7 @@ export default function AboutPage() {
               <div>
                 <p className="font-bold text-lg leading-tight">Beacon</p>
                 <p className="text-xs text-sky-200/90 mt-0.5">
-                  Lighthouse Christian Academy · Full school suite
+                  Multi-school ready · Currently serving {brand.name}
                 </p>
               </div>
             </div>
@@ -58,12 +61,10 @@ export default function AboutPage() {
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-semibold text-navy dark:text-sky-50">Leadership</h2>
+                <h2 className="font-semibold text-navy dark:text-sky-50">What makes it different</h2>
                 <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                  This suite was built under the direction of{' '}
-                  <strong className="text-foreground">Chris Cowan</strong> — vision and priorities
-                  for a single platform: transparent academics, clear family comms, and a real
-                  principal office with payments.
+                  Dinner Table Digest, Conference Brief, Beacon Pulse, and Beacon Signal — products
+                  parents and principals actually use, not another portal of tables.
                 </p>
               </div>
             </div>
@@ -73,26 +74,24 @@ export default function AboutPage() {
                 <School className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-semibold text-navy dark:text-sky-50">Where the profit goes</h2>
+                <h2 className="font-semibold text-navy dark:text-sky-50">Your school’s brand</h2>
                 <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                  All profit from Beacon is used to help fund{' '}
-                  <strong className="text-foreground">LBC teacher salaries</strong> and{' '}
-                  <strong className="text-foreground">student tuition</strong> — so the platform
-                  serves the school long after the first demo.
+                  School name, mission, contact, and website come from your school record — so Beacon
+                  looks like <strong className="text-foreground">{brand.name}</strong>, not a demo
+                  for someone else.
                 </p>
               </div>
             </div>
 
             <div className="flex gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                <Umbrella className="h-5 w-5" />
+                <Shield className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-semibold text-navy dark:text-sky-50">And yes — Chris</h2>
+                <h2 className="font-semibold text-navy dark:text-sky-50">Trust & access</h2>
                 <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                  A small portion is also set aside for{' '}
-                  <strong className="text-foreground">small vacations for Chris</strong>. Leadership
-                  is hard. Occasional rest is part of stewardship. (We&apos;re not sorry.)
+                  Parents only see linked students. Staff are scoped by school. Email and QuickBooks
+                  modes are labeled (live vs log-only / sandbox) so leadership never ships a surprise.
                 </p>
               </div>
             </div>
@@ -117,7 +116,7 @@ export default function AboutPage() {
                   <Badge variant="warning">Beacon Signal</Badge>
                   <Badge variant="sky">Teacher Quick Mode</Badge>
                   <Badge variant="sky">QuickBooks tuition</Badge>
-                  <Badge variant="sky">Built for Lighthouse</Badge>
+                  <Badge variant="sky">Any school</Badge>
                 </div>
               </div>
             </div>
@@ -126,16 +125,8 @@ export default function AboutPage() {
 
         <p className="text-center text-sm flex flex-wrap justify-center gap-4">
           <Link href="/school" className="font-semibold text-sky-700 hover:underline">
-            LCA school site
+            {brand.shortName} school site
           </Link>
-          <a
-            href="https://lcadawsonville.com"
-            target="_blank"
-            rel="noreferrer"
-            className="font-semibold text-sky-700 hover:underline"
-          >
-            Official lcadawsonville.com
-          </a>
           <Link href="/login" className="font-semibold text-sky-700 hover:underline">
             Sign in to Beacon →
           </Link>

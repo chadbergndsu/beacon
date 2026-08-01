@@ -1,8 +1,8 @@
 # Beacon
 
-**The full school suite for Lighthouse Christian Academy** — academics, family communications, principal operations, and payments.
+**The full school suite for any school** — academics, family communications, principal operations, and payments.
 
-Modern JupiterEd familiarity where it helps teachers, cleaner than Blackbaud where it matters, and transparent grades parents can actually understand. Built under the direction of Chris Cowan.
+Multi-tenant by design: each `schools` row carries its own name, branding, roster, and settings. JupiterEd familiarity where it helps teachers, cleaner than Blackbaud where families need clarity.
 
 ## Modules
 
@@ -15,17 +15,17 @@ Modern JupiterEd familiarity where it helps teachers, cleaner than Blackbaud whe
 | **Conference Brief** | One-page PTC sheet from grades + pulse + attendance (unique) |
 | **Beacon Signal** | Principal school climate heart-rate + pastoral watch list (unique) |
 | **Families** | Announcements, parent feed, system email |
-| **Principal office** | Tuition, QuickBooks, videos, pulse board |
+| **Principal office** | Tuition, QuickBooks, videos, pulse board, **Go-live** ops |
 | **Teacher Quick Mode** | Phone-first attendance / scores / pulse |
-| **Public** | Modern LCA school site at `/school` |
+| **Public** | School marketing site at `/school` (driven by school branding) |
 
 ## Live
 
 **Production:** https://beacon-beta-lemon.vercel.app  
 **School site:** https://beacon-beta-lemon.vercel.app/school  
-**Official LCA site:** https://lcadawsonville.com  
+**Go-live (principal):** https://beacon-beta-lemon.vercel.app/principal/release  
 
-Demo accounts are issued privately (not listed in this public README). Contact the Beacon operator for principal / teacher / parent demo credentials.
+Demo accounts are issued privately. Set school branding in **Principal → Go-live**.
 
 ## Local setup
 
@@ -39,29 +39,51 @@ npm run dev
 ### Quality automation
 
 ```bash
-npm test          # unit tests (grade engine, roles, redirects, report cards)
+npm test
 npm run lint
 npm run build
 npm run ci        # lint + test + build
 ```
 
-GitHub Actions runs `lint`, `test`, and `build` on every push to `main`.
+### Database migrations
 
-### Database
-
-Apply SQL migrations in `supabase/migrations/` **in order** via the Supabase SQL Editor.
-
-Optional CLI (requires DB password):
+Apply SQL in `supabase/migrations/` **in order** (Supabase SQL Editor), or:
 
 ```bash
-POSTGRES_PASSWORD='…' node scripts/apply-migration-007.mjs
+DATABASE_URL='postgresql://…' node scripts/apply-migrations.mjs
+# or
+POSTGRES_PASSWORD='…' node scripts/apply-migrations.mjs
 ```
 
-Migration `007_suite_hardening.sql` adds attendance, lesson_plans, pulse_entries, and school_videos tables with non-recursive RLS helpers. App stores **fall back to `schools.settings` JSON** if tables are not applied yet.
+Migration `007` adds attendance, lesson_plans, pulse_entries, and school_videos. App stores fall back to `schools.settings` JSON if those tables are not applied yet.
 
-### QuickBooks / email (optional)
+### Branding any school
 
-See `.env.example` for `INTUIT_*` and `RESEND_*` variables.
+1. Sign in as principal/admin  
+2. Open **Principal → Go-live**  
+3. Save school name, short name, mission, website, contact  
+4. Public `/school`, login, headers, and emails use that brand  
+
+Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user to principal when needed for seed accounts.
+
+### Email & QuickBooks
+
+| Mode | Behavior |
+|------|----------|
+| No `RESEND_API_KEY` | Emails **log-only** (outbox status `skipped`) — safe for dry-run |
+| Resend configured | Live delivery; verify domain in Resend |
+| No Intuit keys | QuickBooks **Connect** activates a **labeled sandbox demo** only |
+| Intuit OAuth set | Live sandbox/production per `INTUIT_ENVIRONMENT` |
+
+Leadership sees a trust banner until email + QB are production-ready. Details on **Go-live**.
+
+## Security / trust
+
+- Parents only access students linked in `parent_students`
+- Staff scoped by `school_id`
+- Principal office requires principal or admin role
+- Service role used only after `getUser()` session check
+- No hard-coded single-school principal identity
 
 ## Repo
 

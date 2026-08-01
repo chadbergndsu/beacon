@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Beacon · School Suite · Lighthouse Christian Academy',
+  title: 'Beacon · School Suite',
   description:
-    'Beacon — the full school suite for Lighthouse Christian Academy: academics, families, communications, payments, and principal operations.',
+    'Beacon — the full school suite for any school: academics, families, communications, payments, and principal operations.',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

@@ -103,7 +103,13 @@ export async function createAnnouncement(input: {
       emailNote =
         'No matching parent/staff emails found. Link parent profiles with emails, or choose Staff audience.'
     } else {
-      const schoolName = 'Lighthouse Christian Academy'
+      const admin = createAdminClient()
+      const { data: schoolRow } = await admin
+        .from('schools')
+        .select('name')
+        .eq('id', access.profile.school_id!)
+        .maybeSingle()
+      const schoolName = schoolRow?.name || 'Your school'
       const author = access.profile.full_name || 'Beacon'
       const text = [
         title,
@@ -113,7 +119,7 @@ export async function createAnnouncement(input: {
         `— ${author}`,
         schoolName,
         '',
-        'Sent by Beacon · Lighthouse Christian Academy.',
+        `Sent by Beacon · ${schoolName}.`,
       ].join('\n')
 
       const html = `
@@ -188,7 +194,7 @@ export async function sendSystemEmail(input: {
     to_email: to,
     to_name: input.to_name || null,
     subject: `[Beacon] ${subject}`,
-    body_text: `${body}\n\n— Beacon system message\nLighthouse Christian Academy`,
+    body_text: `${body}\n\n— Beacon system message`,
     body_html: `<div style="font-family:system-ui,sans-serif"><p>${escapeHtml(body).replace(/\n/g, '<br/>')}</p><p style="color:#64748b;font-size:13px">— Beacon system</p></div>`,
     related_table: null,
     related_id: null,

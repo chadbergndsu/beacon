@@ -1,13 +1,12 @@
 import Link from 'next/link'
 import { ExternalLink, Shield } from 'lucide-react'
 import { LoginForm } from '@/components/auth/LoginForm'
-import { PRINCIPAL_EMAIL } from '@/lib/roles'
+import { demoPrincipalEmail } from '@/lib/roles'
 import { safeInternalPath } from '@/lib/safe-redirect'
+import { loadSchoolBrand } from '@/lib/school-brand'
 
 /**
- * Critical CSS keeps the login usable even if the Tailwind chunk fails
- * (stale deploy cache, Reader mode quirks, partial network). Never dump
- * as bare browser-default blue links again.
+ * Critical CSS keeps the login usable even if the Tailwind chunk fails.
  */
 const LOGIN_CRITICAL_CSS = `
   .login-shell {
@@ -81,9 +80,7 @@ const LOGIN_CRITICAL_CSS = `
       align-items: stretch;
     }
   }
-  .login-story {
-    display: none;
-  }
+  .login-story { display: none; }
   @media (min-width: 1024px) {
     .login-story {
       display: flex;
@@ -157,10 +154,7 @@ const LOGIN_CRITICAL_CSS = `
     padding: 1.35rem 1.25rem 1.5rem;
   }
   @media (min-width: 640px) {
-    .login-card {
-      border-radius: 1.5rem;
-      padding: 2rem;
-    }
+    .login-card { border-radius: 1.5rem; padding: 2rem; }
   }
   .login-card h1 {
     margin: 0;
@@ -177,11 +171,7 @@ const LOGIN_CRITICAL_CSS = `
     font-size: 0.875rem;
     color: #5b6b7c;
   }
-  .login-card form {
-    margin-top: 1.35rem;
-    display: grid;
-    gap: 1rem;
-  }
+  .login-card form { margin-top: 1.35rem; display: grid; gap: 1rem; }
   .login-card label {
     display: block;
     margin-bottom: 0.4rem;
@@ -199,7 +189,7 @@ const LOGIN_CRITICAL_CSS = `
     border: 1px solid #e2e8f0;
     background: #fff;
     padding: 0.65rem 0.9rem;
-    font-size: 16px; /* prevents iOS zoom on focus */
+    font-size: 16px;
     color: #0b1220;
   }
   .login-card button[type="submit"] {
@@ -251,10 +241,7 @@ const LOGIN_CRITICAL_CSS = `
     font-size: 0.75rem;
     color: #5b6b7c;
   }
-  .login-footer a {
-    font-weight: 600;
-    color: #0369a1;
-  }
+  .login-footer a { font-weight: 600; color: #0369a1; }
   .login-principal-card {
     width: 100%;
     border-radius: 1.25rem;
@@ -265,10 +252,7 @@ const LOGIN_CRITICAL_CSS = `
     padding: 1.35rem 1.25rem 1.5rem;
   }
   @media (min-width: 640px) {
-    .login-principal-card {
-      border-radius: 1.5rem;
-      padding: 2rem;
-    }
+    .login-principal-card { border-radius: 1.5rem; padding: 2rem; }
   }
   .login-principal-head {
     display: flex;
@@ -325,12 +309,13 @@ export default async function LoginPage({
   const params = await searchParams
   const nextPath = safeInternalPath(params.next, '/dashboard')
   const asPrincipal = params.as === 'principal'
+  const brand = await loadSchoolBrand(null)
+  const principalEmail = demoPrincipalEmail() || ''
 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: LOGIN_CRITICAL_CSS }} />
       <div className="login-shell relative overflow-x-hidden">
-        {/* Soft decorative glows — clipped so phones never sideways-scroll */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 overflow-hidden opacity-50"
@@ -341,16 +326,15 @@ export default async function LoginPage({
 
         <div className="relative z-10 w-full">
           <Link href="/school" className="login-brand group">
-            <span className="login-mark transition group-hover:scale-105">B</span>
+            <span className="login-mark transition group-hover:scale-105">{brand.logoLetter}</span>
             <span>
               <p className="login-brand-title">Beacon</p>
-              <p className="login-brand-sub">School suite · LCA</p>
+              <p className="login-brand-sub">School suite · {brand.shortName}</p>
             </span>
           </Link>
 
           <div className="login-layout">
-            {/* Desktop-only story panel — never dumps on phones */}
-            <aside className="login-story" aria-hidden={asPrincipal ? undefined : undefined}>
+            <aside className="login-story">
               <div>
                 <p className="login-story-kicker">One platform</p>
                 <h1>
@@ -359,9 +343,9 @@ export default async function LoginPage({
                   Operations. Clarity.
                 </h1>
                 <p>
-                  Beacon is LCA&apos;s full school suite — transparent grades, family
-                  communication, principal office, and QuickBooks-ready tuition. Built for
-                  Lighthouse under Chris Cowan&apos;s direction.
+                  Beacon is the full school suite for <strong>{brand.name}</strong> — transparent
+                  grades, family communication, principal office, and QuickBooks-ready tuition.
+                  Built for any school that wants one clear system.
                 </p>
               </div>
               <div className="login-story-grid">
@@ -387,13 +371,13 @@ export default async function LoginPage({
                     </div>
                     <div className="min-w-0">
                       <p className="kicker">Principal access</p>
-                      <h2>Chris Cowan</h2>
-                      <p>Dedicated principal workspace for the full Beacon suite.</p>
+                      <h2>School leadership</h2>
+                      <p>Dedicated principal workspace for {brand.name}.</p>
                     </div>
                   </div>
                   <LoginForm
                     nextPath={nextPath === '/dashboard' ? '/principal' : nextPath}
-                    defaultEmail={PRINCIPAL_EMAIL}
+                    defaultEmail={principalEmail}
                     submitLabel="Enter principal office"
                     variant="principal"
                   />
@@ -404,27 +388,33 @@ export default async function LoginPage({
               ) : (
                 <div className="login-card">
                   <h1>Sign in to Beacon</h1>
-                  <p className="login-card-sub">Teachers, staff, parents &amp; leadership</p>
+                  <p className="login-card-sub">
+                    Teachers, staff, parents &amp; leadership · {brand.shortName}
+                  </p>
                   <LoginForm nextPath={nextPath} />
 
                   <div className="login-principal">
                     <strong>Principal</strong>
-                    <p>Chris — open your dedicated office workspace.</p>
+                    <p>Open the dedicated office workspace for school leadership.</p>
                     <Link href="/login?as=principal">Principal sign-in →</Link>
                   </div>
 
                   <div className="login-footer">
                     <Link href="/school">School site</Link>
-                    <span aria-hidden>·</span>
-                    <a
-                      href="https://lcadawsonville.com"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1"
-                    >
-                      lcadawsonville.com
-                      <ExternalLink className="h-3 w-3" aria-hidden />
-                    </a>
+                    {brand.websiteUrl && (
+                      <>
+                        <span aria-hidden>·</span>
+                        <a
+                          href={brand.websiteUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1"
+                        >
+                          School website
+                          <ExternalLink className="h-3 w-3" aria-hidden />
+                        </a>
+                      </>
+                    )}
                     <span aria-hidden>·</span>
                     <Link href="/about">About Beacon</Link>
                   </div>

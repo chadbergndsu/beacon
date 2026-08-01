@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { effectiveRole, PRINCIPAL_EMAIL } from '@/lib/roles'
+import { effectiveRole } from '@/lib/roles'
 import type { Profile } from '@/lib/types'
 
 export async function requireUser() {
@@ -40,7 +40,6 @@ export async function getProfile(): Promise<{
       .maybeSingle()
     profile = (data as Profile | null) ?? null
   } catch {
-    // Fall back to user-scoped client if service role missing in some envs
     const { data } = await supabase
       .from('profiles')
       .select('id, school_id, role, full_name, email, phone')
@@ -54,10 +53,6 @@ export async function getProfile(): Promise<{
     profile = {
       ...profile,
       role,
-      full_name:
-        profile.email?.toLowerCase() === PRINCIPAL_EMAIL
-          ? profile.full_name || 'Chris Cowan'
-          : profile.full_name,
     }
   }
 
