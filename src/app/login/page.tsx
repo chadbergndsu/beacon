@@ -420,6 +420,8 @@ export default async function LoginPage({
                     )}
                     <span aria-hidden>·</span>
                     <Link href="/about">About Beacon</Link>
+                    <span aria-hidden>·</span>
+                    <Link href="/privacy">Privacy</Link>
                   </div>
                 </div>
               )}

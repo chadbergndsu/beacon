@@ -19,6 +19,8 @@ import {
 import { canEnterGrades } from '@/lib/roles'
 import { listLessonPlans, listPulsesForClass } from '@/lib/school-modules/store'
 import { loadAttendanceForClassDate } from '@/lib/attendance/store'
+import { loadTeacherClassMissing } from '@/lib/insights/load-missing-work'
+import { Badge } from '@/components/ui/badge'
 
 export default async function ClassGradebookPage({
   params,
@@ -52,14 +54,15 @@ export default async function ClassGradebookPage({
   const weights = validateCategoryWeights(categories)
 
   const schoolId = classRow.school_id
-  const [lessonPlans, pulses, attendanceRecords] =
+  const [lessonPlans, pulses, attendanceRecords, missingRollup] =
     canEnter && schoolId
       ? await Promise.all([
           listLessonPlans(schoolId, classId),
           listPulsesForClass(schoolId, classId),
           loadAttendanceForClassDate(classId, attendanceDate),
+          loadTeacherClassMissing(classId, classRow.name),
         ])
-      : [[], [], []]
+      : [[], [], [], null]
 
   return (
     <div className="space-y-6">
@@ -87,6 +90,37 @@ export default async function ClassGradebookPage({
       {canEnter && activeTab === 'grades' && !weights.ok && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 text-amber-950 px-4 py-3 text-sm">
           {weights.message} Fix weights under <strong>Class setup</strong>.
+        </div>
+      )}
+
+      {canEnter && activeTab === 'grades' && missingRollup && missingRollup.totalMissingItems > 0 && (
+        <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+                Missing work radar
+              </p>
+              <p className="text-sm text-amber-950 dark:text-amber-100 mt-0.5">
+                {missingRollup.studentsWithMissing} student(s) · {missingRollup.totalMissingItems}{' '}
+                past-due / unscored item(s)
+              </p>
+            </div>
+            <Badge variant="warning">Focus</Badge>
+          </div>
+          {missingRollup.topStudents.length > 0 && (
+            <ul className="mt-2 flex flex-wrap gap-1.5">
+              {missingRollup.topStudents.map((s) => (
+                <li key={s.studentId}>
+                  <Link
+                    href={`/students/${s.studentId}`}
+                    className="inline-flex rounded-full border border-amber-300 bg-white px-2.5 py-0.5 text-xs font-medium text-amber-950 hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-100 dark:border-amber-800"
+                  >
+                    {s.studentName} ×{s.count}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
