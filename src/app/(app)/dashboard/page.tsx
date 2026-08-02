@@ -208,6 +208,12 @@ export default async function DashboardPage() {
               Quick mode
             </Link>
             <Link
+              href="/teacher/lessons"
+              className="hidden rounded-lg border border-sky-300 bg-sky-50 text-sky-900 px-3 py-2 text-sm font-semibold sm:inline-flex dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
+            >
+              Lesson day/week
+            </Link>
+            <Link
               href="/announcements/new"
               className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold"
             >

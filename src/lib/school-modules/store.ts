@@ -189,6 +189,43 @@ export async function listLessonPlans(schoolId: string, classId: string): Promis
     .sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt))
 }
 
+/** All lesson plans for many classes (teacher day/week planner). */
+export async function listLessonPlansForClasses(
+  schoolId: string,
+  classIds: string[]
+): Promise<LessonPlan[]> {
+  if (!classIds.length) return []
+  const idSet = new Set(classIds)
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('lesson_plans')
+      .select('*')
+      .eq('school_id', schoolId)
+      .in('class_id', classIds)
+      .order('date', { ascending: false })
+
+    if (!error && data) {
+      const fromTable = data.map((r) => mapLessonRow(r as Record<string, unknown>))
+      try {
+        const m = await loadModulesJson(schoolId)
+        const tableIds = new Set(fromTable.map((p) => p.id))
+        const fromJson = m.lessonPlans.filter(
+          (p) => idSet.has(p.classId) && !tableIds.has(p.id)
+        )
+        return [...fromTable, ...fromJson]
+      } catch {
+        return fromTable
+      }
+    }
+  } catch (e) {
+    console.error('listLessonPlansForClasses:', e)
+  }
+
+  const m = await loadModulesJson(schoolId)
+  return m.lessonPlans.filter((p) => idSet.has(p.classId))
+}
+
 export async function upsertLessonPlan(schoolId: string, plan: LessonPlan): Promise<LessonPlan> {
   const baseRow = {
     id: plan.id,
