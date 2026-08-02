@@ -301,6 +301,9 @@ const LOGIN_CRITICAL_CSS = `
   }
 `
 
+/** Pilot form prefill only — does not grant role by itself. */
+const PILOT_PRINCIPAL_EMAIL = 'principal@lighthouse.test'
+
 export default async function LoginPage({
   searchParams,
 }: {
@@ -310,7 +313,7 @@ export default async function LoginPage({
   const nextPath = safeInternalPath(params.next, '/dashboard')
   const asPrincipal = params.as === 'principal'
   const brand = await loadSchoolBrand(null)
-  const principalEmail = demoPrincipalEmail() || ''
+  const principalEmail = demoPrincipalEmail() || PILOT_PRINCIPAL_EMAIL
 
   return (
     <>
