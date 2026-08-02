@@ -140,6 +140,7 @@ export function PrincipalTetris() {
   const pausedRef = useRef(paused)
   const gameOverRef = useRef(gameOver)
   const levelRef = useRef(level)
+  const autoStartedRef = useRef(false)
 
   useEffect(() => {
     pieceRef.current = piece
@@ -271,6 +272,13 @@ export function PrincipalTetris() {
     setNextPiece(randomPiece())
     spawn(first, b)
   }, [spawn])
+
+  // Pop right up on principal break
+  useEffect(() => {
+    if (autoStartedRef.current) return
+    autoStartedRef.current = true
+    startGame()
+  }, [startGame])
 
   useEffect(() => {
     if (!playing || paused || gameOver) return
@@ -449,7 +457,7 @@ export function PrincipalTetris() {
               <p className="font-semibold text-foreground text-sm">Controls</p>
               <p>← → move · ↑ rotate · ↓ soft drop · Space hard drop · P pause</p>
               <p className="pt-1">
-                Principal office exclusive — not shown to teachers or parents.
+                Principal office exclusive — auto-starts. Not shown to teachers or parents.
               </p>
             </div>
           </CardContent>
