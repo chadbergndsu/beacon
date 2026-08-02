@@ -162,7 +162,7 @@ export default async function ClassGradebookPage({
           initialRecords={attendanceRecords}
         />
       ) : activeTab === 'lessons' ? (
-        <LessonPlansPanel classId={classId} plans={lessonPlans} />
+        <LessonPlansPanel classId={classId} className={classRow.name} plans={lessonPlans} />
       ) : activeTab === 'pulse' ? (
         students.length === 0 ? (
           <div className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
