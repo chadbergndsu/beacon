@@ -85,6 +85,7 @@ export async function saveLessonPlan(
     await upsertLessonPlan(access.classRow.school_id, plan)
     revalidatePath(`/classes/${classId}`)
     revalidatePath(`/classes/${classId}?tab=lessons`)
+    revalidatePath('/teacher/lessons')
     return { ok: true, id: plan.id }
   } catch (e) {
     console.error('saveLessonPlan failed:', e)
@@ -108,12 +109,52 @@ export async function removeLessonPlan(
     await deleteLessonPlan(access.classRow.school_id, planId)
     revalidatePath(`/classes/${classId}`)
     revalidatePath(`/classes/${classId}?tab=lessons`)
+    revalidatePath('/teacher/lessons')
     return { ok: true }
   } catch (e) {
     console.error('removeLessonPlan failed:', e)
     return {
       ok: false,
       error: e instanceof Error ? e.message : 'Could not delete lesson plan.',
+    }
+  }
+}
+
+/**
+ * Mark lesson complete for the day (status = taught).
+ * Does not delete — Day view simply hides taught plans unless "Show completed" is on.
+ */
+export async function setLessonPlanStatus(
+  classId: string,
+  planId: string,
+  status: LessonPlan['status']
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const access = await requireClassManager(classId)
+    if (!access.ok) return access
+
+    const next: LessonPlan['status'] =
+      status === 'draft' || status === 'ready' || status === 'taught' ? status : 'ready'
+
+    const plans = await listLessonPlans(access.classRow.school_id, classId)
+    const found = plans.find((p) => p.id === planId)
+    if (!found) return { ok: false, error: 'Lesson plan not found.' }
+
+    await upsertLessonPlan(access.classRow.school_id, {
+      ...found,
+      status: next,
+      updatedAt: new Date().toISOString(),
+    })
+
+    revalidatePath(`/classes/${classId}`)
+    revalidatePath(`/classes/${classId}?tab=lessons`)
+    revalidatePath('/teacher/lessons')
+    return { ok: true }
+  } catch (e) {
+    console.error('setLessonPlanStatus failed:', e)
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : 'Could not update lesson status.',
     }
   }
 }
