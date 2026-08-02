@@ -6,15 +6,18 @@ import { loadSchoolBrand } from '@/lib/school-brand'
 import { HealthChecksList } from '@/components/ops/HealthChecksList'
 import { ReleaseChecklistForm } from '@/components/ops/ReleaseChecklistForm'
 import { SchoolBrandForm } from '@/components/ops/SchoolBrandForm'
+import { OnboardingProgress } from '@/components/ops/OnboardingProgress'
+import { loadSchoolOnboarding } from '@/lib/ops/onboarding'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 
 export default async function PrincipalReleasePage() {
   const { schoolId } = await requirePrincipal()
-  const [health, checklist, brand] = await Promise.all([
+  const [health, checklist, brand, onboarding] = await Promise.all([
     probeOpsHealth(schoolId),
     loadReleaseChecklistState(schoolId),
     loadSchoolBrand(schoolId),
+    loadSchoolOnboarding(schoolId),
   ])
 
   const done = RELEASE_CHECKLIST.filter((i) => checklist[i.id]).length
@@ -75,6 +78,8 @@ export default async function PrincipalReleasePage() {
           </CardContent>
         </Card>
       </div>
+
+      <OnboardingProgress status={onboarding} />
 
       <Card>
         <div className="border-b border-border px-5 py-4">

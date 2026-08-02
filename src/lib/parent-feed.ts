@@ -2,13 +2,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { listPulsesForStudent } from '@/lib/school-modules/store'
 import { loadAttendanceForStudent } from '@/lib/attendance/store'
 import { loadBillingState } from '@/lib/billing/store'
+import { loadMissingWorkForStudent } from '@/lib/insights/load-missing-work'
 import { ATTENDANCE_LABEL } from '@/lib/attendance/types'
 import { PULSE_LEVEL_LABEL } from '@/lib/school-modules/types'
 import { formatMoney } from '@/lib/billing/store'
 
 export type FeedItem = {
   id: string
-  type: 'announcement' | 'pulse' | 'attendance' | 'invoice' | 'grade'
+  type: 'announcement' | 'pulse' | 'attendance' | 'invoice' | 'grade' | 'missing'
   title: string
   body: string
   href: string
@@ -50,6 +51,26 @@ export async function buildParentFeed(
 
   for (const child of children) {
     const name = `${child.first_name} ${child.last_name}`
+
+    // Missing work radar signal (market: parents open apps for this first)
+    const missing = await loadMissingWorkForStudent(child.id, name)
+    if (missing.missingCount > 0) {
+      const sample = missing.missing
+        .slice(0, 3)
+        .map((m) => m.title)
+        .join(', ')
+      items.push({
+        id: `missing_${child.id}`,
+        type: 'missing',
+        title: `Missing work · ${name}`,
+        body: `${missing.missingCount} item(s): ${sample}${
+          missing.missingCount > 3 ? '…' : ''
+        }`,
+        href: `/students/${child.id}`,
+        at: new Date().toISOString(),
+        tone: 'warning',
+      })
+    }
 
     // Pulses
     const pulses = await listPulsesForStudent(schoolId, child.id)

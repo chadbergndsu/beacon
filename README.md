@@ -16,8 +16,22 @@ Multi-tenant by design: each `schools` row carries its own name, branding, roste
 | **Beacon Signal** | Principal school climate heart-rate + pastoral watch list (unique) |
 | **Families** | Announcements, parent feed, system email |
 | **Principal office** | Tuition, QuickBooks, videos, pulse board, **Go-live** ops |
+| **Missing Work Radar** | Calm past-due vs upcoming list (parent + teacher Today) |
+| **Teacher Today** | Per-class missing-work focus without district dashboards |
 | **Teacher Quick Mode** | Phone-first attendance / scores / pulse |
+| **Go-live / onboarding** | Health probes, checklist, first-run setup % |
 | **Public** | School marketing site at `/school` (driven by school branding) |
+
+### Market positioning (why not FACTS / Jupiter / PowerSchool)
+
+| Competitor pattern | Beacon response |
+|--------------------|-----------------|
+| Portals of tables | Dinner Table Digest + conversation starters |
+| Missing work buried | Missing Work Radar (past-due ≠ future-due) |
+| District analytics | Beacon Signal + Teacher Today (small-school scale) |
+| Slow PTC prep | Conference Brief one-pager |
+| Grades only | Beacon Pulse whole-child |
+| Teacher desktop-only | Quick Mode phone-first |
 
 ## Live
 

@@ -18,8 +18,9 @@ function canAccessClass(profile: Profile | null, user: User, classRow: ClassRow)
   if (profile.role === 'admin' || profile.role === 'staff' || profile.role === 'principal') {
     return !profile.school_id || profile.school_id === classRow.school_id
   }
+  // Teachers only their classes — not whole-school browse (FACTS-style leak risk)
   if (profile.role === 'teacher') {
-    return classRow.teacher_id === user.id || profile.school_id === classRow.school_id
+    return classRow.teacher_id === user.id
   }
   if (profile.role === 'parent') {
     // Parent access checked via enrollment + parent_students in caller

@@ -4,7 +4,13 @@ import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateTransparentGrade } from '@/lib/grades'
 import { buildParentFeed } from '@/lib/parent-feed'
+import {
+  loadMissingWorkForParentChildren,
+  loadTeacherToday,
+} from '@/lib/insights/load-missing-work'
 import { ParentFeed } from '@/components/parent/ParentFeed'
+import { MissingWorkRadar } from '@/components/insights/MissingWorkRadar'
+import { TeacherTodayCard } from '@/components/insights/TeacherTodayCard'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
 export default async function DashboardPage() {
@@ -115,6 +121,17 @@ export default async function DashboardPage() {
   const isPrincipal = role === 'principal'
   const showQuick = canPost
 
+  // Market: parents want missing-work clarity; teachers want a "today" focus list
+  const parentMissing =
+    role === 'parent' && children.length
+      ? await loadMissingWorkForParentChildren(children)
+      : []
+  const teacherToday =
+    (role === 'teacher' || role === 'admin' || role === 'staff' || role === 'principal') &&
+    classes.length
+      ? await loadTeacherToday(classes.map((c) => ({ id: c.id, name: c.name })))
+      : null
+
   return (
     <div className="space-y-8">
       {showQuick && (
@@ -208,6 +225,14 @@ export default async function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-8">
+          {teacherToday && (
+            <TeacherTodayCard
+              rollups={teacherToday.rollups}
+              totalMissingStudents={teacherToday.totalMissingStudents}
+              totalMissingItems={teacherToday.totalMissingItems}
+            />
+          )}
+
           {(role === 'teacher' || role === 'admin' || role === 'staff' || role === 'principal') && (
             <section>
               <h2 className="text-lg font-semibold mb-3">Classes</h2>
@@ -241,6 +266,9 @@ export default async function DashboardPage() {
 
           {role === 'parent' && (
             <>
+              {parentMissing.length > 0 && (
+                <MissingWorkRadar summaries={parentMissing} title="Family missing work" />
+              )}
               <section>
                 <h2 className="text-lg font-semibold mb-3">Your children</h2>
                 {children.length === 0 ? (

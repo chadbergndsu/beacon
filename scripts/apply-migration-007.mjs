@@ -12,7 +12,7 @@ import pg from 'pg'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const sqlPath = path.join(root, 'supabase/migrations/007_suite_hardening.sql')
-const projectRef = 'lqswgkjotjmltoyfnggj'
+const projectRef = process.env.SUPABASE_PROJECT_REF || 'lqswgkjotjmltoyfnggj'
 const pwd = process.env.POSTGRES_PASSWORD || process.env.SUPABASE_DB_PASSWORD
 const connectionString =
   process.env.DATABASE_URL ||
@@ -21,7 +21,10 @@ const connectionString =
     : null)
 
 if (!connectionString) {
-  console.error('Set DATABASE_URL or POSTGRES_PASSWORD to apply migration 007.')
+  console.error(
+    'Set DATABASE_URL or POSTGRES_PASSWORD (Supabase → Settings → Database → Database password).'
+  )
+  console.error('Optional: SUPABASE_PROJECT_REF (default lqswgkjotjmltoyfnggj).')
   process.exit(1)
 }
 

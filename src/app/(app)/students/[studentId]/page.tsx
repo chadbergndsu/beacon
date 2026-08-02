@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { TransparentGradeView } from '@/components/gradebook/TransparentGradeView'
 import { StudentPulseTimeline } from '@/components/pulse/StudentPulseTimeline'
 import { DinnerTableCard } from '@/components/insights/DinnerTableCard'
+import { MissingWorkRadar } from '@/components/insights/MissingWorkRadar'
+import { loadMissingWorkForStudent } from '@/lib/insights/load-missing-work'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateTransparentGrade } from '@/lib/grades'
@@ -74,13 +76,16 @@ export default async function StudentOverviewPage({
       ? await listPulsesForStudent(profile?.school_id || student.school_id, studentId)
       : []
 
-  const { dinner } = await buildStudentDinnerAndConference({
-    id: student.id,
-    school_id: student.school_id,
-    first_name: student.first_name,
-    last_name: student.last_name,
-    grade_level: student.grade_level,
-  })
+  const [{ dinner }, missingWork] = await Promise.all([
+    buildStudentDinnerAndConference({
+      id: student.id,
+      school_id: student.school_id,
+      first_name: student.first_name,
+      last_name: student.last_name,
+      grade_level: student.grade_level,
+    }),
+    loadMissingWorkForStudent(studentId, name),
+  ])
 
   return (
     <div className="space-y-8">
@@ -114,6 +119,7 @@ export default async function StudentOverviewPage({
       </div>
 
       <DinnerTableCard digest={dinner} />
+      <MissingWorkRadar summaries={[missingWork]} title={`${name.split(' ')[0]}'s missing work`} />
 
       <StudentPulseTimeline pulses={pulses} studentName={name} />
 

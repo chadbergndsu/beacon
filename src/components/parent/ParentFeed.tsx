@@ -11,6 +11,7 @@ const TYPE_LABEL: Record<FeedItem['type'], string> = {
   attendance: 'Attendance',
   invoice: 'Billing',
   grade: 'Grade',
+  missing: 'Missing work',
 }
 
 function toneClasses(tone?: FeedItem['tone']) {
