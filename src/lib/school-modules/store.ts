@@ -1,8 +1,15 @@
+/**
+ * School modules store — pilot-ready.
+ * Prefer first-class tables (migration 007). Fall back to schools.settings JSON
+ * only when those tables are not yet applied.
+ */
+
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
   emptyModules,
   type LessonPlan,
   type PulseEntry,
+  type PulseLevel,
   type SchoolModulesState,
   type SchoolVideo,
 } from '@/lib/school-modules/types'
@@ -12,7 +19,18 @@ type SchoolSettings = {
   [key: string]: unknown
 }
 
-export async function loadModules(schoolId: string): Promise<SchoolModulesState> {
+function isMissingRelation(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false
+  const msg = (error.message || '').toLowerCase()
+  return (
+    error.code === '42P01' ||
+    msg.includes('does not exist') ||
+    msg.includes('could not find the table') ||
+    msg.includes('schema cache')
+  )
+}
+
+async function loadModulesJson(schoolId: string): Promise<SchoolModulesState> {
   const admin = createAdminClient()
   const { data } = await admin
     .from('schools')
@@ -29,7 +47,7 @@ export async function loadModules(schoolId: string): Promise<SchoolModulesState>
   }
 }
 
-async function saveModules(schoolId: string, modules: SchoolModulesState) {
+async function saveModulesJson(schoolId: string, modules: SchoolModulesState) {
   const admin = createAdminClient()
   const { data } = await admin
     .from('schools')
@@ -42,68 +60,305 @@ async function saveModules(schoolId: string, modules: SchoolModulesState) {
   if (error) throw new Error(error.message)
 }
 
-export async function listLessonPlans(schoolId: string, classId: string) {
-  const m = await loadModules(schoolId)
+/** @deprecated Prefer table-backed helpers. Kept for any residual callers. */
+export async function loadModules(schoolId: string): Promise<SchoolModulesState> {
+  return loadModulesJson(schoolId)
+}
+
+function mapLessonRow(r: Record<string, unknown>): LessonPlan {
+  return {
+    id: String(r.id),
+    classId: String(r.class_id),
+    title: String(r.title || ''),
+    date: String(r.date || '').slice(0, 10),
+    unit: (r.unit as string) || '',
+    objectives: String(r.objectives || ''),
+    materials: String(r.materials || ''),
+    activities: String(r.activities || ''),
+    scripture: (r.scripture as string) || '',
+    homework: (r.homework as string) || '',
+    differentiation: (r.differentiation as string) || '',
+    assessment: (r.assessment as string) || '',
+    durationMinutes: Number(r.duration_minutes) || 45,
+    status: (r.status as LessonPlan['status']) || 'draft',
+    createdBy: String(r.created_by || ''),
+    createdAt: String(r.created_at || new Date().toISOString()),
+    updatedAt: String(r.updated_at || r.created_at || new Date().toISOString()),
+  }
+}
+
+function mapPulseRow(r: Record<string, unknown>): PulseEntry {
+  return {
+    id: String(r.id),
+    classId: String(r.class_id),
+    studentId: String(r.student_id),
+    teacherId: String(r.teacher_id || ''),
+    teacherName: String(r.teacher_name || ''),
+    date: String(r.date || '').slice(0, 10),
+    overall: r.overall as PulseLevel,
+    dimensions: (r.dimensions as PulseEntry['dimensions']) || {},
+    note: String(r.note || ''),
+    celebrate: (r.celebrate as string) || undefined,
+    createdAt: String(r.created_at || new Date().toISOString()),
+  }
+}
+
+function mapVideoRow(r: Record<string, unknown>): SchoolVideo {
+  return {
+    id: String(r.id),
+    title: String(r.title || ''),
+    description: String(r.description || ''),
+    url: String(r.url || ''),
+    provider: (r.provider as SchoolVideo['provider']) || 'other',
+    category: (r.category as SchoolVideo['category']) || 'other',
+    featured: Boolean(r.featured),
+    createdAt: String(r.created_at || new Date().toISOString()),
+    createdBy: String(r.created_by || ''),
+  }
+}
+
+// —— Lesson plans (table-first) ————————————————————————————————
+
+export async function listLessonPlans(schoolId: string, classId: string): Promise<LessonPlan[]> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('lesson_plans')
+    .select('*')
+    .eq('school_id', schoolId)
+    .eq('class_id', classId)
+    .order('date', { ascending: false })
+
+  if (!error && data) {
+    return data.map((r) => mapLessonRow(r as Record<string, unknown>))
+  }
+  if (error && !isMissingRelation(error)) {
+    // Unexpected error — still try JSON so the UI is not empty
+    console.error('listLessonPlans table error:', error.message)
+  }
+
+  const m = await loadModulesJson(schoolId)
   return m.lessonPlans
     .filter((p) => p.classId === classId)
     .sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt))
 }
 
-export async function upsertLessonPlan(schoolId: string, plan: LessonPlan) {
-  const m = await loadModules(schoolId)
+export async function upsertLessonPlan(schoolId: string, plan: LessonPlan): Promise<LessonPlan> {
+  const admin = createAdminClient()
+  const row = {
+    id: plan.id,
+    school_id: schoolId,
+    class_id: plan.classId,
+    title: plan.title,
+    date: plan.date,
+    unit: plan.unit || null,
+    objectives: plan.objectives || '',
+    materials: plan.materials || '',
+    activities: plan.activities || '',
+    scripture: plan.scripture || null,
+    homework: plan.homework || null,
+    differentiation: plan.differentiation || null,
+    assessment: plan.assessment || null,
+    duration_minutes: plan.durationMinutes || 45,
+    status: plan.status,
+    created_by: plan.createdBy || null,
+    created_at: plan.createdAt,
+    updated_at: plan.updatedAt || new Date().toISOString(),
+  }
+
+  const { error } = await admin.from('lesson_plans').upsert(row, { onConflict: 'id' })
+  if (!error) return plan
+
+  if (!isMissingRelation(error)) {
+    throw new Error(error.message)
+  }
+
+  // Table missing — JSON fallback for pre-migration installs
+  const m = await loadModulesJson(schoolId)
   const idx = m.lessonPlans.findIndex((p) => p.id === plan.id)
   if (idx >= 0) m.lessonPlans[idx] = plan
   else m.lessonPlans.unshift(plan)
-  await saveModules(schoolId, m)
+  await saveModulesJson(schoolId, m)
   return plan
 }
 
-export async function deleteLessonPlan(schoolId: string, planId: string) {
-  const m = await loadModules(schoolId)
+export async function deleteLessonPlan(schoolId: string, planId: string): Promise<void> {
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('lesson_plans')
+    .delete()
+    .eq('id', planId)
+    .eq('school_id', schoolId)
+
+  if (!error) return
+  if (!isMissingRelation(error)) throw new Error(error.message)
+
+  const m = await loadModulesJson(schoolId)
   m.lessonPlans = m.lessonPlans.filter((p) => p.id !== planId)
-  await saveModules(schoolId, m)
+  await saveModulesJson(schoolId, m)
 }
 
-export async function addPulse(schoolId: string, entry: PulseEntry) {
-  const m = await loadModules(schoolId)
-  m.pulses = [entry, ...m.pulses].slice(0, 2000) // cap history
-  await saveModules(schoolId, m)
+// —— Beacon Pulse (table-first) ————————————————————————————————
+
+export async function addPulse(schoolId: string, entry: PulseEntry): Promise<PulseEntry> {
+  const admin = createAdminClient()
+  const row = {
+    id: entry.id,
+    school_id: schoolId,
+    class_id: entry.classId,
+    student_id: entry.studentId,
+    teacher_id: entry.teacherId || null,
+    teacher_name: entry.teacherName || null,
+    date: entry.date,
+    overall: entry.overall,
+    dimensions: entry.dimensions || {},
+    note: entry.note || null,
+    celebrate: entry.celebrate || null,
+    created_at: entry.createdAt,
+  }
+
+  const { error } = await admin.from('pulse_entries').upsert(row, { onConflict: 'id' })
+  if (!error) return entry
+
+  if (!isMissingRelation(error)) throw new Error(error.message)
+
+  const m = await loadModulesJson(schoolId)
+  m.pulses = [entry, ...m.pulses].slice(0, 2000)
+  await saveModulesJson(schoolId, m)
   return entry
 }
 
-export async function listPulsesForClass(schoolId: string, classId: string) {
-  const m = await loadModules(schoolId)
+export async function listPulsesForClass(schoolId: string, classId: string): Promise<PulseEntry[]> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('pulse_entries')
+    .select('*')
+    .eq('school_id', schoolId)
+    .eq('class_id', classId)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (!error && data) {
+    return data.map((r) => mapPulseRow(r as Record<string, unknown>))
+  }
+  if (error && !isMissingRelation(error)) {
+    console.error('listPulsesForClass table error:', error.message)
+  }
+
+  const m = await loadModulesJson(schoolId)
   return m.pulses.filter((p) => p.classId === classId).slice(0, 200)
 }
 
-export async function listPulsesForStudent(schoolId: string, studentId: string) {
-  const m = await loadModules(schoolId)
+export async function listPulsesForStudent(
+  schoolId: string,
+  studentId: string
+): Promise<PulseEntry[]> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('pulse_entries')
+    .select('*')
+    .eq('school_id', schoolId)
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  if (!error && data) {
+    return data.map((r) => mapPulseRow(r as Record<string, unknown>))
+  }
+  if (error && !isMissingRelation(error)) {
+    console.error('listPulsesForStudent table error:', error.message)
+  }
+
+  const m = await loadModulesJson(schoolId)
   return m.pulses.filter((p) => p.studentId === studentId).slice(0, 50)
 }
 
-export async function listAllPulses(schoolId: string) {
-  const m = await loadModules(schoolId)
+export async function listAllPulses(schoolId: string): Promise<PulseEntry[]> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('pulse_entries')
+    .select('*')
+    .eq('school_id', schoolId)
+    .order('created_at', { ascending: false })
+    .limit(300)
+
+  if (!error && data) {
+    return data.map((r) => mapPulseRow(r as Record<string, unknown>))
+  }
+  if (error && !isMissingRelation(error)) {
+    console.error('listAllPulses table error:', error.message)
+  }
+
+  const m = await loadModulesJson(schoolId)
   return m.pulses.slice(0, 300)
 }
 
-export async function listVideos(schoolId: string) {
-  const m = await loadModules(schoolId)
-  return m.videos.sort((a, b) => Number(b.featured) - Number(a.featured) || b.createdAt.localeCompare(a.createdAt))
+// —— School videos (table-first) ————————————————————————————————
+
+export async function listVideos(schoolId: string): Promise<SchoolVideo[]> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('school_videos')
+    .select('*')
+    .eq('school_id', schoolId)
+    .order('created_at', { ascending: false })
+
+  if (!error && data) {
+    return data
+      .map((r) => mapVideoRow(r as Record<string, unknown>))
+      .sort((a, b) => Number(b.featured) - Number(a.featured) || b.createdAt.localeCompare(a.createdAt))
+  }
+  if (error && !isMissingRelation(error)) {
+    console.error('listVideos table error:', error.message)
+  }
+
+  const m = await loadModulesJson(schoolId)
+  return m.videos.sort(
+    (a, b) => Number(b.featured) - Number(a.featured) || b.createdAt.localeCompare(a.createdAt)
+  )
 }
 
-export async function upsertVideo(schoolId: string, video: SchoolVideo) {
-  const m = await loadModules(schoolId)
+export async function upsertVideo(schoolId: string, video: SchoolVideo): Promise<SchoolVideo> {
+  const admin = createAdminClient()
+  const row = {
+    id: video.id,
+    school_id: schoolId,
+    title: video.title,
+    description: video.description || null,
+    url: video.url,
+    provider: video.provider || 'other',
+    category: video.category || 'other',
+    featured: Boolean(video.featured),
+    created_by: video.createdBy || null,
+    created_at: video.createdAt,
+  }
+
+  const { error } = await admin.from('school_videos').upsert(row, { onConflict: 'id' })
+  if (!error) return video
+
+  if (!isMissingRelation(error)) throw new Error(error.message)
+
+  const m = await loadModulesJson(schoolId)
   const idx = m.videos.findIndex((v) => v.id === video.id)
   if (idx >= 0) m.videos[idx] = video
   else m.videos.unshift(video)
-  await saveModules(schoolId, m)
+  await saveModulesJson(schoolId, m)
   return video
 }
 
-export async function deleteVideo(schoolId: string, videoId: string) {
-  const m = await loadModules(schoolId)
+export async function deleteVideo(schoolId: string, videoId: string): Promise<void> {
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('school_videos')
+    .delete()
+    .eq('id', videoId)
+    .eq('school_id', schoolId)
+
+  if (!error) return
+  if (!isMissingRelation(error)) throw new Error(error.message)
+
+  const m = await loadModulesJson(schoolId)
   m.videos = m.videos.filter((v) => v.id !== videoId)
-  await saveModules(schoolId, m)
+  await saveModulesJson(schoolId, m)
 }
 
 export function detectVideoProvider(url: string): SchoolVideo['provider'] {
