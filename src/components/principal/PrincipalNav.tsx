@@ -12,7 +12,7 @@ const links = [
   { href: '/principal/invoices', label: 'Invoices & payments' },
   { href: '/principal/videos', label: 'Videos' },
   { href: '/principal/pulse', label: 'Beacon Pulse' },
-  { href: '/principal/break', label: 'Coffee break 🎮' },
+  { href: '/principal/break', label: 'Coffee break' },
 ]
 
 export function PrincipalNav() {
