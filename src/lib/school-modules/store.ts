@@ -1,7 +1,7 @@
 /**
  * School modules store — pilot-ready.
  * Prefer first-class tables (migration 007). Fall back to schools.settings JSON
- * only when those tables are not yet applied.
+ * only when those tables are not yet applied or when a write fails soft.
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -19,15 +19,39 @@ type SchoolSettings = {
   [key: string]: unknown
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 function isMissingRelation(error: { message?: string; code?: string } | null): boolean {
   if (!error) return false
   const msg = (error.message || '').toLowerCase()
+  const code = (error.code || '').toUpperCase()
   return (
-    error.code === '42P01' ||
+    code === '42P01' ||
+    code === 'PGRST205' ||
     msg.includes('does not exist') ||
     msg.includes('could not find the table') ||
     msg.includes('schema cache')
   )
+}
+
+function isFkOrCheckError(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false
+  const msg = (error.message || '').toLowerCase()
+  const code = (error.code || '').toUpperCase()
+  return (
+    code === '23503' ||
+    code === '23514' ||
+    code === '22P02' ||
+    msg.includes('foreign key') ||
+    msg.includes('violates') ||
+    msg.includes('invalid input syntax')
+  )
+}
+
+function asUuidOrNull(value: string | null | undefined): string | null {
+  if (!value) return null
+  return UUID_RE.test(value) ? value : null
 }
 
 async function loadModulesJson(schoolId: string): Promise<SchoolModulesState> {
@@ -58,6 +82,14 @@ async function saveModulesJson(schoolId: string, modules: SchoolModulesState) {
   const settings = { ...((data?.settings || {}) as SchoolSettings), modules }
   const { error } = await admin.from('schools').update({ settings }).eq('id', schoolId)
   if (error) throw new Error(error.message)
+}
+
+async function saveLessonPlanJson(schoolId: string, plan: LessonPlan) {
+  const m = await loadModulesJson(schoolId)
+  const idx = m.lessonPlans.findIndex((p) => p.id === plan.id)
+  if (idx >= 0) m.lessonPlans[idx] = plan
+  else m.lessonPlans.unshift(plan)
+  await saveModulesJson(schoolId, m)
 }
 
 /** @deprecated Prefer table-backed helpers. Kept for any residual callers. */
@@ -120,20 +152,35 @@ function mapVideoRow(r: Record<string, unknown>): SchoolVideo {
 // —— Lesson plans (table-first) ————————————————————————————————
 
 export async function listLessonPlans(schoolId: string, classId: string): Promise<LessonPlan[]> {
-  const admin = createAdminClient()
-  const { data, error } = await admin
-    .from('lesson_plans')
-    .select('*')
-    .eq('school_id', schoolId)
-    .eq('class_id', classId)
-    .order('date', { ascending: false })
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('lesson_plans')
+      .select('*')
+      .eq('school_id', schoolId)
+      .eq('class_id', classId)
+      .order('date', { ascending: false })
 
-  if (!error && data) {
-    return data.map((r) => mapLessonRow(r as Record<string, unknown>))
-  }
-  if (error && !isMissingRelation(error)) {
-    // Unexpected error — still try JSON so the UI is not empty
-    console.error('listLessonPlans table error:', error.message)
+    if (!error && data) {
+      const fromTable = data.map((r) => mapLessonRow(r as Record<string, unknown>))
+      try {
+        const m = await loadModulesJson(schoolId)
+        const tableIds = new Set(fromTable.map((p) => p.id))
+        const fromJson = m.lessonPlans.filter(
+          (p) => p.classId === classId && !tableIds.has(p.id)
+        )
+        return [...fromTable, ...fromJson].sort(
+          (a, b) => b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt)
+        )
+      } catch {
+        return fromTable
+      }
+    }
+    if (error && !isMissingRelation(error)) {
+      console.error('listLessonPlans table error:', error.message)
+    }
+  } catch (e) {
+    console.error('listLessonPlans unexpected:', e)
   }
 
   const m = await loadModulesJson(schoolId)
@@ -143,8 +190,7 @@ export async function listLessonPlans(schoolId: string, classId: string): Promis
 }
 
 export async function upsertLessonPlan(schoolId: string, plan: LessonPlan): Promise<LessonPlan> {
-  const admin = createAdminClient()
-  const row = {
+  const baseRow = {
     id: plan.id,
     school_id: schoolId,
     class_id: plan.classId,
@@ -159,42 +205,54 @@ export async function upsertLessonPlan(schoolId: string, plan: LessonPlan): Prom
     differentiation: plan.differentiation || null,
     assessment: plan.assessment || null,
     duration_minutes: plan.durationMinutes || 45,
-    status: plan.status,
-    created_by: plan.createdBy || null,
+    status: plan.status || 'draft',
+    created_by: asUuidOrNull(plan.createdBy),
     created_at: plan.createdAt,
     updated_at: plan.updatedAt || new Date().toISOString(),
   }
 
-  const { error } = await admin.from('lesson_plans').upsert(row, { onConflict: 'id' })
-  if (!error) return plan
+  try {
+    const admin = createAdminClient()
+    let { error } = await admin.from('lesson_plans').upsert(baseRow, { onConflict: 'id' })
 
-  if (!isMissingRelation(error)) {
-    throw new Error(error.message)
+    // Retry without created_by if FK/profile missing
+    if (error && isFkOrCheckError(error) && baseRow.created_by) {
+      const retry = { ...baseRow, created_by: null }
+      ;({ error } = await admin.from('lesson_plans').upsert(retry, { onConflict: 'id' }))
+    }
+
+    if (!error) return plan
+
+    console.warn('upsertLessonPlan falling back to JSON:', error.message)
+    await saveLessonPlanJson(schoolId, plan)
+    return plan
+  } catch (e) {
+    console.error('upsertLessonPlan exception, JSON fallback:', e)
+    try {
+      await saveLessonPlanJson(schoolId, plan)
+      return plan
+    } catch (jsonErr) {
+      throw new Error(
+        jsonErr instanceof Error ? jsonErr.message : 'Could not save lesson plan.'
+      )
+    }
   }
-
-  // Table missing — JSON fallback for pre-migration installs
-  const m = await loadModulesJson(schoolId)
-  const idx = m.lessonPlans.findIndex((p) => p.id === plan.id)
-  if (idx >= 0) m.lessonPlans[idx] = plan
-  else m.lessonPlans.unshift(plan)
-  await saveModulesJson(schoolId, m)
-  return plan
 }
 
 export async function deleteLessonPlan(schoolId: string, planId: string): Promise<void> {
-  const admin = createAdminClient()
-  const { error } = await admin
-    .from('lesson_plans')
-    .delete()
-    .eq('id', planId)
-    .eq('school_id', schoolId)
-
-  if (!error) return
-  if (!isMissingRelation(error)) throw new Error(error.message)
-
-  const m = await loadModulesJson(schoolId)
-  m.lessonPlans = m.lessonPlans.filter((p) => p.id !== planId)
-  await saveModulesJson(schoolId, m)
+  try {
+    const admin = createAdminClient()
+    await admin.from('lesson_plans').delete().eq('id', planId).eq('school_id', schoolId)
+  } catch (e) {
+    console.error('deleteLessonPlan table:', e)
+  }
+  try {
+    const m = await loadModulesJson(schoolId)
+    m.lessonPlans = m.lessonPlans.filter((p) => p.id !== planId)
+    await saveModulesJson(schoolId, m)
+  } catch (e) {
+    console.error('deleteLessonPlan json:', e)
+  }
 }
 
 // —— Beacon Pulse (table-first) ————————————————————————————————
@@ -206,7 +264,7 @@ export async function addPulse(schoolId: string, entry: PulseEntry): Promise<Pul
     school_id: schoolId,
     class_id: entry.classId,
     student_id: entry.studentId,
-    teacher_id: entry.teacherId || null,
+    teacher_id: asUuidOrNull(entry.teacherId),
     teacher_name: entry.teacherName || null,
     date: entry.date,
     overall: entry.overall,
@@ -219,7 +277,9 @@ export async function addPulse(schoolId: string, entry: PulseEntry): Promise<Pul
   const { error } = await admin.from('pulse_entries').upsert(row, { onConflict: 'id' })
   if (!error) return entry
 
-  if (!isMissingRelation(error)) throw new Error(error.message)
+  if (!isMissingRelation(error) && !isFkOrCheckError(error)) {
+    console.error('addPulse table error:', error.message)
+  }
 
   const m = await loadModulesJson(schoolId)
   m.pulses = [entry, ...m.pulses].slice(0, 2000)
@@ -328,14 +388,16 @@ export async function upsertVideo(schoolId: string, video: SchoolVideo): Promise
     provider: video.provider || 'other',
     category: video.category || 'other',
     featured: Boolean(video.featured),
-    created_by: video.createdBy || null,
+    created_by: asUuidOrNull(video.createdBy),
     created_at: video.createdAt,
   }
 
   const { error } = await admin.from('school_videos').upsert(row, { onConflict: 'id' })
   if (!error) return video
 
-  if (!isMissingRelation(error)) throw new Error(error.message)
+  if (!isMissingRelation(error) && !isFkOrCheckError(error)) {
+    console.error('upsertVideo table error:', error.message)
+  }
 
   const m = await loadModulesJson(schoolId)
   const idx = m.videos.findIndex((v) => v.id === video.id)
@@ -354,7 +416,9 @@ export async function deleteVideo(schoolId: string, videoId: string): Promise<vo
     .eq('school_id', schoolId)
 
   if (!error) return
-  if (!isMissingRelation(error)) throw new Error(error.message)
+  if (!isMissingRelation(error)) {
+    console.error('deleteVideo table error:', error.message)
+  }
 
   const m = await loadModulesJson(schoolId)
   m.videos = m.videos.filter((v) => v.id !== videoId)

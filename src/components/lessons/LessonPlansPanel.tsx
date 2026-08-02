@@ -36,7 +36,9 @@ export function LessonPlansPanel({
             Plan the week — objectives, scripture, activities, and homework in one place.
           </p>
         </div>
-        <Badge variant="sky">{initial.length} plan{initial.length === 1 ? '' : 's'}</Badge>
+        <Badge variant="sky">
+          {initial.length} plan{initial.length === 1 ? '' : 's'}
+        </Badge>
       </div>
 
       <Card className="overflow-hidden border-sky-100/80">
@@ -51,40 +53,65 @@ export function LessonPlansPanel({
             className="grid gap-3 sm:grid-cols-2"
             onSubmit={(e) => {
               e.preventDefault()
-              const fd = new FormData(e.currentTarget)
+              const form = e.currentTarget
+              const fd = new FormData(form)
               setError(null)
               setOk(null)
               start(async () => {
-                const res = await saveLessonPlan(classId, {
-                  title: String(fd.get('title') || ''),
-                  date: String(fd.get('date') || ''),
-                  unit: String(fd.get('unit') || ''),
-                  objectives: String(fd.get('objectives') || ''),
-                  materials: String(fd.get('materials') || ''),
-                  activities: String(fd.get('activities') || ''),
-                  scripture: String(fd.get('scripture') || ''),
-                  homework: String(fd.get('homework') || ''),
-                  differentiation: String(fd.get('differentiation') || ''),
-                  assessment: String(fd.get('assessment') || ''),
-                  durationMinutes: Number(fd.get('duration') || 45),
-                  status: String(fd.get('status') || 'ready') as LessonPlan['status'],
-                })
-                if (!res.ok) setError(res.error)
-                else {
+                try {
+                  const res = await saveLessonPlan(classId, {
+                    title: String(fd.get('title') || ''),
+                    date: String(fd.get('date') || ''),
+                    unit: String(fd.get('unit') || ''),
+                    objectives: String(fd.get('objectives') || ''),
+                    materials: String(fd.get('materials') || ''),
+                    activities: String(fd.get('activities') || ''),
+                    scripture: String(fd.get('scripture') || ''),
+                    homework: String(fd.get('homework') || ''),
+                    differentiation: String(fd.get('differentiation') || ''),
+                    assessment: String(fd.get('assessment') || ''),
+                    durationMinutes: Number(fd.get('duration') || 45),
+                    status: String(fd.get('status') || 'ready') as LessonPlan['status'],
+                  })
+                  if (!res.ok) {
+                    setError(res.error || 'Save failed.')
+                    return
+                  }
                   setOk('Lesson plan saved.')
-                  e.currentTarget.reset()
+                  try {
+                    form.reset()
+                  } catch {
+                    /* form may unmount during refresh */
+                  }
                   router.refresh()
+                } catch (err) {
+                  setError(
+                    err instanceof Error
+                      ? err.message
+                      : 'Could not save. Stay on this page and try again.'
+                  )
                 }
               })
             }}
           >
             <div className="sm:col-span-2">
               <Label htmlFor="title">Lesson title</Label>
-              <Input id="title" name="title" required placeholder="e.g. Fractions · equivalent values" />
+              <Input
+                id="title"
+                name="title"
+                required
+                placeholder="e.g. Fractions · equivalent values"
+              />
             </div>
             <div>
               <Label htmlFor="date">Date</Label>
-              <Input id="date" name="date" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+              <Input
+                id="date"
+                name="date"
+                type="date"
+                required
+                defaultValue={new Date().toISOString().slice(0, 10)}
+              />
             </div>
             <div>
               <Label htmlFor="duration">Minutes</Label>
@@ -109,7 +136,11 @@ export function LessonPlansPanel({
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="scripture">Scripture / character focus</Label>
-              <Input id="scripture" name="scripture" placeholder="e.g. Colossians 3:23 — work heartily" />
+              <Input
+                id="scripture"
+                name="scripture"
+                placeholder="e.g. Colossians 3:23 — work heartily"
+              />
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="objectives">Learning objectives</Label>
@@ -152,9 +183,17 @@ export function LessonPlansPanel({
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="differentiation">Differentiation / support</Label>
-              <Input id="differentiation" name="differentiation" placeholder="Scaffolding, enrichment…" />
+              <Input
+                id="differentiation"
+                name="differentiation"
+                placeholder="Scaffolding, enrichment…"
+              />
             </div>
-            {error && <p className="text-sm text-red-600 sm:col-span-2">{error}</p>}
+            {error && (
+              <p className="text-sm text-red-600 sm:col-span-2" role="alert">
+                {error}
+              </p>
+            )}
             {ok && <p className="text-sm text-emerald-700 sm:col-span-2">{ok}</p>}
             <div className="sm:col-span-2">
               <Button type="submit" disabled={pending} size="lg">
@@ -181,7 +220,15 @@ export function LessonPlansPanel({
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-semibold text-navy dark:text-sky-50">{plan.title}</h3>
-                    <Badge variant={plan.status === 'taught' ? 'success' : plan.status === 'ready' ? 'sky' : 'muted'}>
+                    <Badge
+                      variant={
+                        plan.status === 'taught'
+                          ? 'success'
+                          : plan.status === 'ready'
+                            ? 'sky'
+                            : 'muted'
+                      }
+                    >
                       {plan.status}
                     </Badge>
                   </div>
@@ -197,7 +244,9 @@ export function LessonPlansPanel({
                 <div className="border-t border-border bg-muted/20 px-5 py-4 space-y-3 text-sm">
                   {plan.scripture && (
                     <p>
-                      <span className="font-semibold text-sky-800 dark:text-sky-300">Scripture: </span>
+                      <span className="font-semibold text-sky-800 dark:text-sky-300">
+                        Scripture:{' '}
+                      </span>
                       {plan.scripture}
                     </p>
                   )}
@@ -241,8 +290,19 @@ export function LessonPlansPanel({
                     onClick={() =>
                       start(async () => {
                         if (!confirm('Delete this lesson plan?')) return
-                        await removeLessonPlan(classId, plan.id)
-                        router.refresh()
+                        try {
+                          const res = await removeLessonPlan(classId, plan.id)
+                          if (!res.ok) {
+                            setError(res.error)
+                            return
+                          }
+                          setOk('Lesson plan deleted.')
+                          router.refresh()
+                        } catch (err) {
+                          setError(
+                            err instanceof Error ? err.message : 'Could not delete lesson plan.'
+                          )
+                        }
                       })
                     }
                   >
