@@ -72,9 +72,8 @@ export function calculateTransparentGrade(
     const maxP = Number(a.max_points) > 0 ? Number(a.max_points) : 100;
     const isExtra = Boolean(a.is_extra_credit);
 
-    if (!g) continue;
-
-    if (g.is_missing || g.score === null) {
+    // No grade row at all = missing work (was previously skipped, undercounting)
+    if (!g || g.is_missing || g.score === null) {
       missingCount++;
       if (!missingAsZero) continue;
       const catId = a.category_id || 'uncategorized';
