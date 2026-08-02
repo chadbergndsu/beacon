@@ -25,7 +25,7 @@ Multi-tenant by design: each `schools` row carries its own name, branding, roste
 **School site:** https://beacon-beta-lemon.vercel.app/school  
 **Go-live (principal):** https://beacon-beta-lemon.vercel.app/principal/release  
 
-Demo accounts are issued privately. Set school branding in **Principal → Go-live**.
+Pilot accounts are issued privately. Set school branding in **Principal → Go-live**.
 
 ## Local setup
 
@@ -55,7 +55,7 @@ DATABASE_URL='postgresql://…' node scripts/apply-migrations.mjs
 POSTGRES_PASSWORD='…' node scripts/apply-migrations.mjs
 ```
 
-Migration `007` adds attendance, lesson_plans, pulse_entries, and school_videos. App stores fall back to `schools.settings` JSON if those tables are not applied yet.
+**Pilot requirement:** migration `007` creates real tables for `attendance`, `lesson_plans`, `pulse_entries`, and `school_videos`. The app **writes to those tables first**. JSON in `schools.settings` is only a fallback if a table is missing (migration not applied yet).
 
 ### Branding any school
 
