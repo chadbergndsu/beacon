@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Check,
+  CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -276,7 +277,8 @@ export function TeacherLessonPlanner({
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
-  const [mode, setMode] = useState<PreviewMode>('day')
+  // Default Week — matches SchoolWorx planning board Jen prefers
+  const [mode, setMode] = useState<PreviewMode>('week')
   const [selectedDay, setSelectedDay] = useState(() => isoDate(new Date()))
   const [anchor, setAnchor] = useState(() => startOfWeekMonday(new Date()))
   const [expandedWeek, setExpandedWeek] = useState<string | null>(null)
@@ -368,10 +370,10 @@ export function TeacherLessonPlanner({
           My day &amp; week
         </h1>
         <p className="mt-1 text-sm text-muted-foreground max-w-2xl">
-          <strong className="text-foreground">Day</strong> view shows what’s left to teach. Tap{' '}
-          <strong className="text-foreground">Done for today</strong> to clear a subject from the
-          list — the plan is saved, not deleted. Switch to{' '}
-          <strong className="text-foreground">Week</strong> for the grid.
+          <strong className="text-foreground">Week</strong> is the planning board (Mon–Fri cards per
+          subject). <strong className="text-foreground">Day</strong> is for teaching — full lessons
+          stacked, with <strong className="text-foreground">Done for today</strong> to clear a
+          subject without deleting the plan.
         </p>
       </div>
 
@@ -517,137 +519,173 @@ export function TeacherLessonPlanner({
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto bg-white dark:bg-slate-950">
-            <table className="w-full min-w-[800px] border-collapse text-sm">
-              <thead>
-                <tr className="bg-slate-800 text-white">
-                  <th className="sticky left-0 z-10 bg-slate-800 px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide">
-                    Class
-                  </th>
-                  {weekDays.map((d) => (
-                    <th
-                      key={isoDate(d)}
-                      className={cn(
-                        'px-2 py-2.5 text-center text-xs font-bold',
-                        isoDate(d) === isoDate(new Date()) && 'bg-sky-700'
-                      )}
-                    >
-                      {formatShortDay(d)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedClasses.map((c) => (
-                  <tr key={c.id} className="border-b border-border align-top">
-                    <td className="sticky left-0 z-10 border-r border-border bg-slate-50 px-3 py-2 font-bold uppercase tracking-wide text-sky-900 dark:bg-slate-900 dark:text-sky-200">
-                      <Link href={`/classes/${c.id}?tab=lessons`} className="hover:underline">
-                        {classLabel(c)}
-                      </Link>
-                    </td>
-                    {weekDays.map((d) => {
-                      const date = isoDate(d)
-                      const plan = planFor(c.id, date)
-                      const key = `${c.id}:${date}`
-                      const open = expandedWeek === key
-                      const taught = plan?.status === 'taught'
+          /* SchoolWorx-style week board: subject rows × Mon–Fri cards */
+          <div className="overflow-x-auto bg-[#f4f6f8] dark:bg-slate-950">
+            {/* Day headers */}
+            <div
+              className="grid min-w-[900px] border-b border-slate-300 dark:border-slate-700"
+              style={{ gridTemplateColumns: `repeat(5, minmax(0, 1fr))` }}
+            >
+              {weekDays.map((d) => {
+                const date = isoDate(d)
+                const isToday = date === isoDate(new Date())
+                return (
+                  <div
+                    key={date}
+                    className={cn(
+                      'border-r border-slate-300 px-2 py-2.5 text-center text-xs font-bold last:border-r-0 dark:border-slate-700',
+                      isToday
+                        ? 'bg-sky-700 text-white'
+                        : 'bg-slate-700 text-white dark:bg-slate-800'
+                    )}
+                  >
+                    {formatShortDay(d)}
+                  </div>
+                )
+              })}
+            </div>
+
+            {sortedClasses.length === 0 ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">No classes assigned.</p>
+            ) : (
+              sortedClasses.map((c) => (
+                <div
+                  key={c.id}
+                  className="grid min-w-[900px] border-b border-slate-200 dark:border-slate-800"
+                  style={{ gridTemplateColumns: `repeat(5, minmax(0, 1fr))` }}
+                >
+                  {weekDays.map((d) => {
+                    const date = isoDate(d)
+                    const plan = planFor(c.id, date)
+                    const key = `${c.id}:${date}`
+                    const open = expandedWeek === key
+                    const taught = plan?.status === 'taught'
+                    const label = classLabel(c)
+
+                    if (!plan) {
                       return (
-                        <td key={date} className="border-l border-border p-1.5 align-top">
-                          {!plan ? (
+                        <div
+                          key={date}
+                          className="min-h-[140px] border-r border-slate-200 bg-white p-2 last:border-r-0 dark:border-slate-800 dark:bg-slate-950"
+                        >
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-sky-900/70 dark:text-sky-300/80">
+                            {label}
+                          </p>
+                          <Link
+                            href={`/classes/${c.id}?tab=lessons`}
+                            className="mt-2 flex min-h-[88px] flex-col items-center justify-center rounded border border-dashed border-slate-300 px-1 text-center text-[11px] text-slate-500 hover:border-sky-400 hover:bg-sky-50/60 dark:border-slate-600 dark:hover:bg-sky-950/30"
+                          >
+                            Click to add lesson plan.
+                            <ChevronDown className="mt-1 h-4 w-4 text-slate-400" />
+                          </Link>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div
+                        key={date}
+                        className={cn(
+                          'min-h-[140px] border-r border-slate-200 bg-white p-2 last:border-r-0 dark:border-slate-800 dark:bg-slate-950',
+                          open && 'bg-sky-50/40 dark:bg-sky-950/20'
+                        )}
+                      >
+                        {/* Card chrome — subject + complete check */}
+                        <div className="flex items-start justify-between gap-1">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-sky-950 dark:text-sky-200">
+                            {label}
+                          </p>
+                          <div className="flex shrink-0 items-center gap-0.5">
+                            <button
+                              type="button"
+                              title={taught ? 'Mark not done' : 'Mark done'}
+                              disabled={pending}
+                              className={cn(
+                                'rounded p-0.5',
+                                taught
+                                  ? 'text-emerald-600'
+                                  : 'text-slate-300 hover:text-emerald-600'
+                              )}
+                              onClick={() =>
+                                updateStatus(c.id, plan, taught ? 'ready' : 'taught')
+                              }
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Collapsed preview — Topic + Objectives like SchoolWorx */}
+                        <button
+                          type="button"
+                          className="mt-1 w-full text-left"
+                          onClick={() => setExpandedWeek(open ? null : key)}
+                        >
+                          <p className="text-[11px] leading-snug text-slate-800 dark:text-slate-100">
+                            <span className="font-semibold">Topic: </span>
+                            <span className="line-clamp-2">{plan.unit || plan.title}</span>
+                          </p>
+                          <p className="mt-1 text-[11px] leading-snug text-slate-700 dark:text-slate-200">
+                            <span className="font-semibold">Objectives: </span>
+                            <span className="line-clamp-2">{plan.objectives}</span>
+                          </p>
+                          <div className="mt-1.5 flex justify-center">
+                            <ChevronDown
+                              className={cn(
+                                'h-4 w-4 text-slate-400 transition',
+                                open && 'rotate-180 text-sky-600'
+                              )}
+                            />
+                          </div>
+                        </button>
+
+                        {/* Expanded full lesson */}
+                        {open && (
+                          <div className="mt-2 space-y-1.5 border-t border-slate-200 pt-2 text-[11px] leading-snug text-slate-800 dark:border-slate-700 dark:text-slate-100">
+                            {plan.materials && (
+                              <p>
+                                <span className="font-semibold">Materials: </span>
+                                {plan.materials}
+                              </p>
+                            )}
+                            <p className="whitespace-pre-wrap">
+                              <span className="font-semibold">Procedures: </span>
+                              {plan.activities}
+                            </p>
+                            {plan.homework && (
+                              <p>
+                                <span className="font-semibold">Homework: </span>
+                                {plan.homework}
+                              </p>
+                            )}
+                            {plan.assessment && (
+                              <p>
+                                <span className="font-semibold">Evaluation: </span>
+                                {plan.assessment}
+                              </p>
+                            )}
+                            {plan.scripture && (
+                              <p>
+                                <span className="font-semibold text-sky-800 dark:text-sky-300">
+                                  Scripture:{' '}
+                                </span>
+                                {plan.scripture}
+                              </p>
+                            )}
                             <Link
                               href={`/classes/${c.id}?tab=lessons`}
-                              className="flex min-h-[72px] flex-col items-center justify-center rounded-md border border-dashed border-slate-200 px-1 py-2 text-center text-[11px] text-muted-foreground hover:border-sky-300 hover:bg-sky-50/50"
+                              className="inline-flex items-center gap-1 pt-1 font-semibold text-sky-700 hover:underline"
                             >
-                              Click to add
-                              <ChevronDown className="mt-0.5 h-3.5 w-3.5 opacity-40" />
+                              Edit
+                              <ExternalLink className="h-3 w-3" />
                             </Link>
-                          ) : (
-                            <div
-                              className={cn(
-                                'rounded-md border text-left',
-                                taught && 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/20',
-                                open &&
-                                  !taught &&
-                                  'border-sky-300 bg-sky-50 dark:border-sky-700 dark:bg-sky-950/40',
-                                !open && !taught && 'border-slate-200 bg-card'
-                              )}
-                            >
-                              <button
-                                type="button"
-                                className="flex w-full items-start gap-1 px-2 py-1.5"
-                                onClick={() => setExpandedWeek(open ? null : key)}
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-[11px] font-bold leading-snug line-clamp-2">
-                                    {taught ? '✓ ' : ''}
-                                    {plan.unit || plan.title}
-                                  </p>
-                                  <p className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">
-                                    {plan.objectives}
-                                  </p>
-                                </div>
-                                <ChevronDown
-                                  className={cn(
-                                    'h-3.5 w-3.5 shrink-0 text-slate-400 transition',
-                                    open && 'rotate-180 text-sky-600'
-                                  )}
-                                />
-                              </button>
-                              {open && (
-                                <div className="space-y-1.5 border-t border-border px-2 py-2 text-[11px] leading-snug">
-                                  <p>
-                                    <strong>Objectives:</strong> {plan.objectives}
-                                  </p>
-                                  {plan.materials && (
-                                    <p>
-                                      <strong>Materials:</strong> {plan.materials}
-                                    </p>
-                                  )}
-                                  <p className="whitespace-pre-wrap">
-                                    <strong>Procedures:</strong> {plan.activities}
-                                  </p>
-                                  {plan.homework && (
-                                    <p>
-                                      <strong>Homework:</strong> {plan.homework}
-                                    </p>
-                                  )}
-                                  {plan.assessment && (
-                                    <p>
-                                      <strong>Evaluation:</strong> {plan.assessment}
-                                    </p>
-                                  )}
-                                  {plan.status !== 'taught' ? (
-                                    <button
-                                      type="button"
-                                      disabled={pending}
-                                      className="mt-1 font-semibold text-emerald-700 hover:underline"
-                                      onClick={() => updateStatus(c.id, plan, 'taught')}
-                                    >
-                                      Done for today
-                                    </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      disabled={pending}
-                                      className="mt-1 font-semibold text-sky-700 hover:underline"
-                                      onClick={() => updateStatus(c.id, plan, 'ready')}
-                                    >
-                                      Undo done
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {sortedClasses.length === 0 && (
-              <p className="p-8 text-center text-sm text-muted-foreground">No classes assigned.</p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ))
             )}
           </div>
         )}
