@@ -35,7 +35,14 @@ async function tableExists(table: string): Promise<boolean> {
     // Missing table → error with relation/schema message; empty is fine
     if (!error) return true
     const msg = (error.message || '').toLowerCase()
-    if (msg.includes('does not exist') || msg.includes('schema cache') || msg.includes('relation')) {
+    if (
+      msg.includes('does not exist') ||
+      msg.includes('could not find the table') ||
+      msg.includes('schema cache') ||
+      msg.includes('relation') ||
+      (error as { code?: string }).code === 'PGRST205' ||
+      (error as { code?: string }).code === '42P01'
+    ) {
       return false
     }
     // RLS or other errors still mean table exists
@@ -208,6 +215,22 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     detail:
       'Parents only see linked students; staff scoped by school; principal/admin for office tools',
     category: 'trust',
+  })
+
+  // Storage mode — critical for "do saves work?"
+  const suiteTables = ['attendance', 'lesson_plans', 'pulse_entries', 'school_videos', 'email_outbox']
+  const suiteMissing = suiteTables.filter(
+    (t) => checks.find((c) => c.id === `table_${t}`)?.status !== 'ok'
+  )
+  checks.push({
+    id: 'storage_mode',
+    label: 'Where data saves',
+    status: suiteMissing.length === 0 ? 'ok' : 'warn',
+    detail:
+      suiteMissing.length === 0
+        ? 'First-class tables present (migration 007). Grades/classes always use core tables.'
+        : `Migration 007 not fully applied. Missing: ${suiteMissing.join(', ')}. App still saves via schools.settings JSON for lessons/pulse/videos/cameras/attendance — apply 007 for durable tables + email outbox.`,
+    category: 'data',
   })
 
   // Score: fail=-30, warn=-10, info=0, ok=+full
