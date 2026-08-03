@@ -11,6 +11,7 @@ const links = [
   { href: '/principal/billing', label: 'Tuition products' },
   { href: '/principal/invoices', label: 'Invoices & payments' },
   { href: '/principal/videos', label: 'Videos' },
+  { href: '/principal/cameras', label: 'Cameras' },
   { href: '/principal/pulse', label: 'Beacon Pulse' },
   { href: '/principal/break', label: 'Coffee break' },
 ]

@@ -63,17 +63,53 @@ export type SchoolVideo = {
   createdBy: string
 }
 
+/**
+ * Campus cameras — browser-safe stream registry.
+ * Proven stack: go2rtc (RTSP → HLS/WebRTC) + hls.js in the browser.
+ * https://github.com/AlexxIT/go2rtc
+ */
+export type CameraStreamKind = 'hls' | 'mjpeg' | 'iframe' | 'snapshot'
+
+export type SchoolCamera = {
+  id: string
+  name: string
+  location: string
+  zone: 'entrance' | 'hallway' | 'playground' | 'parking' | 'gym' | 'office' | 'other'
+  /** Browser-playable URL (HLS .m3u8, MJPEG, go2rtc embed, or snapshot JPG) */
+  streamUrl: string
+  streamKind: CameraStreamKind
+  /** Optional still image when stream is offline */
+  snapshotUrl?: string
+  notes?: string
+  enabled: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
 export type SchoolModulesState = {
   lessonPlans: LessonPlan[]
   pulses: PulseEntry[]
   videos: SchoolVideo[]
+  cameras?: SchoolCamera[]
 }
 
 export const emptyModules = (): SchoolModulesState => ({
   lessonPlans: [],
   pulses: [],
   videos: [],
+  cameras: [],
 })
+
+export const CAMERA_ZONE_LABEL: Record<SchoolCamera['zone'], string> = {
+  entrance: 'Entrance',
+  hallway: 'Hallway',
+  playground: 'Playground',
+  parking: 'Parking',
+  gym: 'Gym',
+  office: 'Office',
+  other: 'Other',
+}
 
 export const PULSE_LABELS: Record<PulseDimension, string> = {
   engagement: 'Engagement',

@@ -15,7 +15,8 @@ Multi-tenant by design: each `schools` row carries its own name, branding, roste
 | **Conference Brief** | One-page PTC sheet from grades + pulse + attendance (unique) |
 | **Beacon Signal** | Principal school climate heart-rate + pastoral watch list (unique) |
 | **Families** | Announcements, parent feed, system email |
-| **Principal office** | Tuition, QuickBooks, videos, pulse board, **Go-live** ops |
+| **Principal office** | Tuition, QuickBooks, videos, **cameras** (go2rtc + hls.js), pulse, **Go-live** |
+| **Campus cameras** | Live wall — open-source go2rtc streams in browser (principal) |
 | **Missing Work Radar** | Calm past-due vs upcoming list (parent + teacher Today) |
 | **Teacher Today** | Per-class missing-work focus without district dashboards |
 | **Teacher Quick Mode** | Phone-first attendance / scores / pulse |

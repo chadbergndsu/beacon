@@ -10,6 +10,7 @@ import {
   type LessonPlan,
   type PulseEntry,
   type PulseLevel,
+  type SchoolCamera,
   type SchoolModulesState,
   type SchoolVideo,
 } from '@/lib/school-modules/types'
@@ -68,6 +69,7 @@ async function loadModulesJson(schoolId: string): Promise<SchoolModulesState> {
     lessonPlans: settings.modules.lessonPlans ?? [],
     pulses: settings.modules.pulses ?? [],
     videos: settings.modules.videos ?? [],
+    cameras: settings.modules.cameras ?? [],
   }
 }
 
@@ -480,4 +482,46 @@ export function youtubeEmbedId(url: string): string | null {
     return null
   }
   return null
+}
+
+// —— Campus cameras (settings JSON; browser-safe streams via go2rtc/HLS) ——
+
+export async function listCameras(schoolId: string): Promise<SchoolCamera[]> {
+  const m = await loadModulesJson(schoolId)
+  return (m.cameras || [])
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+}
+
+export async function upsertCamera(
+  schoolId: string,
+  camera: SchoolCamera
+): Promise<SchoolCamera> {
+  const m = await loadModulesJson(schoolId)
+  const cameras = m.cameras || []
+  const idx = cameras.findIndex((c) => c.id === camera.id)
+  if (idx >= 0) cameras[idx] = camera
+  else cameras.push(camera)
+  m.cameras = cameras
+  await saveModulesJson(schoolId, m)
+  return camera
+}
+
+export async function deleteCamera(schoolId: string, cameraId: string): Promise<void> {
+  const m = await loadModulesJson(schoolId)
+  m.cameras = (m.cameras || []).filter((c) => c.id !== cameraId)
+  await saveModulesJson(schoolId, m)
+}
+
+/** Infer stream kind from URL when principal leaves it auto. */
+export function detectCameraStreamKind(url: string): SchoolCamera['streamKind'] {
+  const u = url.toLowerCase()
+  if (u.includes('.m3u8') || u.includes('/hls/') || u.includes('stream.m3u8')) return 'hls'
+  if (u.includes('mjpeg') || u.includes('mjpg') || u.endsWith('.cgi')) return 'mjpeg'
+  if (u.includes('/stream.html') || u.includes('go2rtc') || u.includes('/api/webrtc'))
+    return 'iframe'
+  if (u.match(/\.(jpe?g|png|webp)(\?|$)/i)) return 'snapshot'
+  // go2rtc default api stream often HLS when path has stream id
+  if (u.includes(':1984/')) return 'iframe'
+  return 'hls'
 }
