@@ -29,7 +29,6 @@ export function CameraStreamPlayer({
   const [retry, setRetry] = useState(0)
 
   useEffect(() => {
-    setError(null)
     if (camera.streamKind !== 'hls') return
 
     const video = videoRef.current
@@ -78,8 +77,10 @@ export function CameraStreamPlayer({
       }
     }
 
-    setError('This browser cannot play HLS. Use Chrome, Safari, or Firefox.')
-    return undefined
+    const t = window.setTimeout(() => {
+      setError('This browser cannot play HLS. Use Chrome, Safari, or Firefox.')
+    }, 0)
+    return () => window.clearTimeout(t)
   }, [camera.streamUrl, camera.streamKind, autoPlay, retry])
 
   if (camera.streamKind === 'simulator') {

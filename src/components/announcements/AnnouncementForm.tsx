@@ -18,14 +18,12 @@ export function AnnouncementForm({ classes }: { classes: ClassOption[] }) {
   const [recipientCount, setRecipientCount] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!sendEmail) {
-      setRecipientCount(null)
-      return
-    }
+    if (!sendEmail) return
     let cancelled = false
     previewComposeRecipients({ audience, class_id: classId || null }).then((r) => {
       if (cancelled) return
       if (r.ok) setRecipientCount(r.count ?? 0)
+      else setRecipientCount(null)
     })
     return () => {
       cancelled = true

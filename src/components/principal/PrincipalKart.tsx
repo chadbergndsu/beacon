@@ -48,10 +48,17 @@ export function PrincipalKart() {
     best: 0,
     alive: true,
   })
-  const obstaclesRef = useRef<{ x: number; y: number; w: number; h: number }[]>([])
+  const obstaclesRef = useRef<{ x: number; y: number; w: number; h: number }[]>(
+    Array.from({ length: 5 }, (_, i) => ({
+      x: 180 + i * 140,
+      y: 40 + ((i * 37) % (H - 80)),
+      w: 18,
+      h: 28 + ((i * 11) % 20),
+    }))
+  )
   const rafRef = useRef<number>(0)
   const [score, setScore] = useState(0)
-  const [best, setBest] = useState(0)
+  const [best, setBest] = useState(() => loadBest())
   const [alive, setAlive] = useState(true)
 
   const reset = useCallback(() => {
@@ -64,23 +71,16 @@ export function PrincipalKart() {
       best: b,
       alive: true,
     }
-    obstaclesRef.current = []
-    for (let i = 0; i < 5; i++) {
-      obstaclesRef.current.push({
-        x: 180 + i * 140,
-        y: 40 + Math.random() * (H - 80),
-        w: 18,
-        h: 28 + Math.random() * 20,
-      })
-    }
+    obstaclesRef.current = Array.from({ length: 5 }, (_, i) => ({
+      x: 180 + i * 140,
+      y: 40 + Math.random() * (H - 80),
+      w: 18,
+      h: 28 + Math.random() * 20,
+    }))
     setScore(0)
     setBest(b)
     setAlive(true)
   }, [])
-
-  useEffect(() => {
-    reset()
-  }, [reset])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

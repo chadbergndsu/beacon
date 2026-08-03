@@ -131,7 +131,14 @@ export function PrincipalTetris() {
   const [playing, setPlaying] = useState(false)
   const [gameOver, setGameOver] = useState(false)
   const [paused, setPaused] = useState(false)
-  const [highScore, setHighScore] = useState(0)
+  const [highScore, setHighScore] = useState(() => {
+    if (typeof window === 'undefined') return 0
+    try {
+      return Number(localStorage.getItem('beacon-principal-tetris-hi') || '0') || 0
+    } catch {
+      return 0
+    }
+  })
 
   const pieceRef = useRef(piece)
   const boardRef = useRef(board)
@@ -151,15 +158,6 @@ export function PrincipalTetris() {
     gameOverRef.current = gameOver
     levelRef.current = level
   }, [piece, board, nextPiece, playing, paused, gameOver, level])
-
-  useEffect(() => {
-    try {
-      const hs = Number(localStorage.getItem('beacon-principal-tetris-hi') || '0')
-      if (hs) setHighScore(hs)
-    } catch {
-      /* ignore */
-    }
-  }, [])
 
   const spawn = useCallback((from: Piece, boardNow: Cell[][]) => {
     const p: Piece = {

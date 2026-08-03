@@ -320,7 +320,7 @@ export default async function DashboardPage() {
                   <ParentFeedSection
                     parentId={user.id}
                     schoolId={schoolId}
-                    children={children}
+                    students={children}
                   />
                 </section>
               )}
@@ -384,13 +384,13 @@ export default async function DashboardPage() {
 async function ParentFeedSection({
   parentId,
   schoolId,
-  children,
+  students,
 }: {
   parentId: string
   schoolId: string
-  children: { id: string; first_name: string; last_name: string }[]
+  students: { id: string; first_name: string; last_name: string }[]
 }) {
-  const items = await buildParentFeed(parentId, schoolId, children)
+  const items = await buildParentFeed(parentId, schoolId, students)
   return <ParentFeed items={items} />
 }
 

@@ -4,6 +4,27 @@
 
 Multi-tenant by design: each `schools` row carries its own name, branding, roster, and settings. JupiterEd familiarity where it helps teachers, cleaner than Blackbaud where families need clarity.
 
+This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/solid-systems-standards)** — see `AGENTS.md`.
+
+## Stack
+
+| Layer | Choice | Notes |
+|-------|--------|--------|
+| App | Next.js App Router + TypeScript + Tailwind | Portable web frontend |
+| DB | Supabase Postgres | Schema owned in `supabase/migrations/` |
+| Auth | Supabase Auth | Session checked before service-role use |
+| Host | Vercel + HTTPS | Default per Solid Systems |
+| Email | Resend (optional) | Log-only outbox without `RESEND_API_KEY` |
+| Billing | QuickBooks OAuth (optional) | Demo mode without Intuit keys |
+
+## Architecture (short)
+
+- **Multi-tenant:** `schools` + `school_id` on roster/grades; brand in `schools.settings.brand`
+- **Academics:** core tables (`classes`, `assignments`, `grades`, …)
+- **Suite modules:** prefer tables from migration `007`; JSON fallback only if tables missing
+- **Communications:** `email_outbox` + Resend; never silent — every attempt is recorded
+- **Ops:** principal Go-live UI + public `GET /api/health`
+
 ## Modules
 
 | Area | What it does |
@@ -36,9 +57,10 @@ Multi-tenant by design: each `schools` row carries its own name, branding, roste
 
 ## Live
 
-**Production:** https://beacon-beta-lemon.vercel.app  
-**School site:** https://beacon-beta-lemon.vercel.app/school  
-**Go-live (principal):** https://beacon-beta-lemon.vercel.app/principal/release  
+**Production:** https://beacon.commoncentsip.com  
+**School site:** https://beacon.commoncentsip.com/school  
+**Go-live (principal):** https://beacon.commoncentsip.com/principal/release  
+**Health:** https://beacon.commoncentsip.com/api/health  
 
 Pilot accounts are issued privately. Set school branding in **Principal → Go-live**.
 
@@ -47,18 +69,22 @@ Pilot accounts are issued privately. Set school branding in **Principal → Go-l
 ```bash
 npm install
 cp .env.example .env.local
-# Fill Supabase URL + keys
+# Fill Supabase URL + keys (never commit real secrets)
 npm run dev
 ```
 
 ### Quality automation
 
 ```bash
-npm test
 npm run lint
+npm run lint:fix   # ESLint auto-fix (formatter gate)
+npm run typecheck
+npm test
 npm run build
-npm run ci        # lint + test + build
+npm run ci          # lint + typecheck + test + build
 ```
+
+GitHub Actions runs `npm run ci` on push/PR to `main` (see `.github/workflows/ci.yml`).
 
 ### Database migrations
 
@@ -101,6 +127,13 @@ Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user to prin
 
 Leadership sees a trust banner until email + QB are production-ready. Details on **Go-live**.
 
+## Deploy
+
+1. Secrets live only in **Vercel Production env** (see `.env.example` for names).
+2. **Preferred:** push to `main` → Vercel deploys over HTTPS.
+3. Confirm `GET /api/health` returns `"status":"ok"`.
+4. Email: set Resend keys, then **Comms → Send live test**.
+
 ## Security / trust
 
 - Parents only access students linked in `parent_students`
@@ -108,6 +141,33 @@ Leadership sees a trust banner until email + QB are production-ready. Details on
 - Principal office requires principal or admin role
 - Service role used only after `getUser()` session check
 - No hard-coded single-school principal identity
+- `.gitignore` blocks `.env*`; only `.env.example` is committed
+
+## Observability
+
+| Signal | Where |
+|--------|--------|
+| App health | `GET /api/health` |
+| Go-live probes | Principal → Go-live |
+| Email delivery | Comms outbox (`sent` / `failed` / `skipped`) |
+| Staff actions | `audit_logs` |
+| Error product (Sentry) | Considered for later; outbox + audit + health cover pilot |
+
+## Solid Systems checklist (Beacon)
+
+| Item | Status |
+|------|--------|
+| README (purpose, stack, setup, architecture, deploy) | Yes |
+| `.env.example`, no committed secrets | Yes |
+| `.gitignore` | Yes |
+| Linter + fix (`eslint` / `lint:fix`) | Yes |
+| TypeScript | Yes |
+| Core logic tests (vitest) | Yes |
+| Secrets in platform env only | Yes (Vercel) |
+| Error tracking considered | Yes (Sentry deferred; outbox/health now) |
+| Deploy from Git | Preferred path on Vercel |
+| HTTPS only | Vercel |
+| Health check | `/api/health` + Go-live |
 
 ## Repo
 

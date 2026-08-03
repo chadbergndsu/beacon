@@ -20,34 +20,40 @@ export function ComposeMessageForm({
   const [ok, setOk] = useState<string | null>(null)
   const [audience, setAudience] = useState('parents')
   const [classId, setClassId] = useState(canSchoolWide ? '' : classes[0]?.id || '')
-  const [preview, setPreview] = useState<{ count: number; sample: string[]; note?: string } | null>(
-    null
-  )
-  const [previewing, setPreviewing] = useState(false)
+  const [preview, setPreview] = useState<{
+    count: number
+    sample: string[]
+    note?: string
+    forKey: string
+  } | null>(null)
+
+  const previewKey = `${audience}|${classId}`
 
   useEffect(() => {
     let cancelled = false
-    setPreviewing(true)
     previewComposeRecipients({
       audience,
       class_id: classId || null,
     }).then((r) => {
       if (cancelled) return
-      setPreviewing(false)
       if (r.ok) {
         setPreview({
           count: r.count ?? 0,
           sample: r.sample ?? [],
           note: r.emailNote,
+          forKey: previewKey,
         })
       } else {
-        setPreview(null)
+        setPreview({ count: 0, sample: [], note: r.error, forKey: previewKey })
       }
     })
     return () => {
       cancelled = true
     }
-  }, [audience, classId])
+  }, [audience, classId, previewKey])
+
+  const previewReady = preview?.forKey === previewKey
+  const previewing = !previewReady
 
   return (
     <form

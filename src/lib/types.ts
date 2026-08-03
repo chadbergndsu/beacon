@@ -19,7 +19,7 @@ export interface Student {
   photo_url?: string | null;
   allergies?: string | null;
   medical_notes?: string | null;
-  emergency_contact?: any;
+  emergency_contact?: Record<string, unknown> | string | null;
   active?: boolean;
 }
 
