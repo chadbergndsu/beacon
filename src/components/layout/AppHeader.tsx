@@ -24,7 +24,7 @@ export function AppHeader({
     ...(isPrincipal ? [{ href: '/principal', label: 'Principal office' }] : []),
     ...(isPrincipal ? [{ href: '/principal/release', label: 'Go-live' }] : []),
     { href: '/announcements', label: 'Announcements' },
-    ...(staff ? [{ href: '/admin/emails', label: 'Emails' }] : []),
+    ...(staff ? [{ href: '/admin/emails', label: 'Comms' }] : []),
     { href: '/school', label: 'School site' },
     { href: '/about', label: 'About' },
   ]

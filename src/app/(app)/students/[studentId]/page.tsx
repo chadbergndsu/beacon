@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { TransparentGradeView } from '@/components/gradebook/TransparentGradeView'
 import { StudentPulseTimeline } from '@/components/pulse/StudentPulseTimeline'
 import { DinnerTableCard } from '@/components/insights/DinnerTableCard'
+import { EmailDigestButton } from '@/components/insights/EmailDigestButton'
 import { MissingWorkRadar } from '@/components/insights/MissingWorkRadar'
 import { loadMissingWorkForStudent } from '@/lib/insights/load-missing-work'
 import { getProfile } from '@/lib/auth'
@@ -102,7 +103,7 @@ export default async function StudentOverviewPage({
           {student.grade_level ? `Grade ${student.grade_level}` : 'Student'} · Academics + Beacon
           Pulse
         </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <Link
             href={`/students/${studentId}/report-card`}
             className="inline-flex rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
@@ -115,6 +116,10 @@ export default async function StudentOverviewPage({
           >
             Conference brief →
           </Link>
+          {profile &&
+            ['admin', 'staff', 'teacher', 'principal'].includes(profile.role) && (
+              <EmailDigestButton studentId={studentId} />
+            )}
         </div>
       </div>
 

@@ -41,7 +41,7 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
   {
     id: 'email_mode',
     label: 'Email mode understood',
-    help: 'Either Resend is live, or staff know messages are log-only until RESEND_API_KEY is set.',
+    help: 'Resend live on Vercel + domain verified, or staff explicitly accept log-only until then. Send a delivery test from Comms.',
     group: 'trust',
   },
   {

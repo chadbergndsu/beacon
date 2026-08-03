@@ -1,8 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { createAnnouncement } from '@/app/actions/announcements'
+import { previewComposeRecipients } from '@/app/actions/communications'
 
 type ClassOption = { id: string; name: string }
 
@@ -11,6 +12,25 @@ export function AnnouncementForm({ classes }: { classes: ClassOption[] }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
+  const [audience, setAudience] = useState('parents')
+  const [classId, setClassId] = useState('')
+  const [sendEmail, setSendEmail] = useState(true)
+  const [recipientCount, setRecipientCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!sendEmail) {
+      setRecipientCount(null)
+      return
+    }
+    let cancelled = false
+    previewComposeRecipients({ audience, class_id: classId || null }).then((r) => {
+      if (cancelled) return
+      if (r.ok) setRecipientCount(r.count ?? 0)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [audience, classId, sendEmail])
 
   return (
     <form
@@ -33,6 +53,7 @@ export function AnnouncementForm({ classes }: { classes: ClassOption[] }) {
             return
           }
           if (result.emailNote) setNote(result.emailNote)
+          else if (result.emailed) setNote(`Emailed ${result.emailed} recipient(s).`)
           router.push('/announcements')
           router.refresh()
         })
@@ -62,7 +83,12 @@ export function AnnouncementForm({ classes }: { classes: ClassOption[] }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm font-medium">
           Audience
-          <select name="audience" defaultValue="parents" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+          <select
+            name="audience"
+            value={audience}
+            onChange={(e) => setAudience(e.target.value)}
+            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+          >
             <option value="parents">Parents</option>
             <option value="teachers">Teachers</option>
             <option value="staff">All staff</option>
@@ -72,7 +98,12 @@ export function AnnouncementForm({ classes }: { classes: ClassOption[] }) {
 
         <label className="block text-sm font-medium">
           Limit to class (optional)
-          <select name="class_id" defaultValue="" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+          <select
+            name="class_id"
+            value={classId}
+            onChange={(e) => setClassId(e.target.value)}
+            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+          >
             <option value="">Whole school</option>
             {classes.map((c) => (
               <option key={c.id} value={c.id}>
@@ -84,11 +115,20 @@ export function AnnouncementForm({ classes }: { classes: ClassOption[] }) {
       </div>
 
       <label className="flex items-start gap-2 text-sm">
-        <input name="send_email" type="checkbox" defaultChecked className="mt-1 h-4 w-4" />
+        <input
+          name="send_email"
+          type="checkbox"
+          checked={sendEmail}
+          onChange={(e) => setSendEmail(e.target.checked)}
+          className="mt-1 h-4 w-4"
+        />
         <span>
           <strong>Email recipients</strong>
           <span className="block text-muted-foreground text-xs mt-0.5">
-            Sends system emails via Beacon (Resend if configured; otherwise logged in Email outbox).
+            School-branded mail via Resend when live; always logged in Comms outbox.
+            {sendEmail && recipientCount != null && (
+              <> · <strong>{recipientCount}</strong> address{recipientCount === 1 ? '' : 'es'} will receive it</>
+            )}
           </span>
         </span>
       </label>
@@ -107,7 +147,11 @@ export function AnnouncementForm({ classes }: { classes: ClassOption[] }) {
         disabled={pending}
         className="rounded-lg bg-sky-600 text-white px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
       >
-        {pending ? 'Publishing…' : 'Publish announcement'}
+        {pending
+          ? 'Publishing…'
+          : sendEmail && recipientCount != null
+            ? `Publish & email ${recipientCount}`
+            : 'Publish announcement'}
       </button>
     </form>
   )

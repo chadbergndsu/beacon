@@ -8,7 +8,14 @@ import {
 } from '@/lib/attendance/store'
 import type { AttendanceStatus } from '@/lib/attendance/types'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { queueAndSendEmail } from '@/lib/email/send'
+import { queueAndSendBatch } from '@/lib/email/send'
+import {
+  appBaseUrl,
+  attendanceNoticeBodies,
+  subjectTag,
+} from '@/lib/email/templates'
+import { resolveParentsForStudents } from '@/lib/email/recipients'
+import { loadSchoolBrand } from '@/lib/school-brand'
 import { ATTENDANCE_LABEL } from '@/lib/attendance/types'
 
 export async function getAttendance(classId: string, date: string) {
@@ -50,60 +57,65 @@ export async function saveAttendance(
   let notifyNote: string | undefined
   if (options?.notifyParents) {
     const absentees = rows.filter((r) => r.status === 'absent' || r.status === 'tardy')
-    let sent = 0
-    for (const row of absentees) {
-      const { data: links } = await admin
-        .from('parent_students')
-        .select('parent_id')
-        .eq('student_id', row.studentId)
-      const parentIds = (links ?? []).map((l) => l.parent_id)
-      if (!parentIds.length) continue
+    if (!absentees.length) {
+      notifyNote = 'No absent/tardy students — nothing to email.'
+    } else {
+      const brand = await loadSchoolBrand(access.classRow.school_id)
+      const tag = subjectTag(brand)
+      const base = appBaseUrl()
+      const studentIds = absentees.map((r) => r.studentId)
+      const parentsMap = await resolveParentsForStudents(studentIds)
 
-      const { data: parents } = await admin
-        .from('profiles')
-        .select('email, full_name')
-        .in('id', parentIds)
-
-      const { data: student } = await admin
+      const { data: students } = await admin
         .from('students')
-        .select('first_name, last_name')
-        .eq('id', row.studentId)
-        .maybeSingle()
+        .select('id, first_name, last_name')
+        .in('id', studentIds)
+      const studentById = new Map((students ?? []).map((s) => [s.id, s]))
 
-      const studentName = student
-        ? `${student.first_name} ${student.last_name}`
-        : 'your student'
+      type Out = Parameters<typeof queueAndSendBatch>[0][number]
+      const batch: Out[] = []
 
-      for (const p of parents ?? []) {
-        if (!p.email) continue
-        const result = await queueAndSendEmail({
-          school_id: access.classRow.school_id,
-          kind: 'system',
-          to_email: p.email,
-          to_name: p.full_name,
-          subject: `[Beacon] Attendance notice · ${studentName}`,
-          body_text: [
-            `Hello ${p.full_name || 'Parent'},`,
-            '',
-            `Attendance update for ${studentName} in ${access.classRow.name}:`,
-            `${ATTENDANCE_LABEL[row.status]} on ${date}`,
-            row.note ? `Note: ${row.note}` : '',
-            '',
-            '— Beacon school suite',
-          ]
-            .filter(Boolean)
-            .join('\n'),
-          related_table: 'attendance',
-          related_id: null,
-          meta: { studentId: row.studentId, status: row.status, date },
-        })
-        if (result.status === 'sent' || result.status === 'skipped') sent++
+      for (const row of absentees) {
+        const student = studentById.get(row.studentId)
+        const studentName = student
+          ? `${student.first_name} ${student.last_name}`
+          : 'your student'
+        for (const p of parentsMap.get(row.studentId) || []) {
+          const { text, html } = attendanceNoticeBodies({
+            brand,
+            parentName: p.name || 'Parent',
+            studentName,
+            className: access.classRow.name,
+            date,
+            statusLabel: ATTENDANCE_LABEL[row.status],
+            note: row.note,
+            appUrl: `${base}/students/${row.studentId}`,
+          })
+          batch.push({
+            school_id: access.classRow.school_id,
+            kind: 'attendance_notice',
+            to_email: p.email,
+            to_name: p.name,
+            subject: `[${tag}] Attendance · ${studentName}`,
+            body_text: text,
+            body_html: html,
+            related_table: 'attendance',
+            related_id: null,
+            meta: { studentId: row.studentId, status: row.status, date },
+          })
+        }
+      }
+
+      if (!batch.length) {
+        notifyNote = 'No parent emails for absent/tardy students.'
+      } else {
+        const result = await queueAndSendBatch(batch, { brand })
+        notifyNote =
+          result.sent + result.skipped > 0
+            ? `Notified parents on ${result.sent + result.skipped} message(s) for absent/tardy.${result.note ? ` ${result.note}` : ''}`
+            : 'No parent emails sent (delivery failed or no matches).'
       }
     }
-    notifyNote =
-      sent > 0
-        ? `Notified parents on ${sent} message(s) for absent/tardy.`
-        : 'No parent emails sent (no matches or all present).'
   }
 
   revalidatePath(`/classes/${classId}`)

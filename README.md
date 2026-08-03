@@ -14,7 +14,7 @@ Multi-tenant by design: each `schools` row carries its own name, branding, roste
 | **Dinner Table Digest** | 60-second plain-English parent story + conversation starters (unique) |
 | **Conference Brief** | One-page PTC sheet from grades + pulse + attendance (unique) |
 | **Beacon Signal** | Principal school climate heart-rate + pastoral watch list (unique) |
-| **Families** | Announcements, parent feed, system email |
+| **Communications** | Compose to families, announcements, Dinner Table Digest email, grade/attendance notices, outbox + resend |
 | **Principal office** | Tuition, QuickBooks, videos, **cameras** (go2rtc + hls.js), pulse, **Go-live** |
 | **Campus cameras** | Principal live wall — EasyCamera LiveGrid pattern + go2rtc/MediaMTX HLS + hls.js simulator fallback |
 | **Missing Work Radar** | Calm past-due vs upcoming list (parent + teacher Today) |
@@ -86,9 +86,18 @@ Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user to prin
 | Mode | Behavior |
 |------|----------|
 | No `RESEND_API_KEY` | Emails **log-only** (outbox status `skipped`) — safe for dry-run |
-| Resend configured | Live delivery; verify domain in Resend |
+| Resend configured | Live delivery; verify domain in Resend; `EMAIL_FROM` must match that domain |
+| School brand email | Used as **Reply-To** so parents can answer the office (not a dead noreply) |
 | No Intuit keys | QuickBooks **Connect** activates a **labeled sandbox demo** only |
 | Intuit OAuth set | Live sandbox/production per `INTUIT_ENVIRONMENT` |
+
+**Production email checklist**
+
+1. [resend.com](https://resend.com) → Domains → add school domain → DNS verify  
+2. Vercel → `RESEND_API_KEY` + `EMAIL_FROM=School Name <office@yourdomain.org>` (Production)  
+3. Principal → Go-live → set school contact email (Reply-To)  
+4. **Comms** → Send delivery test → confirm inbox  
+5. Compose / Announcements / Dinner Table Digest email as needed  
 
 Leadership sees a trust banner until email + QB are production-ready. Details on **Go-live**.
 

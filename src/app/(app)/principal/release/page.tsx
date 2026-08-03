@@ -126,8 +126,15 @@ export default async function PrincipalReleasePage() {
             <code className="text-xs">POSTGRES_PASSWORD</code>
           </li>
           <li>
-            Live email: set <code className="text-xs">RESEND_API_KEY</code> + verified{' '}
-            <code className="text-xs">EMAIL_FROM</code> on Vercel
+            Live email: verify domain at resend.com → set{' '}
+            <code className="text-xs">RESEND_API_KEY</code> +{' '}
+            <code className="text-xs">EMAIL_FROM</code> on Vercel → send test from{' '}
+            <Link href="/admin/emails" className="font-semibold underline">
+              Comms
+            </Link>
+          </li>
+          <li>
+            School contact email on branding above becomes Reply-To so parents can answer the office
           </li>
           <li>
             Live QuickBooks: <code className="text-xs">INTUIT_CLIENT_ID</code> /{' '}
@@ -140,7 +147,7 @@ export default async function PrincipalReleasePage() {
         </ul>
         <p className="mt-3">
           <Link href="/admin/emails" className="font-semibold text-sky-800 hover:underline">
-            Email outbox →
+            Communications →
           </Link>
           {' · '}
           <Link href="/principal/payments" className="font-semibold text-sky-800 hover:underline">

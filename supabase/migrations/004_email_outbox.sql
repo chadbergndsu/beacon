@@ -29,5 +29,5 @@ DROP POLICY IF EXISTS "Staff view school email outbox" ON email_outbox;
 CREATE POLICY "Staff view school email outbox" ON email_outbox FOR SELECT
   USING (
     school_id = get_user_school_id()
-    AND get_user_role() IN ('admin', 'staff', 'teacher')
+    AND get_user_role() IN ('admin', 'staff', 'teacher', 'principal')
   );

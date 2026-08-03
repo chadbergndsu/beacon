@@ -223,7 +223,7 @@ export default async function DashboardPage() {
               href="/admin/emails"
               className="rounded-lg border bg-background px-3 py-2 text-sm font-medium"
             >
-              Email outbox
+              Comms
             </Link>
           </div>
         )}

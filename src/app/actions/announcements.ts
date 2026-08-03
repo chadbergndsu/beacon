@@ -3,8 +3,16 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { queueAndSendEmail } from '@/lib/email/send'
+import { queueAndSendBatch, queueAndSendEmail } from '@/lib/email/send'
 import { resolveAnnouncementRecipients } from '@/lib/email/recipients'
+import {
+  announcementBodies,
+  appBaseUrl,
+  brandedEmailShell,
+  escapeHtml,
+  subjectTag,
+} from '@/lib/email/templates'
+import { loadSchoolBrand } from '@/lib/school-brand'
 
 export type ActionResult =
   | { ok: true; id?: string; emailed?: number; emailNote?: string }
@@ -101,58 +109,38 @@ export async function createAnnouncement(input: {
 
     if (recipients.length === 0) {
       emailNote =
-        'No matching parent/staff emails found. Link parent profiles with emails, or choose Staff audience.'
+        'Announcement saved, but no matching parent/staff emails found. Link parent profiles with emails, or choose Staff audience.'
     } else {
-      const admin = createAdminClient()
-      const { data: schoolRow } = await admin
-        .from('schools')
-        .select('name')
-        .eq('id', access.profile.school_id!)
-        .maybeSingle()
-      const schoolName = schoolRow?.name || 'Your school'
+      const brand = await loadSchoolBrand(access.profile.school_id)
+      const tag = subjectTag(brand)
       const author = access.profile.full_name || 'Beacon'
-      const text = [
+      const base = appBaseUrl()
+      const { text, html } = announcementBodies({
+        brand,
         title,
-        '',
         body,
-        '',
-        `— ${author}`,
-        schoolName,
-        '',
-        `Sent by Beacon · ${schoolName}.`,
-      ].join('\n')
+        author,
+        appUrl: `${base}/announcements/${announcement.id}`,
+      })
 
-      const html = `
-        <div style="font-family: system-ui, sans-serif; max-width: 560px; line-height: 1.5;">
-          <p style="color:#0369a1;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">
-            ${schoolName} · Beacon
-          </p>
-          <h1 style="font-size:20px;margin:0 0 12px;">${escapeHtml(title)}</h1>
-          <div style="white-space:pre-wrap;color:#0f172a;">${escapeHtml(body)}</div>
-          <p style="margin-top:24px;color:#64748b;font-size:13px;">— ${escapeHtml(author)}</p>
-          <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;" />
-          <p style="color:#94a3b8;font-size:12px;">This is a system email from Beacon. Do not reply to this message.</p>
-        </div>
-      `
+      const batch = recipients.map((r) => ({
+        school_id: access.profile.school_id,
+        kind: 'announcement' as const,
+        to_email: r.email,
+        to_name: r.name,
+        subject: `[${tag}] ${title}`,
+        body_text: text,
+        body_html: html,
+        related_table: 'announcements',
+        related_id: announcement.id,
+        meta: { audience, recipient_role: r.role },
+      }))
 
-      for (const r of recipients) {
-        const result = await queueAndSendEmail({
-          school_id: access.profile.school_id,
-          kind: 'announcement',
-          to_email: r.email,
-          to_name: r.name,
-          subject: `[Beacon] ${title}`,
-          body_text: text,
-          body_html: html,
-          related_table: 'announcements',
-          related_id: announcement.id,
-          meta: { audience, recipient_role: r.role },
-        })
-        if (result.status === 'sent' || result.status === 'skipped') emailed++
-        if (result.status === 'skipped' && !emailNote) {
-          emailNote =
-            'Emails were queued/logged but not delivered. Add RESEND_API_KEY to send real mail.'
-        }
+      const result = await queueAndSendBatch(batch, { brand })
+      emailed = result.sent + result.skipped
+      if (result.note) emailNote = result.note
+      else if (result.failed) {
+        emailNote = `${result.failed} of ${result.total} failed — check Email outbox to resend.`
       }
     }
   }
@@ -160,14 +148,6 @@ export async function createAnnouncement(input: {
   revalidatePath('/announcements')
   revalidatePath('/admin/emails')
   return { ok: true, id: announcement.id, emailed, emailNote }
-}
-
-function escapeHtml(s: string) {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
 }
 
 export async function sendSystemEmail(input: {
@@ -188,18 +168,29 @@ export async function sendSystemEmail(input: {
   const body = input.body.trim()
   if (!subject || !body) return { ok: false, error: 'Subject and body required.' }
 
-  const result = await queueAndSendEmail({
-    school_id: access.profile.school_id,
-    kind: 'system',
-    to_email: to,
-    to_name: input.to_name || null,
-    subject: `[Beacon] ${subject}`,
-    body_text: `${body}\n\n— Beacon system message`,
-    body_html: `<div style="font-family:system-ui,sans-serif"><p>${escapeHtml(body).replace(/\n/g, '<br/>')}</p><p style="color:#64748b;font-size:13px">— Beacon system</p></div>`,
-    related_table: null,
-    related_id: null,
-    meta: { manual: true },
-  })
+  const brand = await loadSchoolBrand(access.profile.school_id)
+  const tag = subjectTag(brand)
+
+  const result = await queueAndSendEmail(
+    {
+      school_id: access.profile.school_id,
+      kind: 'system',
+      to_email: to,
+      to_name: input.to_name || null,
+      subject: `[${tag}] ${subject}`,
+      body_text: `${body}\n\n— ${brand.name}`,
+      body_html: brandedEmailShell({
+        brand,
+        eyebrow: 'School message',
+        title: subject,
+        bodyHtml: `<div style="white-space:pre-wrap">${escapeHtml(body)}</div>`,
+      }),
+      related_table: null,
+      related_id: null,
+      meta: { manual: true },
+    },
+    { brand }
+  )
 
   revalidatePath('/admin/emails')
   return {
