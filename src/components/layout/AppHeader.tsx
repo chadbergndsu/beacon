@@ -20,6 +20,7 @@ export function AppHeader({
     { href: '/dashboard', label: 'Home' },
     ...(showQuick ? [{ href: '/teacher/quick', label: 'Quick mode', highlight: true }] : []),
     ...(showQuick ? [{ href: '/teacher/lessons', label: 'Lesson plans' }] : []),
+    ...(showQuick ? [{ href: '/teacher/calendar', label: 'Calendar' }] : []),
     ...(isPrincipal ? [{ href: '/principal', label: 'Principal office' }] : []),
     ...(isPrincipal ? [{ href: '/principal/release', label: 'Go-live' }] : []),
     { href: '/announcements', label: 'Announcements' },

@@ -375,6 +375,18 @@ export function TeacherLessonPlanner({
           stacked, with <strong className="text-foreground">Done for today</strong> to clear a
           subject without deleting the plan.
         </p>
+        <p className="mt-2 text-sm">
+          <Link
+            href="/teacher/calendar"
+            className="font-semibold text-sky-700 hover:underline dark:text-sky-300"
+          >
+            Assignment month calendar →
+          </Link>
+          <span className="text-muted-foreground">
+            {' '}
+            (due dates / quizzes like SchoolWorx calendar)
+          </span>
+        </p>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm dark:border-slate-700">
