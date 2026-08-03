@@ -11,7 +11,11 @@ import {
   Trash2,
   Video,
 } from 'lucide-react'
-import { removeSchoolCamera, saveSchoolCamera } from '@/app/actions/cameras'
+import {
+  removeSchoolCamera,
+  saveSchoolCamera,
+  seedDemoCameras,
+} from '@/app/actions/cameras'
 import { CameraStreamPlayer } from '@/components/principal/CameraStreamPlayer'
 import type { CameraStreamKind, SchoolCamera } from '@/lib/school-modules/types'
 import { CAMERA_ZONE_LABEL } from '@/lib/school-modules/types'
@@ -34,10 +38,11 @@ const ZONES: SchoolCamera['zone'][] = [
 
 const KINDS: { value: CameraStreamKind | 'auto'; label: string }[] = [
   { value: 'auto', label: 'Auto-detect' },
-  { value: 'hls', label: 'HLS (.m3u8) — go2rtc / NVR' },
+  { value: 'hls', label: 'HLS (.m3u8) — go2rtc / MediaMTX' },
   { value: 'iframe', label: 'go2rtc embed page' },
   { value: 'mjpeg', label: 'MJPEG' },
   { value: 'snapshot', label: 'Still snapshot (JPG)' },
+  { value: 'simulator', label: 'Simulator (EasyCamera demo)' },
 ]
 
 export function CameraWall({ cameras: initial }: { cameras: SchoolCamera[] }) {
@@ -72,10 +77,12 @@ export function CameraWall({ cameras: initial }: { cameras: SchoolCamera[] }) {
             Cameras
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-            Live wall of school cameras. Streams use open-source{' '}
-            <strong className="text-foreground">go2rtc</strong> (RTSP → HLS/WebRTC) and{' '}
-            <strong className="text-foreground">hls.js</strong> in the browser — no proprietary NVR
-            UI required.
+            Live wall of school cameras — same idea as your{' '}
+            <strong className="text-foreground">EasyCamera LiveGrid</strong>: pick a cam, open a
+            session. Production streams use open-source{' '}
+            <strong className="text-foreground">go2rtc</strong> /{' '}
+            <strong className="text-foreground">MediaMTX</strong> +{' '}
+            <strong className="text-foreground">hls.js</strong>.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -99,19 +106,39 @@ export function CameraWall({ cameras: initial }: { cameras: SchoolCamera[] }) {
             <Plus className="h-3.5 w-3.5" />
             {showForm ? 'Hide form' : 'Add camera'}
           </Button>
+          {initial.length === 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={() => {
+                start(async () => {
+                  const res = await seedDemoCameras()
+                  if (!res.ok) {
+                    setError(res.error)
+                    return
+                  }
+                  setOk(`Loaded ${res.count} simulator cameras (EasyCamera pattern).`)
+                  router.refresh()
+                })
+              }}
+            >
+              Seed demo wall
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Setup callout */}
+      {/* Setup callout — EasyCamera + go2rtc / MediaMTX */}
       <Card className="border-sky-200/80 bg-sky-50/40 dark:border-sky-900 dark:bg-sky-950/20">
         <CardContent className="pt-5 text-sm text-muted-foreground space-y-2 leading-relaxed">
           <p className="font-semibold text-foreground flex items-center gap-2">
             <Video className="h-4 w-4 text-sky-600" />
-            Proven open-source setup
+            Open-source stack (from EasyCamera + go2rtc)
           </p>
           <ol className="list-decimal ml-5 space-y-1">
             <li>
-              Run{' '}
+              Site gateway:{' '}
               <a
                 className="font-medium text-sky-700 underline"
                 href="https://github.com/AlexxIT/go2rtc"
@@ -120,18 +147,33 @@ export function CameraWall({ cameras: initial }: { cameras: SchoolCamera[] }) {
               >
                 go2rtc
               </a>{' '}
-              (Docker one-liner) next to your cameras / NVR.
+              or{' '}
+              <a
+                className="font-medium text-sky-700 underline"
+                href="https://github.com/bluenviron/mediamtx"
+                target="_blank"
+                rel="noreferrer"
+              >
+                MediaMTX
+              </a>{' '}
+              (EasyCamera media-engine uses MediaMTX).
             </li>
             <li>
-              Point each camera RTSP at go2rtc; use the HLS URL (
-              <code className="text-xs bg-muted px-1 rounded">…/api/stream.m3u8?src=NAME</code>) or
-              go2rtc stream page.
+              HLS URL examples:{' '}
+              <code className="text-xs bg-muted px-1 rounded">
+                …/api/stream.m3u8?src=front
+              </code>{' '}
+              (go2rtc) ·{' '}
+              <code className="text-xs bg-muted px-1 rounded">…/front/index.m3u8</code> (MediaMTX)
             </li>
-            <li>Paste that browser-safe URL below. Beacon plays it with hls.js — no plugins.</li>
+            <li>
+              No hardware yet? <strong className="text-foreground">Seed demo wall</strong> uses the
+              EasyCamera canvas simulator so leadership can tour the UI.
+            </li>
           </ol>
           <p className="text-xs">
-            Demo streams: public HLS samples work for testing (e.g. Apple bipbop or your go2rtc
-            lab). Never expose raw RTSP to the public internet.
+            Never put raw RTSP in the browser. Never expose go2rtc/MediaMTX to the public internet
+            without auth / tunnel.
           </p>
         </CardContent>
       </Card>
@@ -355,7 +397,7 @@ export function CameraWall({ cameras: initial }: { cameras: SchoolCamera[] }) {
                   id="streamUrl"
                   name="streamUrl"
                   required
-                  placeholder="https://go2rtc.local:1984/api/stream.m3u8?src=front"
+                  placeholder="https://go2rtc:1984/api/stream.m3u8?src=front  or  simulator"
                 />
               </div>
               <div className="sm:col-span-2">

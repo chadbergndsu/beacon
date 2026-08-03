@@ -68,7 +68,8 @@ export type SchoolVideo = {
  * Proven stack: go2rtc (RTSP → HLS/WebRTC) + hls.js in the browser.
  * https://github.com/AlexxIT/go2rtc
  */
-export type CameraStreamKind = 'hls' | 'mjpeg' | 'iframe' | 'snapshot'
+/** hls/mjpeg/iframe/snapshot = real streams; simulator = EasyCamera-style canvas demo */
+export type CameraStreamKind = 'hls' | 'mjpeg' | 'iframe' | 'snapshot' | 'simulator'
 
 export type SchoolCamera = {
   id: string

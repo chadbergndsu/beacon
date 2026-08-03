@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requirePrincipal } from '@/lib/principal'
 import {
   deleteCamera,
+  demoCameras,
   detectCameraStreamKind,
   listCameras,
   upsertCamera,
@@ -37,11 +38,13 @@ export async function saveSchoolCamera(input: {
   const streamUrl = input.streamUrl.trim()
   if (!name) return { ok: false, error: 'Camera name is required.' }
   if (!streamUrl) return { ok: false, error: 'Stream URL is required.' }
-  // Allow http(s) for HLS/go2rtc; also relative paths for same-origin reverse proxies
-  if (!/^https?:\/\//i.test(streamUrl) && !streamUrl.startsWith('/')) {
+  // Allow http(s) for HLS/go2rtc; relative paths; EasyCamera-style simulator
+  const isSim = streamUrl === 'simulator' || streamUrl.startsWith('sim://')
+  if (!isSim && !/^https?:\/\//i.test(streamUrl) && !streamUrl.startsWith('/')) {
     return {
       ok: false,
-      error: 'Use an http(s) stream URL (go2rtc HLS/WebRTC page) or a site-relative path.',
+      error:
+        'Use an http(s) stream URL (go2rtc/MediaMTX HLS), a site-relative path, or "simulator".',
     }
   }
 
@@ -85,4 +88,29 @@ export async function removeSchoolCamera(
   await deleteCamera(schoolId, cameraId)
   revalidateCameras()
   return { ok: true }
+}
+
+/** Install EasyCamera-style demo wall (4 simulator cameras). Replaces nothing if real cams exist unless force. */
+export async function seedDemoCameras(
+  force = false
+): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+  const { schoolId } = await requirePrincipal()
+  const existing = await listCameras(schoolId)
+  const onlyDemo = existing.every((c) => c.id.startsWith('cam_demo_'))
+  if (existing.length > 0 && !onlyDemo && !force) {
+    return {
+      ok: false,
+      error: 'Real cameras already configured. Remove them first or pass force.',
+    }
+  }
+  // Clear old demos then seed
+  for (const c of existing.filter((x) => x.id.startsWith('cam_demo_'))) {
+    await deleteCamera(schoolId, c.id)
+  }
+  const demos = demoCameras()
+  for (const cam of demos) {
+    await upsertCamera(schoolId, cam)
+  }
+  revalidateCameras()
+  return { ok: true, count: demos.length }
 }

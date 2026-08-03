@@ -516,12 +516,40 @@ export async function deleteCamera(schoolId: string, cameraId: string): Promise<
 /** Infer stream kind from URL when principal leaves it auto. */
 export function detectCameraStreamKind(url: string): SchoolCamera['streamKind'] {
   const u = url.toLowerCase()
-  if (u.includes('.m3u8') || u.includes('/hls/') || u.includes('stream.m3u8')) return 'hls'
+  if (u === 'simulator' || u.startsWith('sim://')) return 'simulator'
+  // MediaMTX path style: …/camname/index.m3u8 (EasyCamera media-engine)
+  if (u.includes('.m3u8') || u.includes('/hls/') || u.includes('/index.m3u8')) return 'hls'
   if (u.includes('mjpeg') || u.includes('mjpg') || u.endsWith('.cgi')) return 'mjpeg'
   if (u.includes('/stream.html') || u.includes('go2rtc') || u.includes('/api/webrtc'))
     return 'iframe'
   if (u.match(/\.(jpe?g|png|webp)(\?|$)/i)) return 'snapshot'
-  // go2rtc default api stream often HLS when path has stream id
+  // go2rtc default web UI
   if (u.includes(':1984/')) return 'iframe'
+  // MediaMTX WHEP is not wired yet — treat base path as HLS index if ends with path
+  if (u.includes(':8888/') || u.includes('mediamtx')) return 'hls'
   return 'hls'
+}
+
+/** Demo wall for schools without go2rtc yet — mirrors EasyCamera LiveGrid simulator. */
+export function demoCameras(): SchoolCamera[] {
+  const now = new Date().toISOString()
+  const specs: { name: string; location: string; zone: SchoolCamera['zone'] }[] = [
+    { name: 'Front entrance', location: 'Main doors · north', zone: 'entrance' },
+    { name: 'Hallway A', location: 'Primary wing', zone: 'hallway' },
+    { name: 'Playground', location: 'East yard', zone: 'playground' },
+    { name: 'Parking lot', location: 'Staff lot', zone: 'parking' },
+  ]
+  return specs.map((s, i) => ({
+    id: `cam_demo_${i + 1}`,
+    name: s.name,
+    location: s.location,
+    zone: s.zone,
+    streamUrl: 'simulator',
+    streamKind: 'simulator' as const,
+    notes: 'EasyCamera-style simulator — replace with go2rtc/MediaMTX HLS when ready',
+    enabled: true,
+    sortOrder: i,
+    createdAt: now,
+    updatedAt: now,
+  }))
 }

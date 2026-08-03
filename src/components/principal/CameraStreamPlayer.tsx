@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react'
 import Hls from 'hls.js'
 import { Film, RefreshCw } from 'lucide-react'
 import type { SchoolCamera } from '@/lib/school-modules/types'
+import { CameraSimulator } from '@/components/principal/CameraSimulator'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -80,6 +81,10 @@ export function CameraStreamPlayer({
     setError('This browser cannot play HLS. Use Chrome, Safari, or Firefox.')
     return undefined
   }, [camera.streamUrl, camera.streamKind, autoPlay, retry])
+
+  if (camera.streamKind === 'simulator') {
+    return <CameraSimulator camera={camera} className={className} />
+  }
 
   if (camera.streamKind === 'iframe') {
     return (
