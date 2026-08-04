@@ -604,6 +604,10 @@ export async function listRoomPresence(
     .sort((a, b) => a.studentName.localeCompare(b.studentName))
 }
 
+/**
+ * School-scoped student search for staff kiosk/desk.
+ * Uses bound ilike filters (no PostgREST `.or()` string interpolation).
+ */
 export async function searchKioskStudents(
   schoolId: string,
   query: string
@@ -614,23 +618,44 @@ export async function searchKioskStudents(
     .slice(0, 40)
   if (safe.length < 1) return []
   const admin = createAdminClient()
-  const { data } = await admin
-    .from('students')
-    .select('id, first_name, last_name, badge_code, grade_level')
-    .eq('school_id', schoolId)
-    .eq('active', true)
-    .or(
-      `first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,badge_code.ilike.%${safe}%`
-    )
-    .order('last_name')
-    .limit(20)
+  const pattern = `%${safe}%`
+  const base = () =>
+    admin
+      .from('students')
+      .select('id, first_name, last_name, badge_code, grade_level')
+      .eq('school_id', schoolId)
+      .eq('active', true)
+      .limit(20)
 
-  return (data ?? []).map((s) => ({
-    id: s.id as string,
-    name: `${s.last_name}, ${s.first_name}`,
-    badgeCode: (s.badge_code as string) || null,
-    gradeLevel: (s.grade_level as string) || null,
-  }))
+  // Bound filters only — avoid PostgREST .or() string interpolation
+  const [byFirst, byLast, byBadge] = await Promise.all([
+    base().ilike('first_name', pattern),
+    base().ilike('last_name', pattern),
+    base().ilike('badge_code', pattern),
+  ])
+
+  type Row = {
+    id: string
+    first_name: string
+    last_name: string
+    badge_code: string | null
+    grade_level: string | null
+  }
+  const byId = new Map<string, Row>()
+  for (const row of [...(byFirst.data ?? []), ...(byLast.data ?? []), ...(byBadge.data ?? [])]) {
+    const r = row as Row
+    byId.set(r.id, r)
+  }
+
+  return [...byId.values()]
+    .map((s) => ({
+      id: s.id,
+      name: `${s.last_name}, ${s.first_name}`,
+      badgeCode: s.badge_code || null,
+      gradeLevel: s.grade_level || null,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .slice(0, 20)
 }
 
 export async function listOpenAftercare(

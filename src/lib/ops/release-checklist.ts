@@ -10,8 +10,20 @@ export type ChecklistItem = {
 export const RELEASE_CHECKLIST: ChecklistItem[] = [
   {
     id: 'migrations',
-    label: 'Database migrations 001–007 applied',
-    help: 'Attendance, pulse, lessons, and videos tables exist (see health checks).',
+    label: 'Database migrations 001–016 applied',
+    help: 'Core + badge/kiosk (011–012), roster versions (013), security vault (015), RLS lockdown (016). Check Go-live health tables.',
+    group: 'ops',
+  },
+  {
+    id: 'security_016',
+    label: 'Security RLS lockdown (016) run',
+    help: 'Supabase SQL Editor: scripts/pending-016-security-rls-lockdown.sql — locks profile role/school_id and parent write access.',
+    group: 'ops',
+  },
+  {
+    id: 'kiosk_tokens',
+    label: 'Kiosk tokens rotated after go-live',
+    help: 'Principal → Badges: open kiosk once, then rotate if the link was ever shared outside the tablet.',
     group: 'ops',
   },
   {

@@ -1,7 +1,11 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import { staffRoomsAction, staffScanAction } from '@/app/actions/badge'
+import {
+  staffRoomsAction,
+  staffScanAction,
+  staffSearchAction,
+} from '@/app/actions/badge'
 import type { ScanDirection, SchoolRoom } from '@/lib/badge/types'
 import { CameraQrScanner } from '@/components/badge/CameraQrScanner'
 import { Button } from '@/components/ui/button'
@@ -14,6 +18,10 @@ export function StaffScanner() {
   const [roomId, setRoomId] = useState('')
   const [direction, setDirection] = useState<ScanDirection>('in')
   const [code, setCode] = useState('')
+  const [search, setSearch] = useState('')
+  const [hits, setHits] = useState<
+    { id: string; name: string; badgeCode: string | null; gradeLevel: string | null }[]
+  >([])
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [pending, start] = useTransition()
@@ -30,14 +38,27 @@ export function StaffScanner() {
     })
   }, [])
 
-  function scan(raw?: string) {
-    const value = (raw ?? code).trim()
-    if (!value || !roomId) return
+  useEffect(() => {
+    if (search.trim().length < 2) {
+      setHits([])
+      return
+    }
+    const handle = setTimeout(() => {
+      void staffSearchAction({ query: search }).then((r) => {
+        if (r.ok) setHits(r.students)
+      })
+    }, 200)
+    return () => clearTimeout(handle)
+  }, [search])
+
+  function scan(opts: { rawCode?: string; studentId?: string }) {
+    if (!roomId) return
     setMsg(null)
     setErr(null)
     start(async () => {
       const r = await staffScanAction({
-        rawCode: value,
+        rawCode: opts.rawCode,
+        studentId: opts.studentId,
         roomId,
         direction,
       })
@@ -47,6 +68,8 @@ export function StaffScanner() {
       }
       setMsg(r.message)
       setCode('')
+      setSearch('')
+      setHits([])
     })
   }
 
@@ -55,7 +78,8 @@ export function StaffScanner() {
       <div>
         <h1 className="text-xl font-bold text-navy dark:text-sky-50">Staff scanner</h1>
         <p className="text-sm text-muted-foreground">
-          Scan or type badge codes from your laptop — same rules as the room kiosk.
+          Badge, camera QR, or name search from your signed-in desk. Public room kiosks require a
+          physical badge only.
         </p>
       </div>
 
@@ -109,7 +133,10 @@ export function StaffScanner() {
       </div>
 
       <div className="rounded-xl border bg-slate-950 p-3 text-white">
-        <CameraQrScanner enabled={Boolean(roomId)} onCode={(c) => scan(c)} />
+        <CameraQrScanner
+          enabled={Boolean(roomId)}
+          onCode={(c) => scan({ rawCode: c })}
+        />
       </div>
 
       <div>
@@ -121,15 +148,54 @@ export function StaffScanner() {
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault()
-              scan()
+              scan({ rawCode: code })
             }
           }}
           placeholder="Scan or type"
         />
       </div>
-      <Button type="button" disabled={pending || !code || !roomId} onClick={() => scan()}>
+      <Button
+        type="button"
+        disabled={pending || !code || !roomId}
+        onClick={() => scan({ rawCode: code })}
+      >
         {pending ? 'Saving…' : `Record ${direction.toUpperCase()}`}
       </Button>
+
+      <div>
+        <Label>No badge? Search name</Label>
+        <Input
+          className="mt-1"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Start typing last name…"
+          disabled={pending || !roomId}
+        />
+        {hits.length > 0 && (
+          <ul className="mt-2 max-h-48 overflow-y-auto rounded-xl border divide-y bg-card">
+            {hits.map((h) => (
+              <li key={h.id}>
+                <button
+                  type="button"
+                  className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted/60"
+                  onClick={() => scan({ studentId: h.id })}
+                  disabled={pending}
+                >
+                  <span className="font-semibold">{h.name}</span>
+                  {h.gradeLevel && (
+                    <span className="text-muted-foreground"> · {h.gradeLevel}</span>
+                  )}
+                  {h.badgeCode && (
+                    <span className="ml-2 font-mono text-xs text-sky-700 dark:text-sky-300">
+                      ···{h.badgeCode.slice(-3)}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   )
 }

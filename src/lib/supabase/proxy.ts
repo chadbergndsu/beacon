@@ -1,10 +1,33 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { safeInternalPath } from '@/lib/safe-redirect'
+import { KIOSK_COOKIE, KIOSK_COOKIE_MAX_AGE_SEC } from '@/lib/badge/kiosk-cookie'
 
 const PUBLIC_EXACT = new Set(['/', '/login', '/about', '/school'])
 
 export async function updateSession(request: NextRequest) {
+  const path = request.nextUrl.pathname
+
+  // Kiosk bootstrap: /kiosk/{token} → HttpOnly cookie + /kiosk (strip secret from URL bar)
+  const kioskBootstrap = path.match(/^\/kiosk\/([^/]+)$/)
+  if (kioskBootstrap) {
+    const token = decodeURIComponent(kioskBootstrap[1] || '').trim()
+    if (token.length >= 12 && token !== 'run') {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/kiosk'
+      redirectUrl.search = ''
+      const res = NextResponse.redirect(redirectUrl)
+      res.cookies.set(KIOSK_COOKIE, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: KIOSK_COOKIE_MAX_AGE_SEC,
+      })
+      return res
+    }
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -31,10 +54,9 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims()
   const user = data?.claims
 
-  const path = request.nextUrl.pathname
   const isAuthRoute = path === '/login'
-  // Kiosk tablets use secret token URLs — no staff login
-  const isKiosk = path.startsWith('/kiosk/')
+  // Kiosk tablets: secret token URL or cookie session — no staff login
+  const isKiosk = path === '/kiosk' || path.startsWith('/kiosk/')
   // ESP32 / RFID hardware posts with a device token (not a user session)
   const isDeviceApi = path.startsWith('/api/kiosk/')
   const isPublic =

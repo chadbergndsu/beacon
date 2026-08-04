@@ -1,12 +1,11 @@
-import { notFound } from 'next/navigation'
-import {
-  ensureDefaultRooms,
-  listRooms,
-  resolveSchoolByKioskToken,
-} from '@/lib/badge/store'
-import { KioskScanner } from '@/components/badge/KioskScanner'
+import { notFound, redirect } from 'next/navigation'
+import { resolveSchoolByKioskToken } from '@/lib/badge/store'
 
-export default async function KioskPage({
+/**
+ * Token bootstrap is handled in middleware (sets HttpOnly cookie + redirects to /kiosk).
+ * This page is a fallback if middleware did not run (e.g. local edge cases).
+ */
+export default async function KioskTokenFallbackPage({
   params,
 }: {
   params: Promise<{ token: string }>
@@ -14,21 +13,6 @@ export default async function KioskPage({
   const { token } = await params
   const school = await resolveSchoolByKioskToken(token)
   if (!school) notFound()
-
-  try {
-    await ensureDefaultRooms(school.schoolId)
-  } catch {
-    // tables missing — still show kiosk with empty rooms + scan will error helpfully
-  }
-
-  let rooms: Awaited<ReturnType<typeof listRooms>> = []
-  try {
-    rooms = await listRooms(school.schoolId)
-  } catch {
-    rooms = []
-  }
-
-  return (
-    <KioskScanner token={token} schoolName={school.schoolName} rooms={rooms} />
-  )
+  // Prefer cookie session URL; middleware should already have redirected.
+  redirect('/kiosk')
 }

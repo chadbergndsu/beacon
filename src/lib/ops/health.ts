@@ -82,7 +82,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     category: 'platform',
   })
 
-  // Data tables (migration 007+)
+  // Data tables (migration 007+ and badge/security suite)
   const tables = [
     ['schools', 'Schools'],
     ['profiles', 'Profiles'],
@@ -94,22 +94,41 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     ['lesson_plans', 'Lesson plans (007)'],
     ['pulse_entries', 'Pulse entries (007)'],
     ['school_videos', 'School videos (007)'],
+    ['school_rooms', 'Rooms / kiosk (011)'],
+    ['badge_scans', 'Badge scans (011)'],
+    ['aftercare_sessions', 'Aftercare (011)'],
+    ['school_access_tokens', 'Kiosk token vault (015)'],
+    ['roster_revisions', 'Roster versions (013)'],
+    ['approval_requests', 'Delete approvals (013)'],
   ] as const
 
   for (const [table, label] of tables) {
     const ok = await tableExists(table)
-    const critical = !['lesson_plans', 'pulse_entries', 'school_videos', 'attendance'].includes(
-      table
-    )
+    const criticalCore = [
+      'schools',
+      'profiles',
+      'students',
+      'classes',
+      'grades',
+      'email_outbox',
+    ].includes(table)
+    const suiteOptional = [
+      'lesson_plans',
+      'pulse_entries',
+      'school_videos',
+      'attendance',
+    ].includes(table)
     checks.push({
       id: `table_${table}`,
       label,
-      status: ok ? 'ok' : critical ? 'fail' : 'warn',
+      status: ok ? 'ok' : criticalCore ? 'fail' : 'warn',
       detail: ok
         ? 'Table reachable'
-        : critical
-          ? 'Missing — apply migrations 001–007'
-          : 'Missing — suite features fall back to JSON until migration 007',
+        : criticalCore
+          ? 'Missing — apply core migrations 001–008'
+          : suiteOptional
+            ? 'Missing — suite features fall back to JSON until migration 007'
+            : `Missing — run scripts/pending for this feature (${label})`,
       category: 'data',
     })
   }
@@ -188,13 +207,17 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
   // Integrations — multi-transport cascade
   const { describeEmailStack } = await import('@/lib/email/transport')
   const emailStack = describeEmailStack()
+  const fromRaw = process.env.EMAIL_FROM || 'Beacon <onboarding@resend.dev>'
+  const insecureFrom = /onboarding@resend\.dev/i.test(fromRaw)
   checks.push({
     id: 'email',
     label: 'Email delivery',
-    status: emailStack.live ? 'ok' : 'warn',
-    detail: emailStack.live
-      ? `${emailStack.detail} · from ${process.env.EMAIL_FROM || 'default'}`
-      : 'No live transport — set RESEND_API_KEY and/or SMTP_HOST (cascade: resend → smtp → log)',
+    status: !emailStack.live ? 'warn' : insecureFrom ? 'warn' : 'ok',
+    detail: !emailStack.live
+      ? 'No live transport — set RESEND_API_KEY and/or SMTP_HOST (cascade: resend → smtp → log)'
+      : insecureFrom
+        ? `${emailStack.detail} · EMAIL_FROM is still onboarding@resend.dev (production forces log-only until you set a verified domain)`
+        : `${emailStack.detail} · from ${fromRaw}`,
     category: 'integrations',
   })
 

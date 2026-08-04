@@ -8,13 +8,16 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export function KioskScanner({
-  token,
+  token = '',
   schoolName,
   rooms,
+  useCookie = false,
 }: {
-  token: string
+  token?: string
   schoolName: string
   rooms: SchoolRoom[]
+  /** When true, server actions read HttpOnly cookie (token may be empty). */
+  useCookie?: boolean
 }) {
   const [roomId, setRoomId] = useState(rooms[0]?.id ?? '')
   const [direction, setDirection] = useState<ScanDirection>('in')
@@ -29,10 +32,13 @@ export function KioskScanner({
 
   const refreshPresence = useCallback(() => {
     if (!roomId) return
-    void kioskPresenceAction({ token, roomId }).then((r) => {
+    void kioskPresenceAction({
+      token: useCookie ? undefined : token,
+      roomId,
+    }).then((r) => {
       if (r.ok) setPresent(r.present)
     })
-  }, [token, roomId])
+  }, [token, roomId, useCookie])
 
   useEffect(() => {
     refreshPresence()
@@ -52,7 +58,7 @@ export function KioskScanner({
     setFlash(null)
     start(async () => {
       const r = await kioskScanAction({
-        token,
+        token: useCookie ? undefined : token,
         rawCode,
         roomId,
         direction,

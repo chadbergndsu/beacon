@@ -1,11 +1,13 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { effectiveRole, isLeadership, isSchoolStaff } from '@/lib/roles'
 import type { Role } from '@/lib/types'
 import type { RoomKind, ScanDirection } from '@/lib/badge/types'
+import { KIOSK_COOKIE } from '@/lib/badge/kiosk-cookie'
 import {
   billClosedAftercareSessions,
   ensureDefaultRooms,
@@ -140,20 +142,37 @@ function kioskRateOk(token: string, action: string) {
   return rateLimit({ key, limit, windowMs: 60_000 })
 }
 
-/** Kiosk scan — authorized by kiosk token (no staff login on tablet). */
+async function resolveKioskToken(clientToken?: string | null): Promise<string | null> {
+  const fromClient = (clientToken || '').trim()
+  if (fromClient.length >= 12) return fromClient
+  try {
+    const jar = await cookies()
+    const fromCookie = jar.get(KIOSK_COOKIE)?.value?.trim() || ''
+    if (fromCookie.length >= 12) return fromCookie
+  } catch {
+    // cookies() unavailable in some contexts
+  }
+  return null
+}
+
+/** Kiosk scan — authorized by kiosk cookie (preferred) or bootstrap token. */
 export async function kioskScanAction(input: {
-  token: string
+  token?: string
   rawCode?: string
   studentId?: string
   roomId: string
   direction: ScanDirection
   kioskLabel?: string
 }): Promise<Awaited<ReturnType<typeof processBadgeScan>>> {
-  const rl = kioskRateOk(input.token, 'scan')
+  const token = await resolveKioskToken(input.token)
+  if (!token) {
+    return { ok: false, error: 'Kiosk session expired. Open the link from Principal → Badges.' }
+  }
+  const rl = kioskRateOk(token, 'scan')
   if (!rl.ok) {
     return { ok: false, error: 'Too many scans — wait a moment.' }
   }
-  const school = await resolveSchoolByKioskToken(input.token)
+  const school = await resolveSchoolByKioskToken(token)
   if (!school) {
     return { ok: false, error: 'Invalid kiosk link. Open kiosk from Principal → Badges.' }
   }
@@ -193,18 +212,50 @@ export async function kioskSearchAction(_input: {
 }
 
 export async function kioskPresenceAction(input: {
-  token: string
+  token?: string
   roomId: string
 }): Promise<
   | { ok: true; present: Awaited<ReturnType<typeof listRoomPresence>> }
   | { ok: false; error: string }
 > {
-  const rl = kioskRateOk(input.token, 'presence')
+  const token = await resolveKioskToken(input.token)
+  if (!token) return { ok: false, error: 'Kiosk session expired.' }
+  const rl = kioskRateOk(token, 'presence')
   if (!rl.ok) return { ok: false, error: 'Too many requests — wait a moment.' }
-  const school = await resolveSchoolByKioskToken(input.token)
+  const school = await resolveSchoolByKioskToken(token)
   if (!school) return { ok: false, error: 'Invalid kiosk.' }
   const present = await listRoomPresence(school.schoolId, input.roomId)
   return { ok: true, present }
+}
+
+/** Logged-in staff: name search for desk scanner (not public kiosk). */
+export async function staffSearchAction(input: {
+  query: string
+}): Promise<
+  | { ok: true; students: Awaited<ReturnType<typeof searchKioskStudents>> }
+  | { ok: false; error: string }
+> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('school_id, role, email')
+    .eq('id', user.id)
+    .maybeSingle()
+  const role = effectiveRole(
+    profile
+      ? { role: profile.role as Role, email: profile.email as string | null }
+      : null
+  )
+  if (!profile?.school_id || !isSchoolStaff(role)) {
+    return { ok: false, error: 'Staff only.' }
+  }
+  const students = await searchKioskStudents(profile.school_id, input.query)
+  return { ok: true, students }
 }
 
 export async function rotateKioskTokenAction(): Promise<
@@ -246,6 +297,10 @@ export async function staffScanAction(input: {
   )
   if (!profile?.school_id || !isSchoolStaff(role)) {
     return { ok: false, error: 'Staff only.' }
+  }
+  // Staff may use badge code or name-tap (studentId) — not available on public kiosk
+  if (!input.rawCode?.trim() && !input.studentId?.trim()) {
+    return { ok: false, error: 'Scan a badge or pick a student.' }
   }
   return processBadgeScan({
     schoolId: profile.school_id,

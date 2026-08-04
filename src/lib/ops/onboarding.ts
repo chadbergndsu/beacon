@@ -143,7 +143,33 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
           ? `${schoolParentLinks} parent–student links`
           : 'Link parents so Dinner Table & grades work',
     },
+    {
+      id: 'badges',
+      label: 'Badge / kiosk ready',
+      done: false, // filled below after room probe
+      href: '/principal/badges',
+      detail: 'Assign badge codes and open room kiosk',
+    },
   ]
+
+  // Badge rooms table may be missing until 011
+  let roomsOk = false
+  try {
+    const { error: roomsErr, count: roomCount } = await admin
+      .from('school_rooms')
+      .select('*', { count: 'exact', head: true })
+      .eq('school_id', schoolId)
+    roomsOk = !roomsErr && (roomCount ?? 0) > 0
+  } catch {
+    roomsOk = false
+  }
+  const badgeStep = steps.find((s) => s.id === 'badges')
+  if (badgeStep) {
+    badgeStep.done = roomsOk
+    badgeStep.detail = roomsOk
+      ? 'Rooms configured — open kiosk from Badges'
+      : 'Run pending-011 + open Principal → Badges'
+  }
 
   // silence unused
   void parents
