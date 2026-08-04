@@ -30,6 +30,8 @@ export function BadgesAdmin({
   initialOpenAftercare,
   initialKioskPath,
   initialDeviceToken = '',
+  initialKioskExpiresAt = null,
+  initialDeviceExpiresAt = null,
   initialNotifyParents = true,
   emailLive = false,
   smsConfigured = false,
@@ -42,6 +44,9 @@ export function BadgesAdmin({
   initialOpenAftercare: (AftercareSession & { studentName?: string; roomName?: string })[]
   initialKioskPath: string
   initialDeviceToken?: string
+  /** ISO timestamp — tokens fail closed after this (migration 018) */
+  initialKioskExpiresAt?: string | null
+  initialDeviceExpiresAt?: string | null
   initialNotifyParents?: boolean
   emailLive?: boolean
   smsConfigured?: boolean
@@ -162,8 +167,15 @@ export function BadgesAdmin({
           </Link>
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Tokens are stored in a service-only table (not visible to parents). Run{' '}
-          <code className="rounded bg-muted px-1">migration 015 (token vault)</code> once.
+          Tokens are stored in a service-only table (not visible to parents). Vault = migration 015;
+          expiry = migration 018 (default 90 days; rotate anytime).
+          {initialKioskExpiresAt && (
+            <>
+              {' '}
+              Kiosk expires{' '}
+              <strong>{new Date(initialKioskExpiresAt).toLocaleString()}</strong>.
+            </>
+          )}
         </p>
       </section>
 
@@ -342,6 +354,12 @@ export function BadgesAdmin({
           <code className="mt-1 block break-all rounded-lg bg-muted px-3 py-2 text-xs">
             {deviceToken || '— generate by refreshing —'}
           </code>
+          {initialDeviceExpiresAt && (
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Expires <strong>{new Date(initialDeviceExpiresAt).toLocaleString()}</strong> — rotate
+              or re-open Principal → Badges after expiry (expired tokens are rejected).
+            </p>
+          )}
         </div>
         <div>
           <Label className="text-xs">API endpoint</Label>

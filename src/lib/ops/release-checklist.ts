@@ -10,8 +10,8 @@ export type ChecklistItem = {
 export const RELEASE_CHECKLIST: ChecklistItem[] = [
   {
     id: 'migrations',
-    label: 'Database migrations 001–017 applied',
-    help: 'Prefer: npm run db:migrate (supabase/migrations). Includes badge/kiosk (011–012), roster (013), token vault (015), RLS (016), billing first-class (017). Check Go-live health tables.',
+    label: 'Database migrations 001–018 applied',
+    help: 'Prefer: npm run db:migrate (supabase/migrations). Includes badge/kiosk (011–012), roster (013), token vault (015), RLS (016), billing (017), token expiry (018). Check Go-live health tables.',
     group: 'ops',
   },
   {
@@ -27,9 +27,21 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
     group: 'ops',
   },
   {
+    id: 'token_expiry_018',
+    label: 'Access token expiry (018) run',
+    help: 'Apply 018_access_token_expiry.sql — kiosk/device tokens expire (default 90 days). Resolve fails closed after expiry.',
+    group: 'ops',
+  },
+  {
+    id: 'upstash_prod',
+    label: 'Upstash rate limits set for production',
+    help: 'UPSTASH_REDIS_REST_URL + TOKEN on Vercel Production (or RATE_LIMIT_ALLOW_MEMORY=1 break-glass only).',
+    group: 'ops',
+  },
+  {
     id: 'kiosk_tokens',
     label: 'Kiosk tokens rotated after go-live',
-    help: 'Principal → Badges: open kiosk once, then rotate if the link was ever shared outside the tablet.',
+    help: 'Principal → Badges: open kiosk once, then rotate if the link was ever shared outside the tablet. Re-open after expiry.',
     group: 'ops',
   },
   {

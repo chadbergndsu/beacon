@@ -7,6 +7,10 @@ import {
 } from '@/lib/billing/store'
 import type { BillingInvoice } from '@/lib/billing/types'
 import {
+  isAccessTokenExpired,
+  nextAccessTokenExpiryIso,
+} from '@/lib/badge/access-tokens'
+import {
   computeAftercareAmountCents,
   generateBadgeCode,
   generateDeviceToken,
@@ -199,72 +203,154 @@ export async function setStudentRfidUid(
   return { ok: true }
 }
 
-/**
- * Tokens live in school_access_tokens (service-role only), not schools.settings,
- * so parents/teachers cannot read kiosk/device secrets via RLS.
- */
-async function loadOrMigrateAccessTokens(schoolId: string): Promise<{
+export type SchoolAccessTokens = {
   kiosk_token: string
   device_token: string
-}> {
+  kiosk_token_expires_at: string
+  device_token_expires_at: string
+}
+
+/**
+ * Tokens live in school_access_tokens (service-role only), not schools.settings.
+ * Expired tokens are rotated when principal/office loads tokens (getOrCreate);
+ * resolve paths fail closed so leaked/old tablet links stop working after TTL.
+ */
+async function loadOrMigrateAccessTokens(schoolId: string): Promise<SchoolAccessTokens> {
   const admin = createAdminClient()
-  const { data: row } = await admin
+  const { data: row, error: readErr } = await admin
     .from('school_access_tokens')
-    .select('kiosk_token, device_token')
+    .select(
+      'kiosk_token, device_token, kiosk_token_expires_at, device_token_expires_at'
+    )
     .eq('school_id', schoolId)
     .maybeSingle()
 
-  if (row?.kiosk_token && row?.device_token) {
-    return {
-      kiosk_token: row.kiosk_token as string,
-      device_token: row.device_token as string,
-    }
-  }
-
-  // Migrate from legacy settings.badge if present
-  const { data: school } = await admin
-    .from('schools')
-    .select('settings')
-    .eq('id', schoolId)
-    .maybeSingle()
-  const settings = { ...((school?.settings || {}) as Record<string, unknown>) }
-  const badge = { ...((settings.badge as Record<string, unknown>) || {}) }
-  const kiosk =
-    typeof badge.kioskToken === 'string' && badge.kioskToken.length >= 16
-      ? badge.kioskToken
-      : generateBadgeCode(10) + generateBadgeCode(10)
-  const device =
-    typeof badge.deviceToken === 'string' && badge.deviceToken.length >= 16
-      ? badge.deviceToken
-      : generateDeviceToken()
-
-  const { error } = await admin.from('school_access_tokens').upsert(
-    {
-      school_id: schoolId,
-      kiosk_token: kiosk,
-      device_token: device,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'school_id' }
-  )
-
-  if (error) {
-    // Never write secrets into schools.settings (client-readable via RLS).
-    // Require migration 015/016 school_access_tokens table.
+  if (
+    readErr &&
+    (readErr.message || '').toLowerCase().includes('does not exist')
+  ) {
     throw new Error(
-      'school_access_tokens missing — apply migrations 015+016 (npm run db:migrate).'
+      'school_access_tokens missing — apply migrations 015+018 (npm run db:migrate).'
     )
   }
 
-  // Strip any legacy secrets from settings so clients cannot read them
-  if (badge.kioskToken || badge.deviceToken) {
-    delete badge.kioskToken
-    delete badge.deviceToken
-    settings.badge = badge
-    await admin.from('schools').update({ settings }).eq('id', schoolId)
+  let kiosk =
+    row?.kiosk_token && String(row.kiosk_token).length >= 16
+      ? String(row.kiosk_token)
+      : ''
+  let device =
+    row?.device_token && String(row.device_token).length >= 16
+      ? String(row.device_token)
+      : ''
+  let kioskExp =
+    row?.kiosk_token_expires_at != null ? String(row.kiosk_token_expires_at) : null
+  let deviceExp =
+    row?.device_token_expires_at != null ? String(row.device_token_expires_at) : null
+
+  // Fresh school or incomplete row — seed from legacy settings once, then vault only
+  if (!kiosk || !device) {
+    const { data: school } = await admin
+      .from('schools')
+      .select('settings')
+      .eq('id', schoolId)
+      .maybeSingle()
+    const settings = { ...((school?.settings || {}) as Record<string, unknown>) }
+    const badge = { ...((settings.badge as Record<string, unknown>) || {}) }
+    if (!kiosk) {
+      kiosk =
+        typeof badge.kioskToken === 'string' && badge.kioskToken.length >= 16
+          ? badge.kioskToken
+          : generateBadgeCode(10) + generateBadgeCode(10)
+    }
+    if (!device) {
+      device =
+        typeof badge.deviceToken === 'string' && badge.deviceToken.length >= 16
+          ? badge.deviceToken
+          : generateDeviceToken()
+    }
+    kioskExp = nextAccessTokenExpiryIso()
+    deviceExp = nextAccessTokenExpiryIso()
+
+    const { error } = await admin.from('school_access_tokens').upsert(
+      {
+        school_id: schoolId,
+        kiosk_token: kiosk,
+        device_token: device,
+        kiosk_token_expires_at: kioskExp,
+        device_token_expires_at: deviceExp,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'school_id' }
+    )
+    if (error) {
+      throw new Error(
+        'school_access_tokens missing — apply migrations 015+018 (npm run db:migrate).'
+      )
+    }
+    if (badge.kioskToken || badge.deviceToken) {
+      delete badge.kioskToken
+      delete badge.deviceToken
+      settings.badge = badge
+      await admin.from('schools').update({ settings }).eq('id', schoolId)
+    }
+    return {
+      kiosk_token: kiosk,
+      device_token: device,
+      kiosk_token_expires_at: kioskExp,
+      device_token_expires_at: deviceExp,
+    }
   }
 
-  return { kiosk_token: kiosk, device_token: device }
+  // Rotate expired halves so Principal → Badges always shows live secrets
+  let dirty = false
+  if (isAccessTokenExpired(kioskExp)) {
+    kiosk = generateBadgeCode(10) + generateBadgeCode(10)
+    kioskExp = nextAccessTokenExpiryIso()
+    dirty = true
+  }
+  if (isAccessTokenExpired(deviceExp)) {
+    device = generateDeviceToken()
+    deviceExp = nextAccessTokenExpiryIso()
+    dirty = true
+  }
+  // Backfill expiry if columns null (018 not fully applied but columns exist empty)
+  if (!kioskExp) {
+    kioskExp = nextAccessTokenExpiryIso()
+    dirty = true
+  }
+  if (!deviceExp) {
+    deviceExp = nextAccessTokenExpiryIso()
+    dirty = true
+  }
+
+  if (dirty) {
+    const { error } = await admin.from('school_access_tokens').upsert(
+      {
+        school_id: schoolId,
+        kiosk_token: kiosk,
+        device_token: device,
+        kiosk_token_expires_at: kioskExp,
+        device_token_expires_at: deviceExp,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'school_id' }
+    )
+    if (error) {
+      throw new Error(
+        error.message.includes('kiosk_token_expires_at') ||
+          error.message.includes('column')
+          ? 'Apply migration 018 (token expiry) — npm run db:migrate.'
+          : error.message
+      )
+    }
+  }
+
+  return {
+    kiosk_token: kiosk,
+    device_token: device,
+    kiosk_token_expires_at: kioskExp!,
+    device_token_expires_at: deviceExp!,
+  }
 }
 
 export async function getOrCreateDeviceToken(schoolId: string): Promise<string> {
@@ -272,22 +358,29 @@ export async function getOrCreateDeviceToken(schoolId: string): Promise<string> 
   return t.device_token
 }
 
+export async function getAccessTokenMeta(schoolId: string): Promise<SchoolAccessTokens> {
+  return loadOrMigrateAccessTokens(schoolId)
+}
+
 export async function rotateDeviceToken(schoolId: string): Promise<string> {
   const admin = createAdminClient()
   const existing = await loadOrMigrateAccessTokens(schoolId)
   const token = generateDeviceToken()
+  const exp = nextAccessTokenExpiryIso()
   const { error } = await admin.from('school_access_tokens').upsert(
     {
       school_id: schoolId,
       kiosk_token: existing.kiosk_token,
       device_token: token,
+      kiosk_token_expires_at: existing.kiosk_token_expires_at,
+      device_token_expires_at: exp,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'school_id' }
   )
   if (error) {
     throw new Error(
-      'Could not rotate device token. Ensure school_access_tokens exists (migrations 015+016).'
+      'Could not rotate device token. Ensure school_access_tokens exists (migrations 015+018).'
     )
   }
   return token
@@ -297,18 +390,21 @@ export async function rotateKioskToken(schoolId: string): Promise<string> {
   const admin = createAdminClient()
   const existing = await loadOrMigrateAccessTokens(schoolId)
   const token = generateBadgeCode(10) + generateBadgeCode(10)
+  const exp = nextAccessTokenExpiryIso()
   const { error } = await admin.from('school_access_tokens').upsert(
     {
       school_id: schoolId,
       kiosk_token: token,
       device_token: existing.device_token,
+      kiosk_token_expires_at: exp,
+      device_token_expires_at: existing.device_token_expires_at,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'school_id' }
   )
   if (error) {
     throw new Error(
-      'Could not rotate kiosk token. Ensure school_access_tokens exists (migrations 015+016).'
+      'Could not rotate kiosk token. Ensure school_access_tokens exists (migrations 015+018).'
     )
   }
   return token
@@ -321,20 +417,21 @@ export async function resolveSchoolByDeviceToken(
   const admin = createAdminClient()
   const { data: row } = await admin
     .from('school_access_tokens')
-    .select('school_id')
+    .select('school_id, device_token_expires_at')
     .eq('device_token', token)
     .maybeSingle()
-  if (row?.school_id) {
-    const { data: school } = await admin
-      .from('schools')
-      .select('id, name')
-      .eq('id', row.school_id)
-      .maybeSingle()
-    if (school) {
-      return { schoolId: school.id as string, schoolName: (school.name as string) || 'School' }
-    }
+  if (!row?.school_id) return null
+  if (isAccessTokenExpired(row.device_token_expires_at as string | null)) {
+    return null
   }
-  // No settings.badge fallback — secrets must live in school_access_tokens only
+  const { data: school } = await admin
+    .from('schools')
+    .select('id, name')
+    .eq('id', row.school_id)
+    .maybeSingle()
+  if (school) {
+    return { schoolId: school.id as string, schoolName: (school.name as string) || 'School' }
+  }
   return null
 }
 
@@ -481,20 +578,21 @@ export async function resolveSchoolByKioskToken(
   const admin = createAdminClient()
   const { data: row } = await admin
     .from('school_access_tokens')
-    .select('school_id')
+    .select('school_id, kiosk_token_expires_at')
     .eq('kiosk_token', token)
     .maybeSingle()
-  if (row?.school_id) {
-    const { data: school } = await admin
-      .from('schools')
-      .select('id, name')
-      .eq('id', row.school_id)
-      .maybeSingle()
-    if (school) {
-      return { schoolId: school.id as string, schoolName: (school.name as string) || 'School' }
-    }
+  if (!row?.school_id) return null
+  if (isAccessTokenExpired(row.kiosk_token_expires_at as string | null)) {
+    return null
   }
-  // No settings.badge fallback — secrets must live in school_access_tokens only
+  const { data: school } = await admin
+    .from('schools')
+    .select('id, name')
+    .eq('id', row.school_id)
+    .maybeSingle()
+  if (school) {
+    return { schoolId: school.id as string, schoolName: (school.name as string) || 'School' }
+  }
   return null
 }
 

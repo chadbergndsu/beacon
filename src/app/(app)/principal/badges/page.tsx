@@ -3,9 +3,8 @@ import { loadSchoolBrand } from '@/lib/school-brand'
 import {
   ensureDefaultRooms,
   ensureStudentBadgeCodes,
+  getAccessTokenMeta,
   getAftercareNotifyPreference,
-  getOrCreateDeviceToken,
-  getOrCreateKioskToken,
   listOpenAftercare,
   listRecentScans,
   listRooms,
@@ -25,20 +24,24 @@ export default async function PrincipalBadgesPage() {
   let openAftercare: Awaited<ReturnType<typeof listOpenAftercare>> = []
   let kioskPath = '/kiosk'
   let deviceToken = ''
+  let kioskExpiresAt: string | null = null
+  let deviceExpiresAt: string | null = null
   let notifyParents = true
   let setupError: string | null = null
 
   try {
     await ensureDefaultRooms(schoolId)
     await ensureStudentBadgeCodes(schoolId)
-    const token = await getOrCreateKioskToken(schoolId)
-    kioskPath = `/kiosk/${token}`
-    ;[badges, rooms, scans, openAftercare, deviceToken, notifyParents] = await Promise.all([
+    const meta = await getAccessTokenMeta(schoolId)
+    kioskPath = `/kiosk/${meta.kiosk_token}`
+    deviceToken = meta.device_token
+    kioskExpiresAt = meta.kiosk_token_expires_at
+    deviceExpiresAt = meta.device_token_expires_at
+    ;[badges, rooms, scans, openAftercare, notifyParents] = await Promise.all([
       listStudentBadges(schoolId, brand.name),
       listRooms(schoolId),
       listRecentScans(schoolId, 40),
       listOpenAftercare(schoolId),
-      getOrCreateDeviceToken(schoolId),
       getAftercareNotifyPreference(schoolId),
     ])
   } catch (e) {
@@ -70,8 +73,8 @@ export default async function PrincipalBadgesPage() {
           <p className="mt-1 text-xs">{setupError}</p>
           <p className="mt-2 text-xs">
             Prefer <code className="rounded bg-white px-1">npm run db:migrate</code> (migrations
-            001–017 under <code className="rounded bg-white px-1">supabase/migrations/</code>).
-            Badge/kiosk needs 011–012; token vault 015; RLS 016. Then refresh this page.
+            001–018 under <code className="rounded bg-white px-1">supabase/migrations/</code>).
+            Badge/kiosk 011–012; token vault 015; RLS 016; token expiry 018.
           </p>
         </div>
       )}
@@ -85,6 +88,8 @@ export default async function PrincipalBadgesPage() {
         initialOpenAftercare={openAftercare}
         initialKioskPath={kioskPath}
         initialDeviceToken={deviceToken}
+        initialKioskExpiresAt={kioskExpiresAt}
+        initialDeviceExpiresAt={deviceExpiresAt}
         initialNotifyParents={notifyParents}
         emailLive={isEmailLive()}
         smsConfigured={isSmsConfigured()}

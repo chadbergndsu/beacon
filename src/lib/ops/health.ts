@@ -261,6 +261,22 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     category: 'integrations',
   })
 
+  const { durableRateLimitOk, isUpstashConfigured, isProductionLike } = await import(
+    '@/lib/security/rate-limit'
+  )
+  const durableRl = durableRateLimitOk()
+  checks.push({
+    id: 'rate_limit_durable',
+    label: 'Durable rate limits (Upstash)',
+    status: durableRl ? 'ok' : isProductionLike() ? 'fail' : 'warn',
+    detail: isUpstashConfigured()
+      ? 'Upstash Redis configured — kiosk/device/login limits span instances'
+      : isProductionLike()
+        ? 'Production/preview without Upstash: limits are per-instance only. Set UPSTASH_REDIS_REST_URL + TOKEN (or RATE_LIMIT_ALLOW_MEMORY=1 break-glass).'
+        : 'Local/dev: in-memory rate limits OK. Set Upstash before public production traffic.',
+    category: 'platform',
+  })
+
   checks.push({
     id: 'ferpa',
     label: 'Access model',

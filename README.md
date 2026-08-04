@@ -12,7 +12,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 |-------|--------|--------|
 | App | Next.js 16 App Router + React 19 + TypeScript + Tailwind 4 | Portable web frontend |
 | Auth edge | `src/proxy.ts` → Supabase SSR session | Public routes listed below; fail-closed without Supabase env on prod/preview |
-| DB | Supabase Postgres | Schema owned in `supabase/migrations/` (**001–017**) |
+| DB | Supabase Postgres | Schema owned in `supabase/migrations/` (**001–018**) |
 | Auth | Supabase Auth | App code uses `getUser()` before service-role; edge refreshes cookies via `getClaims()` |
 | Host | Vercel + HTTPS | Default per Solid Systems |
 | Email | Resend and/or SMTP (cascade) | Log-only outbox without live transport; never use `onboarding@resend.dev` in prod |
@@ -97,7 +97,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth + client |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server actions / admin client (never expose to browser) |
 
-Then apply **migrations 001–017** (see below) and:
+Then apply **migrations 001–018** (see below) and:
 
 ```bash
 npm run dev
@@ -131,7 +131,7 @@ Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, securit
 
 ### Database migrations
 
-**Source of truth:** `supabase/migrations/` files **001–017** in filename order.
+**Source of truth:** `supabase/migrations/` files **001–018** in filename order.
 
 ```bash
 # Preferred
@@ -155,8 +155,11 @@ POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate -- 017
 | **015** | kiosk token vault (`school_access_tokens`) |
 | **016** | RLS lockdown (profile role/school_id, staff write scopes) |
 | **017** | billing first-class: product `code`, invoice `source_key`, demo QB status, parent read RLS, one-time migrate legacy JSON → tables |
+| **018** | kiosk/device token expiry (`kiosk_token_expires_at` / `device_token_expires_at`; default 90 days) |
 
 **Billing money path** uses tables only. Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`.
+
+**Kiosk / device tokens** expire (fail closed on resolve). TTL default **90 days** (`BEACON_ACCESS_TOKEN_TTL_DAYS`). Opening Principal → Badges regenerates expired halves; tablets/ESP32 must re-open the kiosk link or update the device token.
 
 #### Operator notes (avoid footguns)
 
@@ -208,7 +211,8 @@ Full list of names lives in **`.env.example`**. Summary:
 | Pilot owner email | `BEACON_FEEDBACK_TO` / `BEACON_OWNER_EMAIL` | Suggestion button inbox (**not** the principal) |
 | ntfy push | `BEACON_NTFY_*` | Owner phone alerts |
 | Twilio SMS | `TWILIO_*` | Aftercare parent SMS |
-| Upstash Redis | `UPSTASH_REDIS_REST_*` | Durable rate limits (else in-memory per instance) |
+| Upstash Redis | `UPSTASH_REDIS_REST_*` | **Required on production/preview** for multi-instance rate limits (or `RATE_LIMIT_ALLOW_MEMORY=1` break-glass). Go-live fails without either. |
+| Access token TTL | `BEACON_ACCESS_TOKEN_TTL_DAYS` | Kiosk/device secret lifetime (default 90) |
 | School day TZ | `BEACON_SCHOOL_TZ` | Badge attendance calendar day (default `America/Chicago`) |
 | OAuth state | `BEACON_OAUTH_STATE_SECRET` | QB OAuth HMAC (else falls back to service role key) |
 | App URL | `NEXT_PUBLIC_APP_URL` | Absolute links in email |

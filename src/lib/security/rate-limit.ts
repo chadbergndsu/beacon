@@ -1,11 +1,34 @@
 /**
- * Rate limiter: in-memory (always) + optional Upstash Redis when
- * UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set.
+ * Rate limiter: in-memory (always available) + Upstash Redis when configured.
+ *
+ * Production / Vercel preview should set UPSTASH_REDIS_REST_URL + TOKEN so limits
+ * hold across serverless instances. Break-glass: RATE_LIMIT_ALLOW_MEMORY=1.
  */
 
 type Bucket = { count: number; resetAt: number }
 
 const buckets = new Map<string, Bucket>()
+
+export function isProductionLike(): boolean {
+  return (
+    process.env.NODE_ENV === 'production' ||
+    process.env.VERCEL_ENV === 'production' ||
+    process.env.VERCEL_ENV === 'preview'
+  )
+}
+
+export function isUpstashConfigured(): boolean {
+  return Boolean(
+    process.env.UPSTASH_REDIS_REST_URL?.trim() && process.env.UPSTASH_REDIS_REST_TOKEN?.trim()
+  )
+}
+
+/** true when multi-instance durable limits are available (or memory break-glass). */
+export function durableRateLimitOk(): boolean {
+  if (isUpstashConfigured()) return true
+  if (!isProductionLike()) return true
+  return process.env.RATE_LIMIT_ALLOW_MEMORY === '1'
+}
 
 function memoryRateLimit(opts: {
   key: string
@@ -42,7 +65,6 @@ async function upstashRateLimit(opts: {
   const redisKey = `beacon:rl:${opts.key}`
   const windowSec = Math.max(1, Math.ceil(opts.windowMs / 1000))
   try {
-    // INCR + EXPIRE via REST pipeline
     const res = await fetch(`${url}/pipeline`, {
       method: 'POST',
       headers: {
