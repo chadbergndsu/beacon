@@ -226,6 +226,21 @@ stripe listen --forward-to localhost:3000/api/stripe/webhook
 
 Success URL also reconcilies via `session_id` if the webhook is delayed.
 
+### Recurring billing cron
+
+Vercel Cron hits `GET /api/cron/billing-schedules` daily (`vercel.json`, 13:00 UTC) and creates open invoices for due schedules.
+
+1. Set `CRON_SECRET` in Vercel (Production + Preview).  
+2. Vercel sends `Authorization: Bearer $CRON_SECRET` automatically for cron invokes.  
+3. Manual test:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  https://beacon.commoncentsip.com/api/cron/billing-schedules
+```
+
+Aftercare billing emails family pay links automatically when sessions are billed.
+
 ### Optional integrations
 
 Full list of names lives in **`.env.example`**. Summary:
@@ -236,6 +251,7 @@ Full list of names lives in **`.env.example`**. Summary:
 | ntfy push | `BEACON_NTFY_*` | Owner phone alerts |
 | Twilio SMS | `TWILIO_*` | Aftercare parent SMS |
 | Stripe (family pay) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Card Checkout on `/pay/[token]`; webhook `/api/stripe/webhook`; success-page confirm; migration **020** |
+| Cron | `CRON_SECRET` | Daily recurring tuition (`/api/cron/billing-schedules`) |
 | Upstash Redis | `UPSTASH_REDIS_REST_*` | **Required on production/preview** for multi-instance rate limits (or `RATE_LIMIT_ALLOW_MEMORY=1` break-glass). Go-live fails without either. |
 | Access token TTL | `BEACON_ACCESS_TOKEN_TTL_DAYS` | Kiosk/device secret lifetime (default 90) |
 | School day TZ | `BEACON_SCHOOL_TZ` | Badge attendance calendar day (default `America/Chicago`) |

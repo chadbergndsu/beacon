@@ -11,6 +11,7 @@ function isPublicPath(path: string): boolean {
   const isHealth = path === '/api/health'
   const isFamilyPay = path.startsWith('/pay/')
   const isStripeWebhook = path.startsWith('/api/stripe/')
+  const isCron = path.startsWith('/api/cron/')
   return (
     PUBLIC_EXACT.has(path) ||
     isKiosk ||
@@ -18,6 +19,7 @@ function isPublicPath(path: string): boolean {
     isHealth ||
     isFamilyPay ||
     isStripeWebhook ||
+    isCron ||
     path === '/privacy'
   )
 }
@@ -32,6 +34,7 @@ describe('proxy public paths', () => {
     expect(isPublicPath('/privacy')).toBe(true)
     expect(isPublicPath('/pay/tok_abc')).toBe(true)
     expect(isPublicPath('/api/stripe/webhook')).toBe(true)
+    expect(isPublicPath('/api/cron/billing-schedules')).toBe(true)
   })
 
   it('locks app routes', () => {

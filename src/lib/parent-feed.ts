@@ -145,7 +145,7 @@ export async function buildParentFeed(
     }
   }
 
-  // Invoices (school-level family emails matched loosely by parent profile email)
+  // Invoices (match parent profile email → pay portal when open)
   try {
     const billing = await loadBillingState(schoolId)
     const { data: parent } = await admin
@@ -154,14 +154,26 @@ export async function buildParentFeed(
       .eq('id', parentId)
       .maybeSingle()
     const email = parent?.email?.toLowerCase()
+    const { familyPayUrl } = await import('@/lib/billing/portal-token')
+    const { ensureInvoicePortalToken } = await import('@/lib/billing/store')
     for (const inv of billing.invoices.slice(0, 10)) {
       if (email && inv.parentEmail?.toLowerCase() === email) {
+        let href = '/dashboard#billing'
+        if (inv.status === 'open' || inv.status === 'overdue') {
+          try {
+            const token =
+              inv.portalToken || (await ensureInvoicePortalToken(schoolId, inv.id))
+            href = familyPayUrl(token)
+          } catch {
+            /* keep dashboard */
+          }
+        }
         items.push({
           id: `inv_${inv.id}`,
           type: 'invoice',
           title: `Invoice · ${inv.familyName}`,
           body: `${inv.description} — ${formatMoney(inv.amountCents)} (${inv.status})`,
-          href: '/dashboard',
+          href,
           at: inv.createdAt,
           tone: inv.status === 'open' || inv.status === 'overdue' ? 'warning' : 'success',
         })

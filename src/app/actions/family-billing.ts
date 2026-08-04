@@ -5,15 +5,10 @@ import { requirePrincipal } from '@/lib/principal'
 import {
   createBillingSchedule,
   createPaymentPlan,
-  ensureInvoicePortalToken,
   loadBillingState,
-  markInvoiceReminded,
   runDueBillingSchedules,
 } from '@/lib/billing/store'
-import { familyPayUrl } from '@/lib/billing/portal-token'
-import { formatMoney } from '@/lib/billing/store'
-import { queueAndSendEmail } from '@/lib/email/send'
-import { loadSchoolBrand } from '@/lib/school-brand'
+import { sendInvoiceEmailForSchool } from '@/lib/billing/invoice-email'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 function revalidateBilling() {
@@ -27,72 +22,13 @@ export async function emailInvoiceToFamily(
   invoiceId: string
 ): Promise<{ ok: true; payUrl: string } | { ok: false; error: string }> {
   const { schoolId, user } = await requirePrincipal()
-  const state = await loadBillingState(schoolId)
-  const inv = state.invoices.find((i) => i.id === invoiceId)
-  if (!inv) return { ok: false, error: 'Invoice not found.' }
-  if (!inv.parentEmail?.includes('@')) {
-    return { ok: false, error: 'Invoice has no parent email.' }
-  }
-  if (inv.status === 'paid' || inv.status === 'void') {
-    return { ok: false, error: 'Invoice is not open for collection.' }
-  }
-
-  const token = await ensureInvoicePortalToken(schoolId, inv.id)
-  const payUrl = familyPayUrl(token)
-  const brand = await loadSchoolBrand(schoolId)
-
-  const result = await queueAndSendEmail(
-    {
-      school_id: schoolId,
-      kind: 'invoice',
-      to_email: inv.parentEmail.trim(),
-      to_name: inv.familyName,
-      subject: `${brand.shortName || brand.name}: Invoice · ${inv.description}`,
-      body_text: [
-        `Hello ${inv.familyName},`,
-        '',
-        `${brand.name} has an invoice ready for you:`,
-        `${inv.description}`,
-        `Amount: ${formatMoney(inv.amountCents, inv.currency)}`,
-        inv.dueDate ? `Due: ${inv.dueDate}` : '',
-        '',
-        `View and pay: ${payUrl}`,
-        '',
-        '— Beacon family billing (school-owned portal, not a third-party biller)',
-      ]
-        .filter(Boolean)
-        .join('\n'),
-      body_html: `<p>Hello ${escapeHtml(inv.familyName)},</p>
-<p><strong>${escapeHtml(brand.name)}</strong> has an invoice ready:</p>
-<p>${escapeHtml(inv.description)}<br/>
-<strong>${escapeHtml(formatMoney(inv.amountCents, inv.currency))}</strong>
-${inv.dueDate ? `<br/>Due ${escapeHtml(inv.dueDate)}` : ''}</p>
-<p><a href="${payUrl}">View &amp; pay online</a></p>
-<p style="color:#64748b;font-size:12px">Beacon family portal — owned by your school.</p>`,
-      related_table: 'billing_invoices',
-      related_id: inv.id,
-      meta: { portal: true },
-    },
-    { brand }
-  )
-
-  await markInvoiceReminded(schoolId, inv.id)
-
-  const admin = createAdminClient()
-  await admin.from('audit_logs').insert({
-    school_id: schoolId,
-    user_id: user.id,
-    action: 'billing.invoice_emailed',
-    table_name: 'billing_invoices',
-    record_id: inv.id,
-    details: { status: result.status, payUrl },
+  const result = await sendInvoiceEmailForSchool(schoolId, invoiceId, {
+    actorUserId: user.id,
+    reason: 'principal_manual',
   })
-
   revalidateBilling()
-  if (result.status === 'failed') {
-    return { ok: false, error: result.error || 'Email failed.' }
-  }
-  return { ok: true, payUrl }
+  if (!result.ok) return result
+  return { ok: true, payUrl: result.payUrl }
 }
 
 export async function remindOpenInvoices(): Promise<
@@ -206,12 +142,4 @@ export async function runRecurringBillingNow(): Promise<
   })
   revalidateBilling()
   return { ok: true, created: result.created, errors: result.errors }
-}
-
-function escapeHtml(s: string) {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
 }

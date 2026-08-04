@@ -9,6 +9,7 @@ import {
   loadTeacherToday,
 } from '@/lib/insights/load-missing-work'
 import { ParentFeed } from '@/components/parent/ParentFeed'
+import { ParentBillingCard } from '@/components/parent/ParentBillingCard'
 import { MissingWorkRadar } from '@/components/insights/MissingWorkRadar'
 import { TeacherTodayCard } from '@/components/insights/TeacherTodayCard'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
@@ -141,6 +142,19 @@ export default async function DashboardPage() {
   const isStaffHome =
     role === 'teacher' || role === 'admin' || role === 'staff' || role === 'principal'
 
+  // Family billing balances (open + recent paid for this parent's email)
+  let parentInvoices: Awaited<
+    ReturnType<typeof import('@/lib/billing/invoice-email').listOpenInvoicesForParentEmail>
+  > = []
+  if (role === 'parent' && schoolId && user.email) {
+    try {
+      const { listOpenInvoicesForParentEmail } = await import('@/lib/billing/invoice-email')
+      parentInvoices = await listOpenInvoicesForParentEmail(schoolId, user.email)
+    } catch {
+      parentInvoices = []
+    }
+  }
+
   const presentSectionIds = [
     'header',
     'announcements',
@@ -148,6 +162,7 @@ export default async function DashboardPage() {
     ...(isPrincipal ? (['principal_banner'] as const) : []),
     ...(teacherToday ? (['teacher_today'] as const) : []),
     ...(isStaffHome ? (['classes', 'quick_tips'] as const) : []),
+    ...(role === 'parent' && schoolId ? (['parent_billing'] as const) : []),
     ...(role === 'parent' && parentMissing.length > 0 ? (['parent_missing'] as const) : []),
     ...(role === 'parent' ? (['children'] as const) : []),
     ...(role === 'parent' && schoolId && children.length > 0
@@ -225,7 +240,7 @@ export default async function DashboardPage() {
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
               {role === 'parent'
-                ? 'Your family’s home — Dinner Table Digest, grades, Pulse, and conference briefs.'
+                ? 'Your family’s home — balances & pay, Dinner Table Digest, grades, and Pulse.'
                 : isPrincipal
                   ? 'School-wide hub — Beacon Signal, tuition, go-live, and academics.'
                   : 'Your home in the Beacon school suite. Use Edit view to show what you care about.'}
@@ -350,6 +365,15 @@ export default async function DashboardPage() {
                 </ul>
               </>
             )}
+          </section>
+        </ViewSection>
+      ) : null}
+
+      {role === 'parent' && schoolId ? (
+        <ViewSection id="parent_billing" title="Balances & pay">
+          <section id="billing" className="max-w-2xl">
+            <h2 className="text-lg font-semibold mb-3">Balances &amp; pay</h2>
+            <ParentBillingCard invoices={parentInvoices} />
           </section>
         </ViewSection>
       ) : null}

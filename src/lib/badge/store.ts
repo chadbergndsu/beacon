@@ -1342,6 +1342,23 @@ export async function billClosedAftercareSessions(
 
     billed++
     totalCents += amount
+
+    // Auto-email family pay portal link (school-owned; not a third-party biller)
+    try {
+      const { sendInvoiceEmailForSchool } = await import('@/lib/billing/invoice-email')
+      const mail = await sendInvoiceEmailForSchool(schoolId, claimInvoiceId, {
+        reason: 'aftercare_billed',
+      })
+      if (!mail.ok) {
+        errors.push(`Billed but email failed (${student.first_name}): ${mail.error}`)
+      }
+    } catch (e) {
+      errors.push(
+        `Billed but email error (${student.first_name}): ${
+          e instanceof Error ? e.message : 'send failed'
+        }`
+      )
+    }
   }
 
   return { billed, totalCents, errors }
