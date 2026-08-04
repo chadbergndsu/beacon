@@ -237,6 +237,12 @@ export default async function DashboardPage() {
                 My classroom
               </Link>
               <Link
+                href="/teacher/settings"
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800"
+              >
+                Settings
+              </Link>
+              <Link
                 href="/teacher/quick"
                 className="hidden rounded-lg bg-emerald-600 text-white px-3 py-2 text-sm font-semibold sm:inline-flex"
               >
@@ -294,24 +300,52 @@ export default async function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {classes.map((c) => (
-                  <li key={c.id}>
-                    <Link
-                      href={`/classes/${c.id}`}
-                      className="card-interactive block h-full rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]"
+              <>
+                <div className="mb-3 flex flex-wrap gap-2 text-xs">
+                  <Link
+                    href="/teacher/settings"
+                    className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1 font-semibold text-slate-800"
+                  >
+                    Settings · weights
+                  </Link>
+                  <Link
+                    href="/teacher/classroom"
+                    className="rounded-lg border border-violet-300 bg-violet-50 px-2.5 py-1 font-semibold text-violet-900"
+                  >
+                    My classroom
+                  </Link>
+                </div>
+                <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {classes.map((c) => (
+                    <li
+                      key={c.id}
+                      className="rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]"
                     >
                       <p className="font-semibold">{c.name}</p>
                       <p className="text-sm text-muted-foreground mt-1">
                         {[c.subject, c.grade_level, c.term].filter(Boolean).join(' · ') || 'Class'}
                       </p>
-                      <p className="text-xs text-sky-800 mt-3 font-medium">
-                        {rosterCount.get(c.id) || 0} students · Open class →
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {rosterCount.get(c.id) || 0} students
                       </p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Link
+                          href={`/classes/${c.id}`}
+                          className="rounded-lg bg-sky-600 px-2.5 py-1 text-xs font-bold text-white"
+                        >
+                          Gradebook
+                        </Link>
+                        <Link
+                          href={`/classes/${c.id}?tab=setup`}
+                          className="rounded-lg border border-violet-300 bg-violet-50 px-2.5 py-1 text-xs font-bold text-violet-900"
+                        >
+                          Weights
+                        </Link>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </section>
         </ViewSection>

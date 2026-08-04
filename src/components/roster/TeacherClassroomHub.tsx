@@ -141,7 +141,11 @@ export function TeacherClassroomHub({
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
           Build your Abeka classes, add students, and run the year. Deleting a student or class
           goes to the principal for approval. Mistakes? Use <strong>History</strong> below to undo
-          your own changes.
+          your own changes. Grade weights and gradebook links also live under{' '}
+          <Link href="/teacher/settings" className="font-semibold text-sky-800 underline">
+            Settings
+          </Link>
+          .
         </p>
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
           <Badge variant="sky">{classes.length} classes</Badge>

@@ -46,6 +46,8 @@ export function ClassGradebookClient({
         categories={categories}
         classTitle={classTitle}
         exportHref={`/api/classes/${classId}/export`}
+        setupHref={`/classes/${classId}?tab=setup`}
+        settingsHref="/teacher/settings"
         onGradesChange={setLiveGrades}
         onSave={async (grades, options) => {
           setMessage(null)

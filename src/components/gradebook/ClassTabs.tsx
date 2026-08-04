@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 const tabs = [
-  { id: 'grades', label: 'Grade entry', href: (id: string) => `/classes/${id}` },
+  { id: 'grades', label: 'Gradebook', href: (id: string) => `/classes/${id}` },
   {
     id: 'attendance',
     label: 'Attendance',
@@ -13,7 +13,11 @@ const tabs = [
   },
   { id: 'lessons', label: 'Lesson plans', href: (id: string) => `/classes/${id}?tab=lessons` },
   { id: 'pulse', label: 'Beacon Pulse', href: (id: string) => `/classes/${id}?tab=pulse` },
-  { id: 'setup', label: 'Class setup', href: (id: string) => `/classes/${id}?tab=setup` },
+  {
+    id: 'setup',
+    label: 'Weights & setup',
+    href: (id: string) => `/classes/${id}?tab=setup`,
+  },
 ] as const
 
 export function ClassTabs({ classId }: { classId: string }) {

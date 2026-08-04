@@ -24,6 +24,7 @@ export function AppHeader({
   const nav = [
     { href: '/dashboard', label: 'Home' },
     ...(showQuick ? [{ href: '/teacher/classroom', label: 'My classroom' }] : []),
+    ...(showQuick ? [{ href: '/teacher/settings', label: 'Settings' }] : []),
     ...(showQuick ? [{ href: '/teacher/quick', label: 'Quick mode' }] : []),
     ...(showQuick ? [{ href: '/teacher/lessons', label: 'Lesson plans' }] : []),
     ...(showQuick ? [{ href: '/teacher/calendar', label: 'Calendar' }] : []),

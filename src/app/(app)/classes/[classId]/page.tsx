@@ -100,16 +100,46 @@ export default async function ClassGradebookPage({
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
               <Link href="/dashboard" className="hover:underline">
-                Dashboard
+                Home
               </Link>
-              {' / '}
-              Academics
+              {' · '}
+              <Link href="/teacher/settings" className="hover:underline">
+                Settings
+              </Link>
+              {' · '}
+              <Link href="/teacher/classroom" className="hover:underline">
+                My classroom
+              </Link>
+              {' · '}
+              Gradebook
             </p>
             <h1 className="text-2xl font-bold tracking-tight mt-1">{classRow.name}</h1>
             <p className="text-sm text-muted-foreground">
               {[classRow.subject, classRow.grade_level, classRow.term].filter(Boolean).join(' · ')}
             </p>
           </div>
+          {canEnter && (
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/classes/${classId}`}
+                className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-bold text-white"
+              >
+                Gradebook
+              </Link>
+              <Link
+                href={`/classes/${classId}?tab=setup`}
+                className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-900"
+              >
+                Weights &amp; setup
+              </Link>
+              <Link
+                href="/teacher/settings"
+                className="rounded-lg border px-3 py-1.5 text-xs font-semibold"
+              >
+                All classes
+              </Link>
+            </div>
+          )}
         </div>
       </ViewSection>
 
@@ -121,7 +151,15 @@ export default async function ClassGradebookPage({
             </Suspense>
             {activeTab === 'grades' && !weights.ok && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 text-amber-950 px-4 py-3 text-sm">
-                {weights.message} Fix weights under <strong>Class setup</strong>.
+                {weights.message} Fix under{' '}
+                <Link href={`/classes/${classId}?tab=setup`} className="font-bold underline">
+                  Weights &amp; setup
+                </Link>{' '}
+                or{' '}
+                <Link href="/teacher/settings" className="font-bold underline">
+                  Settings
+                </Link>
+                .
               </div>
             )}
           </div>

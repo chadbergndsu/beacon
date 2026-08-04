@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import {
+  applyDefaultGradeWeights,
   createAssignment,
   createCategory,
   deleteAssignment,
@@ -11,6 +12,7 @@ import {
 } from '@/app/actions/class-setup'
 import { validateCategoryWeights } from '@/lib/grades'
 import type { Assignment, GradeCategory, Student } from '@/lib/types'
+import Link from 'next/link'
 
 export function ClassSetupPanel({
   classId,
@@ -65,9 +67,47 @@ export function ClassSetupPanel({
         </p>
       )}
 
+      <div className="flex flex-wrap gap-2 text-sm">
+        <Link
+          href={`/classes/${classId}`}
+          className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-bold text-white"
+        >
+          ← Back to gradebook
+        </Link>
+        <Link
+          href="/teacher/settings"
+          className="rounded-lg border px-3 py-1.5 text-xs font-semibold"
+        >
+          Teacher settings
+        </Link>
+        <Link
+          href="/teacher/classroom"
+          className="rounded-lg border px-3 py-1.5 text-xs font-semibold"
+        >
+          Students &amp; classes
+        </Link>
+      </div>
+
       {/* Categories */}
       <section className="rounded-xl border bg-background p-4 space-y-4">
-        <h2 className="text-lg font-semibold">Grade categories</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Grade categories (weights)</h2>
+          {categories.length === 0 && (
+            <button
+              type="button"
+              disabled={pending}
+              className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-900"
+              onClick={() =>
+                run(() => applyDefaultGradeWeights(classId), 'Abeka-style weights applied (100%).')
+              }
+            >
+              Apply Abeka-style weights (100%)
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Weights should total about 100%. Parents see the same math on transparent grades.
+        </p>
         <ul className="space-y-3">
           {categories.map((cat) => (
             <li key={cat.id} className="grid gap-2 sm:grid-cols-[1fr_90px_90px_auto] items-end border rounded-lg p-3">

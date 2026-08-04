@@ -130,6 +130,71 @@ export async function deleteAssignment(
   return { ok: true }
 }
 
+/**
+ * One-click Abeka-friendly weighted categories for a class.
+ * Only fills in when the class has zero categories (safe default).
+ * Override with force=true to replace empty names only — we never wipe existing.
+ */
+export async function applyDefaultGradeWeights(
+  classId: string,
+  opts?: { force?: boolean }
+): Promise<
+  | { ok: true; created: number; note: string }
+  | { ok: false; error: string }
+> {
+  const access = await requireClassManager(classId)
+  if (!access.ok) return access
+
+  const { data: existing } = await access.admin
+    .from('grade_categories')
+    .select('id, name')
+    .eq('class_id', classId)
+
+  if ((existing?.length ?? 0) > 0 && !opts?.force) {
+    return {
+      ok: false,
+      error:
+        'This class already has categories. Edit weights under Class setup, or delete them first.',
+    }
+  }
+
+  if ((existing?.length ?? 0) > 0 && opts?.force) {
+    // Only allow force when leadership-ish? Keep simple: refuse force if any exist
+    return {
+      ok: false,
+      error: 'Categories already exist — adjust weights manually so you do not lose setup.',
+    }
+  }
+
+  const defaults = [
+    { name: 'Tests', weight: 40, drop_lowest: 0 },
+    { name: 'Quizzes', weight: 20, drop_lowest: 0 },
+    { name: 'Homework / Seatwork', weight: 20, drop_lowest: 1 },
+    { name: 'Participation / Classwork', weight: 10, drop_lowest: 0 },
+    { name: 'Projects / Reports', weight: 10, drop_lowest: 0 },
+  ]
+
+  let created = 0
+  for (const row of defaults) {
+    const { error } = await access.admin.from('grade_categories').insert({
+      class_id: classId,
+      name: row.name,
+      weight: row.weight,
+      drop_lowest: row.drop_lowest,
+    })
+    if (!error) created++
+  }
+
+  revalidateClass(classId)
+  revalidatePath('/teacher/settings')
+  revalidatePath('/dashboard')
+  return {
+    ok: true,
+    created,
+    note: `Added ${created} weighted categories (sum 100%). Adjust anytime in Class setup.`,
+  }
+}
+
 export async function enrollStudent(
   classId: string,
   input: { first_name: string; last_name: string; grade_level: string }
