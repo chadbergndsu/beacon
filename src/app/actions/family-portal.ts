@@ -1,10 +1,12 @@
 'use server'
 
+import { loadInvoiceByPortalToken } from '@/lib/billing/store'
 import {
-  addPayment,
-  loadInvoiceByPortalToken,
-} from '@/lib/billing/store'
-import { createInvoiceCheckoutSession, isStripeConfigured } from '@/lib/billing/stripe'
+  createInvoiceCheckoutSession,
+  isStripeConfigured,
+  retrievePaidCheckoutSession,
+} from '@/lib/billing/stripe'
+import { applyStripePaidSession } from '@/lib/billing/stripe-apply'
 import { familyPayUrl } from '@/lib/billing/portal-token'
 import { loadSchoolBrand } from '@/lib/school-brand'
 import { rateLimitAsync } from '@/lib/security/rate-limit'
@@ -68,22 +70,30 @@ export async function startFamilyPortalCheckout(
   return { ok: true, url: session.url }
 }
 
-/** Webhook / manual office path: record card success against portal invoice */
-export async function recordPortalCardPayment(input: {
-  schoolId: string
-  invoiceId: string
-  stripeSessionId: string
-  amountCents: number
-}): Promise<void> {
-  await addPayment(input.schoolId, {
-    id: crypto.randomUUID(),
-    invoiceId: input.invoiceId,
-    amountCents: input.amountCents,
-    currency: 'USD',
-    method: 'card',
-    status: 'succeeded',
-    paidAt: new Date().toISOString(),
-    notes: `Stripe Checkout ${input.stripeSessionId}`,
-    createdAt: new Date().toISOString(),
+/**
+ * Success-page reconcile: if webhook is slow, apply payment from Checkout session id.
+ * Safe to call multiple times (idempotent).
+ */
+export async function confirmFamilyPortalStripeSession(input: {
+  token: string
+  sessionId: string
+}): Promise<{ ok: true; already?: boolean } | { ok: false; error: string }> {
+  const rl = await rateLimitAsync({
+    key: `pay-confirm:${input.token.slice(0, 12)}`,
+    limit: 30,
+    windowMs: 60_000,
   })
+  if (!rl.ok) return { ok: false, error: 'Too many requests.' }
+
+  const found = await loadInvoiceByPortalToken(input.token)
+  if (!found) return { ok: false, error: 'Invoice not found.' }
+
+  const paid = await retrievePaidCheckoutSession(input.sessionId)
+  if ('error' in paid) return { ok: false, error: paid.error }
+
+  if (paid.invoiceId !== found.invoice.id || paid.schoolId !== found.schoolId) {
+    return { ok: false, error: 'Session does not match this invoice.' }
+  }
+
+  return applyStripePaidSession(paid)
 }

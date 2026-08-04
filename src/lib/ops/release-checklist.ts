@@ -10,8 +10,8 @@ export type ChecklistItem = {
 export const RELEASE_CHECKLIST: ChecklistItem[] = [
   {
     id: 'migrations',
-    label: 'Database migrations 001–019 applied',
-    help: 'Prefer: npm run db:migrate. Includes billing first-class (017), token expiry (018), family portal/plans/schedules (019).',
+    label: 'Database migrations 001–020 applied',
+    help: 'Prefer: npm run db:migrate. Includes family portal (019) and Stripe payment columns (020).',
     group: 'ops',
   },
   {
@@ -42,6 +42,12 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
     id: 'sentry',
     label: 'Sentry DSN set for production errors',
     help: 'SENTRY_DSN (server) + NEXT_PUBLIC_SENTRY_DSN (browser) on Vercel. Optional for pilot; recommended for public traffic.',
+    group: 'ops',
+  },
+  {
+    id: 'stripe',
+    label: 'Stripe family pay configured (or N/A)',
+    help: 'STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET on Vercel; webhook URL /api/stripe/webhook (checkout.session.completed). Apply migration 020. Test with sk_test_ first.',
     group: 'ops',
   },
   {

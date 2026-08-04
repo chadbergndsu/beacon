@@ -263,6 +263,21 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     category: 'integrations',
   })
 
+  const { isStripeConfigured, isStripeWebhookConfigured } = await import('@/lib/billing/stripe')
+  const stripeOn = isStripeConfigured()
+  const stripeWh = isStripeWebhookConfigured()
+  checks.push({
+    id: 'stripe',
+    label: 'Stripe card payments',
+    status: stripeOn ? (stripeWh ? 'ok' : 'warn') : 'info',
+    detail: !stripeOn
+      ? 'Optional: set STRIPE_SECRET_KEY for family portal card checkout'
+      : stripeWh
+        ? 'STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET set — Checkout + webhook ready'
+        : 'STRIPE_SECRET_KEY set but STRIPE_WEBHOOK_SECRET missing — success page can still confirm; set webhook for reliability',
+    category: 'integrations',
+  })
+
   const { durableRateLimitOk, isUpstashConfigured, isProductionLike } = await import(
     '@/lib/security/rate-limit'
   )

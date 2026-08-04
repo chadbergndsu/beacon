@@ -21,35 +21,41 @@ export function FamilyPayClient({
   return (
     <div className="space-y-3 pt-2">
       {stripeEnabled ? (
-        <Button
-          className="w-full"
-          size="lg"
-          disabled={pending}
-          onClick={() => {
-            setError(null)
-            start(async () => {
-              const r = await startFamilyPortalCheckout(token)
-              if (!r.ok) {
-                setError(r.error)
-                return
-              }
-              window.location.href = r.url
-            })
-          }}
-        >
-          {pending ? 'Opening secure checkout…' : 'Pay online with card'}
-        </Button>
+        <>
+          <Button
+            className="w-full"
+            size="lg"
+            disabled={pending}
+            onClick={() => {
+              setError(null)
+              start(async () => {
+                const r = await startFamilyPortalCheckout(token)
+                if (!r.ok) {
+                  setError(r.error)
+                  return
+                }
+                window.location.href = r.url
+              })
+            }}
+          >
+            {pending ? 'Opening Stripe…' : 'Pay securely with card (Stripe)'}
+          </Button>
+          <p className="text-[11px] text-muted-foreground text-center">
+            You will complete payment on Stripe&apos;s secure checkout page.
+          </p>
+        </>
       ) : (
         <div className="rounded-xl border border-dashed bg-muted/40 px-3 py-3 text-sm text-muted-foreground">
-          Online card pay is not enabled yet for this school. Please pay the office directly
+          Online card pay is not enabled yet (school needs Stripe keys). Please pay the office
+          directly
           {schoolEmail ? ` (${schoolEmail})` : ''}
           {schoolPhone ? ` · ${schoolPhone}` : ''}.
         </div>
       )}
       {error && <p className="text-sm text-red-700">{error}</p>}
       <p className="text-[11px] text-muted-foreground">
-        You can also pay by check, cash, or ACH at the school office. Receipts are recorded in
-        Beacon and can sync to QuickBooks.
+        You can also pay by check, cash, or ACH at the school office. Office receipts are recorded
+        in Beacon and can sync to QuickBooks.
       </p>
     </div>
   )

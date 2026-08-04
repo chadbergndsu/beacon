@@ -1,17 +1,21 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { addPayment } from '@/lib/billing/store'
+import {
+  getStripe,
+  isStripeWebhookConfigured,
+  type StripeSessionPaid,
+} from '@/lib/billing/stripe'
+import { applyStripePaidSession } from '@/lib/billing/stripe-apply'
 import { reportError } from '@/lib/ops/report-error'
 
+export const runtime = 'nodejs'
+
 /**
- * Stripe Checkout webhook — marks Beacon invoices paid after successful card pay.
- * Configure endpoint: https://<host>/api/stripe/webhook
- * Events: checkout.session.completed
+ * Stripe webhook — https://<host>/api/stripe/webhook
+ * Subscribe to: checkout.session.completed
+ * Local: stripe listen --forward-to localhost:3000/api/stripe/webhook
  */
 export async function POST(request: Request) {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim()
-  const key = process.env.STRIPE_SECRET_KEY?.trim()
-  if (!secret || !key) {
+  if (!isStripeWebhookConfigured()) {
     return NextResponse.json({ error: 'Stripe webhook not configured' }, { status: 503 })
   }
 
@@ -19,60 +23,45 @@ export async function POST(request: Request) {
   const sig = request.headers.get('stripe-signature')
   if (!sig) return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
 
+  const secret = process.env.STRIPE_WEBHOOK_SECRET!.trim()
+
   try {
-    const Stripe = (await import('stripe')).default
-    const stripe = new Stripe(key)
+    const stripe = getStripe()
     const event = stripe.webhooks.constructEvent(body, sig, secret)
 
     if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as {
-        id: string
-        amount_total?: number | null
-        metadata?: Record<string, string>
-        payment_status?: string
-      }
+      const session = event.data.object
       if (session.payment_status && session.payment_status !== 'paid') {
         return NextResponse.json({ received: true, skipped: true })
       }
+
       const schoolId = session.metadata?.school_id
-      const invoiceId = session.metadata?.invoice_id
+      const invoiceId = session.metadata?.invoice_id || session.client_reference_id
       if (!schoolId || !invoiceId) {
         return NextResponse.json({ received: true, missing_meta: true })
       }
 
-      const admin = createAdminClient()
-      // Idempotent: skip if payment already recorded for this session
-      const { data: existing } = await admin
-        .from('billing_payments')
-        .select('id')
-        .eq('school_id', schoolId)
-        .ilike('notes', `%${session.id}%`)
-        .maybeSingle()
-      if (existing?.id) {
-        return NextResponse.json({ received: true, duplicate: true })
+      const pi =
+        typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : session.payment_intent?.id || null
+
+      const paid: StripeSessionPaid = {
+        sessionId: session.id,
+        paymentIntentId: pi,
+        schoolId,
+        invoiceId,
+        amountCents: session.amount_total ?? 0,
+        currency: (session.currency || 'usd').toUpperCase(),
+        paymentStatus: session.payment_status || 'paid',
       }
 
-      const amount = session.amount_total ?? 0
-      await addPayment(schoolId, {
-        id: crypto.randomUUID(),
-        invoiceId,
-        amountCents: amount,
-        currency: 'USD',
-        method: 'card',
-        status: 'succeeded',
-        paidAt: new Date().toISOString(),
-        notes: `Stripe Checkout ${session.id}`,
-        createdAt: new Date().toISOString(),
-      })
-
-      await admin.from('audit_logs').insert({
-        school_id: schoolId,
-        user_id: null,
-        action: 'billing.stripe_paid',
-        table_name: 'billing_invoices',
-        record_id: invoiceId,
-        details: { sessionId: session.id, amount },
-      })
+      const result = await applyStripePaidSession(paid)
+      if (!result.ok) {
+        reportError(new Error(result.error), { surface: 'stripe-webhook', sessionId: session.id })
+        return NextResponse.json({ error: result.error }, { status: 422 })
+      }
+      return NextResponse.json({ received: true, already: result.already === true })
     }
 
     return NextResponse.json({ received: true })

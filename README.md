@@ -98,7 +98,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth + client |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server actions / admin client (never expose to browser) |
 
-Then apply **migrations 001–019** (see below) and:
+Then apply **migrations 001–020** (see below) and:
 
 ```bash
 npm run dev
@@ -132,7 +132,7 @@ Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, securit
 
 ### Database migrations
 
-**Source of truth:** `supabase/migrations/` files **001–019** in filename order.
+**Source of truth:** `supabase/migrations/` files **001–020** in filename order.
 
 ```bash
 # Preferred
@@ -158,6 +158,7 @@ POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate -- 017
 | **017** | billing first-class: product `code`, invoice `source_key`, demo QB status, parent read RLS, one-time migrate legacy JSON → tables |
 | **018** | kiosk/device token expiry (`kiosk_token_expires_at` / `device_token_expires_at`; default 90 days) |
 | **019** | family billing: portal tokens, payment plans, recurring schedules |
+| **020** | Stripe payment columns (`stripe_checkout_session_id`, payment intent) |
 
 **Billing money path** uses tables only. Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`.
 
@@ -204,6 +205,27 @@ Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user when th
 
 Leadership (and teachers for email) see a trust banner until transports are honest-live. Details on **Go-live**.
 
+### Stripe family card pay
+
+School-owned Checkout (not a third-party biller):
+
+1. Create a Stripe account → **Developers → API keys** → copy **Secret key** (`sk_test_…` first).  
+2. Vercel env: `STRIPE_SECRET_KEY`, and for production webhooks `STRIPE_WEBHOOK_SECRET`.  
+3. **Developers → Webhooks → Add endpoint**  
+   - URL: `https://<your-domain>/api/stripe/webhook`  
+   - Event: `checkout.session.completed`  
+4. Apply migration **020** (`npm run db:migrate`).  
+5. Principal → Family billing → create invoice → **Email pay link** → parent opens `/pay/…` → **Pay with card**.  
+
+Local webhook forward:
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+# paste whsec_… into .env.local as STRIPE_WEBHOOK_SECRET
+```
+
+Success URL also reconcilies via `session_id` if the webhook is delayed.
+
 ### Optional integrations
 
 Full list of names lives in **`.env.example`**. Summary:
@@ -213,7 +235,7 @@ Full list of names lives in **`.env.example`**. Summary:
 | Pilot owner email | `BEACON_FEEDBACK_TO` / `BEACON_OWNER_EMAIL` | Suggestion button inbox (**not** the principal) |
 | ntfy push | `BEACON_NTFY_*` | Owner phone alerts |
 | Twilio SMS | `TWILIO_*` | Aftercare parent SMS |
-| Stripe (family pay) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Optional card checkout on `/pay/[token]`; webhook `/api/stripe/webhook` |
+| Stripe (family pay) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Card Checkout on `/pay/[token]`; webhook `/api/stripe/webhook`; success-page confirm; migration **020** |
 | Upstash Redis | `UPSTASH_REDIS_REST_*` | **Required on production/preview** for multi-instance rate limits (or `RATE_LIMIT_ALLOW_MEMORY=1` break-glass). Go-live fails without either. |
 | Access token TTL | `BEACON_ACCESS_TOKEN_TTL_DAYS` | Kiosk/device secret lifetime (default 90) |
 | School day TZ | `BEACON_SCHOOL_TZ` | Badge attendance calendar day (default `America/Chicago`) |
