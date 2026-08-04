@@ -1,5 +1,6 @@
 import { AppHeader } from '@/components/layout/AppHeader'
 import { TrustModeBanner } from '@/components/ops/TrustModeBanner'
+import { PilotSuggestionButton } from '@/components/pilot/PilotSuggestionButton'
 import { getProfile } from '@/lib/auth'
 import { loadSchoolBrand } from '@/lib/school-brand'
 import { isQuickBooksConfigured } from '@/lib/billing/quickbooks'
@@ -9,6 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const brand = await loadSchoolBrand(profile?.school_id)
   const emailLive = Boolean(process.env.RESEND_API_KEY?.trim())
   const qbLive = isQuickBooksConfigured()
+  const firstName = profile?.full_name?.trim().split(/\s+/)[0] || null
 
   return (
     <div className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden beacon-shell">
@@ -32,7 +34,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </a>
           </>
         ) : null}
+        {' · '}
+        <span className="text-violet-700/80">Pilot · use Suggestion anytime</span>
       </footer>
+      {profile ? <PilotSuggestionButton userLabel={firstName} /> : null}
     </div>
   )
 }
