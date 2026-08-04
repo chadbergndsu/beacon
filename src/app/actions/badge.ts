@@ -21,6 +21,7 @@ import {
   processBadgeScan,
   resolveSchoolByKioskToken,
   rotateDeviceToken,
+  rotateKioskToken,
   searchKioskStudents,
   setAftercareNotifyPreference,
   setStudentRfidUid,
@@ -28,6 +29,7 @@ import {
 } from '@/lib/badge/store'
 import { isSmsConfigured } from '@/lib/sms/twilio'
 import { isEmailLive } from '@/lib/email/transport'
+import { rateLimit } from '@/lib/security/rate-limit'
 
 async function requireBadgeAdmin() {
   const supabase = await createClient()
@@ -116,6 +118,11 @@ export async function billAftercareAction(): Promise<
   return { ok: true, ...r }
 }
 
+function kioskRateOk(token: string, action: string) {
+  const key = `${action}:${token.slice(0, 12)}`
+  return rateLimit({ key, limit: 60, windowMs: 60_000 })
+}
+
 /** Kiosk scan — authorized by kiosk token (no staff login on tablet). */
 export async function kioskScanAction(input: {
   token: string
@@ -125,6 +132,10 @@ export async function kioskScanAction(input: {
   direction: ScanDirection
   kioskLabel?: string
 }): Promise<Awaited<ReturnType<typeof processBadgeScan>>> {
+  const rl = kioskRateOk(input.token, 'scan')
+  if (!rl.ok) {
+    return { ok: false, error: 'Too many scans — wait a moment.' }
+  }
   const school = await resolveSchoolByKioskToken(input.token)
   if (!school) {
     return { ok: false, error: 'Invalid kiosk link. Open kiosk from Principal → Badges.' }
@@ -147,10 +158,19 @@ export async function kioskSearchAction(input: {
   | { ok: true; students: Awaited<ReturnType<typeof searchKioskStudents>> }
   | { ok: false; error: string }
 > {
+  const rl = kioskRateOk(input.token, 'search')
+  if (!rl.ok) return { ok: false, error: 'Too many searches — wait a moment.' }
   const school = await resolveSchoolByKioskToken(input.token)
   if (!school) return { ok: false, error: 'Invalid kiosk.' }
   const students = await searchKioskStudents(school.schoolId, input.query)
-  return { ok: true, students }
+  // Do not expose full badge codes on public kiosk search
+  return {
+    ok: true,
+    students: students.map((s) => ({
+      ...s,
+      badgeCode: s.badgeCode ? `···${s.badgeCode.slice(-3)}` : null,
+    })),
+  }
 }
 
 export async function kioskPresenceAction(input: {
@@ -160,10 +180,26 @@ export async function kioskPresenceAction(input: {
   | { ok: true; present: Awaited<ReturnType<typeof listRoomPresence>> }
   | { ok: false; error: string }
 > {
+  const rl = kioskRateOk(input.token, 'presence')
+  if (!rl.ok) return { ok: false, error: 'Too many requests — wait a moment.' }
   const school = await resolveSchoolByKioskToken(input.token)
   if (!school) return { ok: false, error: 'Invalid kiosk.' }
   const present = await listRoomPresence(school.schoolId, input.roomId)
   return { ok: true, present }
+}
+
+export async function rotateKioskTokenAction(): Promise<
+  { ok: true; token: string; path: string } | { ok: false; error: string }
+> {
+  const access = await requireBadgeAdmin()
+  if (!access.ok) return access
+  try {
+    const token = await rotateKioskToken(access.schoolId)
+    revalidatePath('/principal/badges')
+    return { ok: true, token, path: `/kiosk/${token}` }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Rotate failed' }
+  }
 }
 
 /** Staff can scan while logged in (office laptop). */

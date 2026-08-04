@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyParentsOfGradeSave } from '@/lib/email/grade-notify'
-import type { Grade } from '@/lib/types'
+import { canEnterGrades, effectiveRole } from '@/lib/roles'
+import type { Grade, Role } from '@/lib/types'
 
 export async function saveGrades(
   classId: string,
@@ -33,28 +34,63 @@ export async function saveGrades(
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('role, school_id')
+    .select('role, school_id, email')
     .eq('id', user.id)
     .maybeSingle()
 
-  const { canEnterGrades } = await import('@/lib/roles')
-  if (!canEnterGrades(profile?.role, classRow.teacher_id, user.id)) {
+  const role = effectiveRole(
+    profile
+      ? { role: profile.role as Role, email: profile.email as string | null }
+      : null
+  )
+
+  if (
+    !canEnterGrades(role, classRow.teacher_id, user.id, {
+      profileSchoolId: profile?.school_id as string | null,
+      classSchoolId: classRow.school_id as string | null,
+    })
+  ) {
     return { ok: false, error: 'You do not have permission to save grades for this class.' }
   }
 
-  const rows = grades.map((g) => ({
-    assignment_id: g.assignment_id,
-    student_id: g.student_id,
-    score: g.is_missing ? null : g.score,
-    is_missing: g.is_missing,
-    is_late: g.is_late ?? false,
-    comments: g.comments ?? null,
-    entered_by: user.id,
-    entered_at: new Date().toISOString(),
-  }))
+  if (grades.length === 0) {
+    return { ok: true }
+  }
+
+  // Bind every grade row to this class's assignments + enrolled students
+  const assignmentIds = [...new Set(grades.map((g) => g.assignment_id))]
+  const studentIds = [...new Set(grades.map((g) => g.student_id))]
+
+  const [{ data: validAssignments }, { data: enrollments }] = await Promise.all([
+    admin.from('assignments').select('id').eq('class_id', classId).in('id', assignmentIds),
+    admin
+      .from('enrollments')
+      .select('student_id')
+      .eq('class_id', classId)
+      .in('student_id', studentIds),
+  ])
+
+  const okAssignments = new Set((validAssignments ?? []).map((a) => a.id as string))
+  const okStudents = new Set((enrollments ?? []).map((e) => e.student_id as string))
+
+  const rows = grades
+    .filter((g) => okAssignments.has(g.assignment_id) && okStudents.has(g.student_id))
+    .map((g) => ({
+      assignment_id: g.assignment_id,
+      student_id: g.student_id,
+      score: g.is_missing ? null : g.score,
+      is_missing: g.is_missing,
+      is_late: g.is_late ?? false,
+      comments: g.comments ?? null,
+      entered_by: user.id,
+      entered_at: new Date().toISOString(),
+    }))
 
   if (rows.length === 0) {
-    return { ok: true }
+    return {
+      ok: false,
+      error: 'No valid grades for this class (assignment or student not in class).',
+    }
   }
 
   const { error } = await admin.from('grades').upsert(rows, {
@@ -73,6 +109,7 @@ export async function saveGrades(
     record_id: classId,
     details: {
       count: rows.length,
+      dropped: grades.length - rows.length,
       notifyParents: Boolean(options?.notifyParents),
       student_ids: [...new Set(rows.map((r) => r.student_id))],
     },
@@ -80,12 +117,12 @@ export async function saveGrades(
 
   let notifyNote: string | undefined
   if (options?.notifyParents) {
-    const studentIds = [...new Set(rows.map((r) => r.student_id))]
+    const studentIdsNotify = [...new Set(rows.map((r) => r.student_id))]
     const result = await notifyParentsOfGradeSave({
       classId,
-      schoolId: classRow.school_id,
-      className: classRow.name,
-      studentIds,
+      schoolId: classRow.school_id as string,
+      className: classRow.name as string,
+      studentIds: studentIdsNotify,
     })
     notifyNote =
       result.sent > 0

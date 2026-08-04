@@ -15,6 +15,7 @@ import type {
   OutboundEmail,
 } from '@/lib/email/types'
 import type { SchoolBrand } from '@/lib/school-brand'
+import { sanitizeHeaderValue } from '@/lib/security/headers'
 
 const DEFAULT_FROM = process.env.EMAIL_FROM || 'Beacon <onboarding@resend.dev>'
 
@@ -26,10 +27,12 @@ function buildFromHeader(brand?: Pick<SchoolBrand, 'name' | 'shortName'> | null)
     // Prefer school display name while keeping the verified address
     const match = raw.match(/<([^>]+)>/)
     const address = match?.[1]?.trim()
-    if (address) return `${fromDisplayName(brand)} <${address}>`
+    if (address) {
+      return `${sanitizeHeaderValue(fromDisplayName(brand), 80)} <${address}>`
+    }
     return raw
   }
-  if (brand) return `${fromDisplayName(brand)} <${raw}>`
+  if (brand) return `${sanitizeHeaderValue(fromDisplayName(brand), 80)} <${raw}>`
   return `Beacon <${raw}>`
 }
 
@@ -45,11 +48,16 @@ export async function queueAndSendEmail(
   const brand = opts?.brand
   const replyTo = email.reply_to || (brand ? resolveReplyTo(brand) : undefined) || undefined
   const from = buildFromHeader(brand)
+  const safeEmail = {
+    ...email,
+    subject: sanitizeHeaderValue(email.subject, 200),
+    to_name: email.to_name ? sanitizeHeaderValue(email.to_name, 80) : email.to_name,
+  }
 
-  const sendResult = await deliverWithCascade(email, from, replyTo)
+  const sendResult = await deliverWithCascade(safeEmail, from, replyTo)
 
   const meta = {
-    ...(email.meta ?? {}),
+    ...(safeEmail.meta ?? {}),
     ...(sendResult.providerId ? { provider_id: sendResult.providerId } : {}),
     ...(replyTo ? { reply_to: replyTo } : {}),
     from,
@@ -57,18 +65,18 @@ export async function queueAndSendEmail(
   }
 
   const row = {
-    school_id: email.school_id,
-    kind: email.kind,
-    to_email: email.to_email,
-    to_name: email.to_name ?? null,
-    subject: email.subject,
-    body_text: email.body_text,
-    body_html: email.body_html ?? null,
+    school_id: safeEmail.school_id,
+    kind: safeEmail.kind,
+    to_email: safeEmail.to_email,
+    to_name: safeEmail.to_name ?? null,
+    subject: safeEmail.subject,
+    body_text: safeEmail.body_text,
+    body_html: safeEmail.body_html ?? null,
     status: sendResult.status,
     provider: sendResult.provider,
     error: sendResult.error ?? null,
-    related_table: email.related_table ?? null,
-    related_id: email.related_id ?? null,
+    related_table: safeEmail.related_table ?? null,
+    related_id: safeEmail.related_id ?? null,
     meta,
     sent_at: sendResult.status === 'sent' ? new Date().toISOString() : null,
   }

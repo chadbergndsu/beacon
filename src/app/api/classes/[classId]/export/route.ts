@@ -32,7 +32,12 @@ export async function GET(
   const role = effectiveRole(
     profile as { role: 'admin' | 'teacher' | 'parent' | 'staff' | 'principal'; email: string | null } | null
   )
-  if (!canEnterGrades(role, classRow.teacher_id, user.id)) {
+  if (
+    !canEnterGrades(role, classRow.teacher_id, user.id, {
+      profileSchoolId: profile?.school_id as string | null,
+      classSchoolId: classRow.school_id as string | null,
+    })
+  ) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

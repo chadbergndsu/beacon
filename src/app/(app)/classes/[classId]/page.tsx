@@ -46,7 +46,10 @@ export default async function ClassGradebookPage({
   const classRow = await loadClassForUser(classId, user, profile)
   if (!classRow) notFound()
 
-  const canEnter = canEnterGrades(profile?.role, classRow.teacher_id, user.id)
+  const canEnter = canEnterGrades(profile?.role, classRow.teacher_id, user.id, {
+    profileSchoolId: profile?.school_id,
+    classSchoolId: classRow.school_id,
+  })
 
   const [students, assignments, categories] = await Promise.all([
     loadClassRoster(classId),

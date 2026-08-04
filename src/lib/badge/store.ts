@@ -195,42 +195,124 @@ export async function setStudentRfidUid(
   return { ok: true }
 }
 
-export async function getOrCreateDeviceToken(schoolId: string): Promise<string> {
+/**
+ * Tokens live in school_access_tokens (service-role only), not schools.settings,
+ * so parents/teachers cannot read kiosk/device secrets via RLS.
+ */
+async function loadOrMigrateAccessTokens(schoolId: string): Promise<{
+  kiosk_token: string
+  device_token: string
+}> {
   const admin = createAdminClient()
-  const { data } = await admin
+  const { data: row } = await admin
+    .from('school_access_tokens')
+    .select('kiosk_token, device_token')
+    .eq('school_id', schoolId)
+    .maybeSingle()
+
+  if (row?.kiosk_token && row?.device_token) {
+    return {
+      kiosk_token: row.kiosk_token as string,
+      device_token: row.device_token as string,
+    }
+  }
+
+  // Migrate from legacy settings.badge if present
+  const { data: school } = await admin
     .from('schools')
     .select('settings')
     .eq('id', schoolId)
     .maybeSingle()
-  const settings = { ...((data?.settings || {}) as Record<string, unknown>) }
-  const badge = {
-    ...((settings.badge as Record<string, unknown>) || {}),
+  const settings = { ...((school?.settings || {}) as Record<string, unknown>) }
+  const badge = { ...((settings.badge as Record<string, unknown>) || {}) }
+  let kiosk =
+    typeof badge.kioskToken === 'string' && badge.kioskToken.length >= 16
+      ? badge.kioskToken
+      : generateBadgeCode(10) + generateBadgeCode(10)
+  let device =
+    typeof badge.deviceToken === 'string' && badge.deviceToken.length >= 16
+      ? badge.deviceToken
+      : generateDeviceToken()
+
+  const { error } = await admin.from('school_access_tokens').upsert(
+    {
+      school_id: schoolId,
+      kiosk_token: kiosk,
+      device_token: device,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'school_id' }
+  )
+
+  if (error) {
+    // Table missing — fall back to settings (pre-migration)
+    badge.kioskToken = kiosk
+    badge.deviceToken = device
+    settings.badge = badge
+    await admin.from('schools').update({ settings }).eq('id', schoolId)
+    return { kiosk_token: kiosk, device_token: device }
   }
-  if (typeof badge.deviceToken === 'string' && badge.deviceToken.length >= 16) {
-    return badge.deviceToken
+
+  // Strip secrets from settings so clients cannot read them
+  if (badge.kioskToken || badge.deviceToken) {
+    delete badge.kioskToken
+    delete badge.deviceToken
+    settings.badge = badge
+    await admin.from('schools').update({ settings }).eq('id', schoolId)
   }
-  const token = generateDeviceToken()
-  badge.deviceToken = token
-  settings.badge = badge
-  await admin.from('schools').update({ settings }).eq('id', schoolId)
-  return token
+
+  return { kiosk_token: kiosk, device_token: device }
+}
+
+export async function getOrCreateDeviceToken(schoolId: string): Promise<string> {
+  const t = await loadOrMigrateAccessTokens(schoolId)
+  return t.device_token
 }
 
 export async function rotateDeviceToken(schoolId: string): Promise<string> {
   const admin = createAdminClient()
-  const { data } = await admin
-    .from('schools')
-    .select('settings')
-    .eq('id', schoolId)
-    .maybeSingle()
-  const settings = { ...((data?.settings || {}) as Record<string, unknown>) }
-  const badge = {
-    ...((settings.badge as Record<string, unknown>) || {}),
-  }
+  const existing = await loadOrMigrateAccessTokens(schoolId)
   const token = generateDeviceToken()
-  badge.deviceToken = token
-  settings.badge = badge
-  await admin.from('schools').update({ settings }).eq('id', schoolId)
+  const { error } = await admin.from('school_access_tokens').upsert(
+    {
+      school_id: schoolId,
+      kiosk_token: existing.kiosk_token,
+      device_token: token,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'school_id' }
+  )
+  if (error) {
+    // fallback settings path
+    const { data } = await admin.from('schools').select('settings').eq('id', schoolId).maybeSingle()
+    const settings = { ...((data?.settings || {}) as Record<string, unknown>) }
+    const badge = { ...((settings.badge as Record<string, unknown>) || {}), deviceToken: token }
+    settings.badge = badge
+    await admin.from('schools').update({ settings }).eq('id', schoolId)
+  }
+  return token
+}
+
+export async function rotateKioskToken(schoolId: string): Promise<string> {
+  const admin = createAdminClient()
+  const existing = await loadOrMigrateAccessTokens(schoolId)
+  const token = generateBadgeCode(10) + generateBadgeCode(10)
+  const { error } = await admin.from('school_access_tokens').upsert(
+    {
+      school_id: schoolId,
+      kiosk_token: token,
+      device_token: existing.device_token,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'school_id' }
+  )
+  if (error) {
+    const { data } = await admin.from('schools').select('settings').eq('id', schoolId).maybeSingle()
+    const settings = { ...((data?.settings || {}) as Record<string, unknown>) }
+    const badge = { ...((settings.badge as Record<string, unknown>) || {}), kioskToken: token }
+    settings.badge = badge
+    await admin.from('schools').update({ settings }).eq('id', schoolId)
+  }
   return token
 }
 
@@ -239,7 +321,23 @@ export async function resolveSchoolByDeviceToken(
 ): Promise<{ schoolId: string; schoolName: string } | null> {
   if (!token || token.length < 12) return null
   const admin = createAdminClient()
-  const { data: schools } = await admin.from('schools').select('id, name, settings')
+  const { data: row } = await admin
+    .from('school_access_tokens')
+    .select('school_id')
+    .eq('device_token', token)
+    .maybeSingle()
+  if (row?.school_id) {
+    const { data: school } = await admin
+      .from('schools')
+      .select('id, name')
+      .eq('id', row.school_id)
+      .maybeSingle()
+    if (school) {
+      return { schoolId: school.id as string, schoolName: (school.name as string) || 'School' }
+    }
+  }
+  // Legacy fallback (pre-015): scan settings — still works until migration
+  const { data: schools } = await admin.from('schools').select('id, name, settings').limit(200)
   for (const s of schools ?? []) {
     const settings = (s.settings || {}) as { badge?: { deviceToken?: string } }
     if (settings.badge?.deviceToken === token) {
@@ -358,24 +456,8 @@ export async function ensureDefaultRooms(schoolId: string): Promise<void> {
 }
 
 export async function getOrCreateKioskToken(schoolId: string): Promise<string> {
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('schools')
-    .select('settings')
-    .eq('id', schoolId)
-    .maybeSingle()
-  const settings = { ...((data?.settings || {}) as Record<string, unknown>) }
-  const badge = {
-    ...((settings.badge as Record<string, unknown>) || {}),
-  }
-  if (typeof badge.kioskToken === 'string' && badge.kioskToken.length >= 16) {
-    return badge.kioskToken
-  }
-  const token = generateBadgeCode(10) + generateBadgeCode(10)
-  badge.kioskToken = token
-  settings.badge = badge
-  await admin.from('schools').update({ settings }).eq('id', schoolId)
-  return token
+  const t = await loadOrMigrateAccessTokens(schoolId)
+  return t.kiosk_token
 }
 
 export async function resolveSchoolByKioskToken(
@@ -383,7 +465,22 @@ export async function resolveSchoolByKioskToken(
 ): Promise<{ schoolId: string; schoolName: string } | null> {
   if (!token || token.length < 12) return null
   const admin = createAdminClient()
-  const { data: schools } = await admin.from('schools').select('id, name, settings')
+  const { data: row } = await admin
+    .from('school_access_tokens')
+    .select('school_id')
+    .eq('kiosk_token', token)
+    .maybeSingle()
+  if (row?.school_id) {
+    const { data: school } = await admin
+      .from('schools')
+      .select('id, name')
+      .eq('id', row.school_id)
+      .maybeSingle()
+    if (school) {
+      return { schoolId: school.id as string, schoolName: (school.name as string) || 'School' }
+    }
+  }
+  const { data: schools } = await admin.from('schools').select('id, name, settings').limit(200)
   for (const s of schools ?? []) {
     const settings = (s.settings || {}) as { badge?: { kioskToken?: string } }
     if (settings.badge?.kioskToken === token) {
@@ -438,13 +535,48 @@ export async function listRoomPresence(
   roomId: string
 ): Promise<{ studentId: string; studentName: string; since: string; direction: ScanDirection }[]> {
   const admin = createAdminClient()
+  // Prefer open aftercare sessions for aftercare rooms (authoritative)
+  const { data: room } = await admin
+    .from('school_rooms')
+    .select('kind')
+    .eq('id', roomId)
+    .maybeSingle()
+
+  if (room?.kind === 'aftercare') {
+    const { data: open } = await admin
+      .from('aftercare_sessions')
+      .select('student_id, check_in_at')
+      .eq('school_id', schoolId)
+      .eq('room_id', roomId)
+      .eq('status', 'open')
+    if (open?.length) {
+      const ids = open.map((o) => o.student_id as string)
+      const { data: students } = await admin
+        .from('students')
+        .select('id, first_name, last_name')
+        .in('id', ids)
+      const names = new Map(
+        (students ?? []).map((s) => [s.id as string, `${s.first_name} ${s.last_name}`])
+      )
+      return open
+        .map((o) => ({
+          studentId: o.student_id as string,
+          studentName: names.get(o.student_id as string) || 'Student',
+          since: o.check_in_at as string,
+          direction: 'in' as ScanDirection,
+        }))
+        .sort((a, b) => a.studentName.localeCompare(b.studentName))
+    }
+  }
+
+  // Distinct latest scan per student via ordered fetch + first-seen (cap 2000)
   const { data: scans, error } = await admin
     .from('badge_scans')
     .select('student_id, direction, scanned_at')
     .eq('school_id', schoolId)
     .eq('room_id', roomId)
     .order('scanned_at', { ascending: false })
-    .limit(400)
+    .limit(2000)
 
   if (error || !scans?.length) return []
 
@@ -617,7 +749,7 @@ export async function processBadgeScan(input: {
       }
     }
     if (!student || student.active === false) {
-      return { ok: false, error: `No student found for code ${code}.` }
+      return { ok: false, error: 'No student found for that code.' }
     }
   }
 
@@ -668,7 +800,6 @@ export async function processBadgeScan(input: {
 
   if (purpose === 'aftercare') {
     if (input.direction === 'in') {
-      // Close any weird double-open? Keep one open.
       const { data: open } = await admin
         .from('aftercare_sessions')
         .select('id')
@@ -693,11 +824,25 @@ export async function processBadgeScan(input: {
           })
           .select('id')
           .single()
-        if (error || !sess) {
-          return { ok: false, error: error?.message || 'Could not start aftercare session.' }
+        if (error) {
+          // Unique open session race — treat as already checked in
+          if (/unique|duplicate|idx_aftercare_one_open/i.test(error.message)) {
+            const { data: again } = await admin
+              .from('aftercare_sessions')
+              .select('id')
+              .eq('school_id', input.schoolId)
+              .eq('student_id', student.id)
+              .eq('status', 'open')
+              .maybeSingle()
+            sessionId = (again?.id as string) || null
+            message = `${studentName} already checked into aftercare.`
+          } else {
+            return { ok: false, error: error.message || 'Could not start aftercare session.' }
+          }
+        } else if (sess) {
+          sessionId = sess.id as string
+          message = `${studentName} checked IN to ${room.name} (aftercare tracking started).`
         }
-        sessionId = sess.id as string
-        message = `${studentName} checked IN to ${room.name} (aftercare tracking started).`
       }
     } else {
       const { data: open } = await admin
@@ -722,7 +867,7 @@ export async function processBadgeScan(input: {
         amountCents = amount
         sessionId = open.id as string
 
-        await admin
+        const { data: closed, error: closeErr } = await admin
           .from('aftercare_sessions')
           .update({
             check_out_at: checkOut.toISOString(),
@@ -731,14 +876,24 @@ export async function processBadgeScan(input: {
             status: 'closed',
           })
           .eq('id', open.id)
+          .eq('status', 'open')
+          .select('id')
+          .maybeSingle()
 
-        message = `${studentName} checked OUT of ${room.name} · ${minutes} min` +
-          (amount > 0 ? ` · $${(amount / 100).toFixed(2)} billable` : '')
+        if (closeErr || !closed) {
+          message = `${studentName} checked OUT of ${room.name} (session already closed).`
+          aftercareMinutes = null
+          amountCents = null
+        } else {
+          message =
+            `${studentName} checked OUT of ${room.name} · ${minutes} min` +
+            (amount > 0 ? ` · $${(amount / 100).toFixed(2)} billable` : '')
+        }
       }
     }
   } else {
-    // Classroom / general
-    if (input.direction === 'in' && (room.classId || purpose === 'attendance')) {
+    // Classroom: only mark attendance when room is linked to a class
+    if (input.direction === 'in' && room.classId) {
       attendanceMarked = await markPresentForStudent(
         input.schoolId,
         student.id as string,
@@ -870,37 +1025,23 @@ async function markPresentForStudent(
   studentId: string,
   classId: string | null
 ): Promise<boolean> {
+  // Only mark the room-linked class — never all enrollments
+  if (!classId) return false
   const admin = createAdminClient()
   const today = new Date().toISOString().slice(0, 10)
-
-  let classIds: string[] = []
-  if (classId) {
-    classIds = [classId]
-  } else {
-    const { data: enroll } = await admin
-      .from('enrollments')
-      .select('class_id')
-      .eq('student_id', studentId)
-    classIds = (enroll ?? []).map((e) => e.class_id as string)
+  try {
+    await upsertAttendanceBatch(
+      schoolId,
+      classId,
+      today,
+      [{ studentId, status: 'present', note: 'Badge scan-in' }],
+      'badge-kiosk'
+    )
+    return true
+  } catch (e) {
+    console.error('badge attendance mark failed', e)
+    return false
   }
-  if (!classIds.length) return false
-
-  let any = false
-  for (const cid of classIds) {
-    try {
-      await upsertAttendanceBatch(
-        schoolId,
-        cid,
-        today,
-        [{ studentId, status: 'present', note: 'Badge scan-in' }],
-        'badge-kiosk'
-      )
-      any = true
-    } catch {
-      // continue
-    }
-  }
-  return any
 }
 
 /** Create draft invoices for closed aftercare sessions not yet billed. */
@@ -908,11 +1049,13 @@ export async function billClosedAftercareSessions(
   schoolId: string
 ): Promise<{ billed: number; totalCents: number; errors: string[] }> {
   const admin = createAdminClient()
+  // Claim closed, unbilled sessions only
   const { data: sessions, error } = await admin
     .from('aftercare_sessions')
     .select('*')
     .eq('school_id', schoolId)
     .eq('status', 'closed')
+    .is('invoice_id', null)
     .gt('amount_cents', 0)
     .limit(100)
 
@@ -928,7 +1071,6 @@ export async function billClosedAftercareSessions(
     }
   }
 
-  // Ensure aftercare product exists
   const billing = await loadBillingState(schoolId)
   let product = billing.products.find((p) => p.id === 'prod_aftercare')
   if (!product) {
@@ -950,14 +1092,36 @@ export async function billClosedAftercareSessions(
 
   for (const raw of sessions ?? []) {
     const sess = mapSession(raw as Record<string, unknown>)
+    // CAS claim: only transition closed → billed if still unbilled
+    const invoiceId = `inv_ac_${sess.id}`
+    const { data: claimed, error: claimErr } = await admin
+      .from('aftercare_sessions')
+      .update({ status: 'billed', invoice_id: invoiceId })
+      .eq('id', sess.id)
+      .eq('status', 'closed')
+      .is('invoice_id', null)
+      .select('id')
+      .maybeSingle()
+
+    if (claimErr || !claimed) {
+      // Already claimed by concurrent worker
+      continue
+    }
+
     const { data: student } = await admin
       .from('students')
       .select('id, first_name, last_name')
       .eq('id', sess.studentId)
       .maybeSingle()
-    if (!student) continue
+    if (!student) {
+      // rollback claim
+      await admin
+        .from('aftercare_sessions')
+        .update({ status: 'closed', invoice_id: null })
+        .eq('id', sess.id)
+      continue
+    }
 
-    // Find a parent email for invoice
     const { data: links } = await admin
       .from('parent_students')
       .select('parent_id')
@@ -977,7 +1141,7 @@ export async function billClosedAftercareSessions(
 
     const amount = sess.amountCents || 0
     const invoice: BillingInvoice = {
-      id: `inv_ac_${sess.id}`,
+      id: invoiceId,
       studentId: sess.studentId,
       familyName,
       parentEmail,
@@ -992,13 +1156,10 @@ export async function billClosedAftercareSessions(
 
     try {
       await addInvoice(schoolId, invoice)
-      await admin
-        .from('aftercare_sessions')
-        .update({ status: 'billed', invoice_id: invoice.id })
-        .eq('id', sess.id)
       billed++
       totalCents += amount
     } catch (e) {
+      // Leave billed status — invoice id reserved; re-run can addInvoice dedupe
       errors.push(e instanceof Error ? e.message : 'invoice failed')
     }
   }

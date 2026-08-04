@@ -101,7 +101,10 @@ export async function notifyParentsOfGradeSave(opts: {
 
   const r = await queueAndSendBatch(batch, { brand })
   return {
-    sent: r.sent + r.skipped,
-    note: r.note,
+    sent: r.sent,
+    note:
+      r.sent === 0 && r.skipped > 0
+        ? 'Email not live (log-only) — parents not emailed.'
+        : r.note,
   }
 }

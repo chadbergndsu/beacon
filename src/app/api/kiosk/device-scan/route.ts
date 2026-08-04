@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { processDeviceScan } from '@/lib/badge/store'
 import type { ScanDirection } from '@/lib/badge/types'
+import { rateLimit } from '@/lib/security/rate-limit'
 
 /**
  * Hardware path for ESP32 / RFID readers / custom kiosks.
@@ -9,9 +10,9 @@ import type { ScanDirection } from '@/lib/badge/types'
  * POST /api/kiosk/device-scan
  * {
  *   "deviceToken": "dev_…",
- *   "code": "A1B2C3D4",       // badge or RFID UID
+ *   "code": "A1B2C3D4",
  *   "roomId": "uuid",
- *   "direction": "auto",     // "in" | "out" | "auto" (default auto)
+ *   "direction": "auto",
  *   "deviceLabel": "Door 1"
  * }
  */
@@ -44,6 +45,18 @@ export async function POST(request: Request) {
     )
   }
 
+  const rl = rateLimit({
+    key: `device-scan:${deviceToken.slice(0, 16)}`,
+    limit: 120,
+    windowMs: 60_000,
+  })
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, error: 'Rate limited. Slow down.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } }
+    )
+  }
+
   const dirRaw = (body.direction || 'auto').toLowerCase()
   const direction: ScanDirection | 'auto' =
     dirRaw === 'in' || dirRaw === 'out' ? dirRaw : 'auto'
@@ -57,17 +70,16 @@ export async function POST(request: Request) {
   })
 
   if (!result.ok) {
-    const status = /Invalid device token/i.test(result.error) ? 401 : 400
-    return NextResponse.json(result, { status })
+    // Generic error for invalid token (less oracle)
+    const invalid = /Invalid device token/i.test(result.error)
+    return NextResponse.json(
+      { ok: false, error: invalid ? 'Unauthorized' : result.error },
+      { status: invalid ? 401 : 400 }
+    )
   }
   return NextResponse.json(result)
 }
 
 export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    service: 'beacon-device-scan',
-    usage:
-      'POST { deviceToken, code, roomId, direction?: "in"|"out"|"auto", deviceLabel? }',
-  })
+  return NextResponse.json({ ok: true, service: 'beacon-device-scan' })
 }

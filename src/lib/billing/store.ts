@@ -114,6 +114,10 @@ export async function addInvoice(
   invoice: BillingInvoice
 ): Promise<SchoolBillingState> {
   const state = await loadBillingState(schoolId)
+  // Idempotent: same invoice id does not double-charge
+  if (state.invoices.some((i) => i.id === invoice.id)) {
+    return state
+  }
   state.invoices = [invoice, ...state.invoices]
   await saveBillingState(schoolId, state)
   return state

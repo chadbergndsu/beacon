@@ -141,14 +141,18 @@ export async function notifyParentsOfAftercareScan(opts: {
       }
     }
 
+    const notes: string[] = []
     let emailsSent = 0
     if (batch.length) {
       const r = await queueAndSendBatch(batch, { brand })
-      emailsSent = r.sent + r.skipped
+      // Only count actually delivered — not log-only / skipped
+      emailsSent = r.sent
+      if (r.sent === 0 && r.skipped > 0) {
+        notes.push('Email not live (log-only); parents not emailed.')
+      }
+    } else {
+      notes.push('No parent emails.')
     }
-
-    const notes: string[] = []
-    if (!batch.length) notes.push('No parent emails.')
     if (!isSmsConfigured()) notes.push('SMS not configured (optional TWILIO_*).')
     else if (smsSent === 0 && parents.some((p) => normalizePhone(p.phone))) {
       notes.push(smsErrors[0] || 'SMS not delivered.')

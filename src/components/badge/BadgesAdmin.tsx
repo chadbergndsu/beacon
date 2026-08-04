@@ -8,6 +8,7 @@ import {
   ensureBadgesAction,
   getKioskLinkAction,
   rotateDeviceTokenAction,
+  rotateKioskTokenAction,
   saveRoomAction,
   setAftercareNotifyAction,
   setStudentRfidAction,
@@ -133,12 +134,37 @@ export function BadgesAdmin({
           >
             Refresh kiosk link
           </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => {
+              setMsg(null)
+              setErr(null)
+              start(async () => {
+                const r = await rotateKioskTokenAction()
+                if (!r.ok) {
+                  setErr(r.error)
+                  return
+                }
+                setKioskPath(r.path)
+                setMsg('Kiosk token rotated — old tablet links stop working. Re-open kiosk.')
+              })
+            }}
+          >
+            Rotate kiosk token
+          </Button>
           <Link href={kioskPath} target="_blank" className="inline-flex">
             <Button type="button" size="sm" variant="outline">
               Open kiosk
             </Button>
           </Link>
         </div>
+        <p className="text-[11px] text-muted-foreground">
+          Tokens are stored in a service-only table (not visible to parents). Run{' '}
+          <code className="rounded bg-muted px-1">pending-015-security-hardening.sql</code> once.
+        </p>
       </section>
 
       <section className="rounded-2xl border bg-card p-5 space-y-3">

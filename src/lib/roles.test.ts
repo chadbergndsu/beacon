@@ -27,9 +27,20 @@ describe('effectiveRole', () => {
 })
 
 describe('permissions', () => {
-  it('lets leadership enter any class grades', () => {
-    expect(canEnterGrades('principal', 'other-teacher', 'user-1')).toBe(true)
-    expect(canEnterGrades('admin', null, 'user-1')).toBe(true)
+  it('lets leadership enter grades only for their school', () => {
+    expect(
+      canEnterGrades('principal', 'other-teacher', 'user-1', {
+        profileSchoolId: 's1',
+        classSchoolId: 's1',
+      })
+    ).toBe(true)
+    expect(
+      canEnterGrades('admin', null, 'user-1', {
+        profileSchoolId: 's1',
+        classSchoolId: 's2',
+      })
+    ).toBe(false)
+    expect(canEnterGrades('principal', 't1', 'user-1')).toBe(false)
   })
   it('lets only assigned teacher enter when not leadership', () => {
     expect(canEnterGrades('teacher', 't1', 't1')).toBe(true)

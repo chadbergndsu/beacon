@@ -114,12 +114,20 @@ export function calculateTransparentGrade(
     const drop = Number(cat.drop_lowest) || 0;
     let dropped = 0;
 
-    // Drop lowest non-missing if requested
+    // Drop lowest *completed* scores only — do not drop missing (0%) first
     if (drop > 0 && items.length > drop) {
-      const sorted = [...items].sort((a, b) => a.pct - b.pct);
-      const kept = sorted.slice(drop);
-      items = kept;
-      dropped = drop;
+      const completed = items.filter((i) => !i.missing);
+      const missing = items.filter((i) => i.missing);
+      if (completed.length > drop) {
+        const sorted = [...completed].sort((a, b) => a.pct - b.pct);
+        const keptCompleted = sorted.slice(drop);
+        items = [...keptCompleted, ...missing];
+        dropped = drop;
+      } else if (completed.length > 0) {
+        // Drop all completed lows possible, keep missing for average-as-zero policy
+        items = missing;
+        dropped = completed.length;
+      }
     }
 
     const scores = items.map((i) => i.pct);

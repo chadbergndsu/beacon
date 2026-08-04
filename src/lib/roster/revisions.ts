@@ -120,17 +120,19 @@ export async function restoreFromRevision(
   if (rev.entityType === 'student') {
     const before = rev.beforeData
     if (rev.action === 'create') {
-      // Undo create → soft deactivate
+      // Undo create → soft deactivate (leadership only; action layer enforces)
       const { data: cur } = await admin
         .from('students')
         .select('*')
         .eq('id', rev.entityId)
+        .eq('school_id', rev.schoolId)
         .maybeSingle()
-      await admin
+      const { error } = await admin
         .from('students')
         .update({ active: false })
         .eq('id', rev.entityId)
         .eq('school_id', rev.schoolId)
+      if (error) return { ok: false, error: error.message }
       await logRosterRevision(admin, {
         schoolId: rev.schoolId,
         entityType: 'student',
@@ -184,12 +186,14 @@ export async function restoreFromRevision(
         .from('classes')
         .select('*')
         .eq('id', rev.entityId)
+        .eq('school_id', rev.schoolId)
         .maybeSingle()
-      await admin
+      const { error } = await admin
         .from('classes')
         .update({ active: false })
         .eq('id', rev.entityId)
         .eq('school_id', rev.schoolId)
+      if (error) return { ok: false, error: error.message }
       await logRosterRevision(admin, {
         schoolId: rev.schoolId,
         entityType: 'class',

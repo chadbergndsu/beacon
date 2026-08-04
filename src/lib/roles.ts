@@ -34,13 +34,29 @@ export function canManageAllClasses(role: Role | null | undefined): boolean {
   return isLeadership(role)
 }
 
+/**
+ * Grade entry permission.
+ * Leadership may enter only when sameSchool is true (or school ids unavailable = deny).
+ */
 export function canEnterGrades(
   role: Role | null | undefined,
   teacherId: string | null | undefined,
-  userId: string
+  userId: string,
+  opts?: {
+    profileSchoolId?: string | null
+    classSchoolId?: string | null
+  }
 ): boolean {
-  if (isLeadership(role)) return true
-  return role === 'teacher' && teacherId === userId
+  if (role === 'teacher') {
+    return teacherId === userId
+  }
+  if (isLeadership(role)) {
+    const ps = opts?.profileSchoolId
+    const cs = opts?.classSchoolId
+    if (!ps || !cs) return false
+    return ps === cs
+  }
+  return false
 }
 
 export function canPostAnnouncements(role: Role | null | undefined): boolean {

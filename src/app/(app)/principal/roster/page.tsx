@@ -38,7 +38,11 @@ export default async function PrincipalRosterPage() {
       .eq('school_id', schoolId)
       .eq('active', true)
       .order('name'),
-    admin.from('enrollments').select('class_id, student_id'),
+    // Scoped to this school's classes only (not global enrollments)
+    admin
+      .from('enrollments')
+      .select('class_id, student_id, classes!inner(school_id)')
+      .eq('classes.school_id', schoolId),
   ])
 
   const students = (studentRows ?? []) as RosterStudent[]
@@ -48,7 +52,8 @@ export default async function PrincipalRosterPage() {
 
   const enrollByClass = new Map<string, number>()
   for (const e of enrollRows ?? []) {
-    enrollByClass.set(e.class_id, (enrollByClass.get(e.class_id) || 0) + 1)
+    const cid = e.class_id as string
+    enrollByClass.set(cid, (enrollByClass.get(cid) || 0) + 1)
   }
 
   const classes: RosterClass[] = (classRows ?? []).map((c) => ({

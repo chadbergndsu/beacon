@@ -537,45 +537,107 @@ export async function createPersonAccountAction(input: {
 
   const tempPassword = generateTempPassword(12)
 
+  // Only principals/admins (not staff) may create logins
+  if (access.role === 'staff') {
+    return { ok: false, error: 'Only principal or admin can create user logins.' }
+  }
+
   const { data: existingProfile } = await access.admin
     .from('profiles')
-    .select('id, school_id, email')
+    .select('id, school_id, email, role')
     .ilike('email', email)
     .maybeSingle()
 
   let userId: string
 
   if (existingProfile?.id) {
-    userId = existingProfile.id as string
-    const { error: updErr } = await access.admin.auth.admin.updateUserById(userId, {
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: { full_name },
-    })
-    if (updErr) return { ok: false, error: updErr.message }
-  } else {
-    const { data: created, error: createErr } = await access.admin.auth.admin.createUser({
-      email,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: { full_name },
-    })
-    if (createErr || !created.user) {
-      const msg = createErr?.message || 'Could not create login.'
-      if (/already|registered|exists/i.test(msg)) {
-        return {
-          ok: false,
-          error:
-            'That email already has a login. Add their profile in Supabase Auth or use a different email.',
-        }
-      }
+    // Never take over accounts from another school
+    if (
+      existingProfile.school_id &&
+      existingProfile.school_id !== access.schoolId
+    ) {
       return {
         ok: false,
-        error: `${msg} (Service role must be able to create Auth users.)`,
+        error:
+          'That email already belongs to another school. Use a different email or contact support.',
       }
     }
-    userId = created.user.id
+    // Never demote principal/admin via this form
+    const existingRole = String(existingProfile.role || '')
+    if (
+      (existingRole === 'principal' || existingRole === 'admin') &&
+      String(role) !== existingRole
+    ) {
+      return {
+        ok: false,
+        error: `That person is already a ${existingRole}. Change their role in Supabase if needed — not via this form.`,
+      }
+    }
+    // Same school, same person: update name/role carefully, DO NOT reset password by default
+    userId = existingProfile.id as string
+    const { error: profileErr } = await access.admin
+      .from('profiles')
+      .update({
+        full_name,
+        role,
+        email,
+        school_id: access.schoolId,
+      })
+      .eq('id', userId)
+      .eq('school_id', access.schoolId)
+    if (profileErr) return { ok: false, error: profileErr.message }
+
+    if (role === 'parent' && input.studentIds?.length) {
+      for (const sid of input.studentIds) {
+        const { data: st } = await access.admin
+          .from('students')
+          .select('id')
+          .eq('id', sid)
+          .eq('school_id', access.schoolId)
+          .maybeSingle()
+        if (!st) continue
+        await access.admin.from('parent_students').upsert(
+          {
+            parent_id: userId,
+            student_id: sid,
+            relationship: 'parent',
+          },
+          { onConflict: 'parent_id,student_id' }
+        )
+      }
+    }
+
+    revalidateRoster()
+    return {
+      ok: true,
+      userId,
+      // Existing user: password not reset — return placeholder so UI can show message
+      tempPassword: '(unchanged — existing login, password not reset)',
+      email,
+    }
   }
+
+  const { data: created, error: createErr } = await access.admin.auth.admin.createUser({
+    email,
+    password: tempPassword,
+    email_confirm: true,
+    user_metadata: { full_name },
+  })
+  if (createErr || !created.user) {
+    const msg = createErr?.message || 'Could not create login.'
+    if (/already|registered|exists/i.test(msg)) {
+      return {
+        ok: false,
+        error:
+          'That email already has a login. Use their exact email already in the system, or a different address.',
+      }
+    }
+    return {
+      ok: false,
+      error: `${msg} (Service role must be able to create Auth users.)`,
+    }
+  }
+  userId = created.user.id
 
   const { error: profileErr } = await access.admin.from('profiles').upsert(
     {
@@ -817,17 +879,22 @@ export async function requestDeletionAction(input: {
       )
       if (!owns) return { ok: false, error: 'Not your class.' }
     }
-    const { data: st } = await access.admin
-      .from('students')
-      .select('first_name, last_name')
-      .eq('id', input.entityId)
-      .maybeSingle()
-    const { data: cls } = await access.admin
-      .from('classes')
-      .select('name')
-      .eq('id', classId)
-      .maybeSingle()
-    entityLabel = `${st?.first_name || 'Student'} ${st?.last_name || ''} from ${cls?.name || 'class'}`
+    const [{ data: st }, { data: cls }] = await Promise.all([
+      access.admin
+        .from('students')
+        .select('first_name, last_name')
+        .eq('id', input.entityId)
+        .eq('school_id', access.schoolId)
+        .maybeSingle(),
+      access.admin
+        .from('classes')
+        .select('name')
+        .eq('id', classId)
+        .eq('school_id', access.schoolId)
+        .maybeSingle(),
+    ])
+    if (!st || !cls) return { ok: false, error: 'Student or class not found at this school.' }
+    entityLabel = `${st.first_name} ${st.last_name} from ${cls.name}`
     payload.class_id = classId
     payload.student_id = input.entityId
   }
@@ -863,14 +930,35 @@ export async function requestDeletionAction(input: {
     }
   }
 
-  // Cancel duplicate pending
-  await access.admin
+  // Cancel duplicate pending (unenroll: same student+class only)
+  let cancelQ = access.admin
     .from('approval_requests')
     .update({ status: 'cancelled' })
     .eq('school_id', access.schoolId)
     .eq('entity_id', input.entityId)
     .eq('kind', input.kind)
     .eq('status', 'pending')
+  // Note: payload class_id filter via fetch+cancel is safer for unenroll
+  if (input.kind === 'unenroll_student' && input.classId) {
+    const { data: pendingUnenrolls } = await access.admin
+      .from('approval_requests')
+      .select('id, payload')
+      .eq('school_id', access.schoolId)
+      .eq('entity_id', input.entityId)
+      .eq('kind', 'unenroll_student')
+      .eq('status', 'pending')
+    const ids = (pendingUnenrolls ?? [])
+      .filter((r) => (r.payload as { class_id?: string })?.class_id === input.classId)
+      .map((r) => r.id as string)
+    if (ids.length) {
+      await access.admin
+        .from('approval_requests')
+        .update({ status: 'cancelled' })
+        .in('id', ids)
+    }
+  } else {
+    await cancelQ
+  }
 
   const { data: req, error } = await access.admin
     .from('approval_requests')
@@ -971,6 +1059,22 @@ async function applyDeletion(
   const classId = String(payload.class_id || '')
   const studentId = String(payload.student_id || entityId)
   if (!classId) return { ok: false, error: 'Missing class for unenroll.' }
+  // School-scope both sides
+  const [{ data: cls }, { data: st }] = await Promise.all([
+    access.admin
+      .from('classes')
+      .select('id')
+      .eq('id', classId)
+      .eq('school_id', access.schoolId)
+      .maybeSingle(),
+    access.admin
+      .from('students')
+      .select('id')
+      .eq('id', studentId)
+      .eq('school_id', access.schoolId)
+      .maybeSingle(),
+  ])
+  if (!cls || !st) return { ok: false, error: 'Student or class not found at this school.' }
   const { error } = await access.admin
     .from('enrollments')
     .delete()
@@ -1016,17 +1120,8 @@ export async function reviewApprovalAction(input: {
     return { ok: false, error: `Request already ${req.status}.` }
   }
 
-  if (input.decision === 'approved') {
-    const applied = await applyDeletion(
-      access,
-      req.kind as 'delete_student' | 'delete_class' | 'unenroll_student',
-      req.entity_id as string,
-      (req.payload || {}) as Record<string, unknown>
-    )
-    if (!applied.ok) return applied
-  }
-
-  const { error: updErr } = await access.admin
+  // CAS: claim pending → decision first so concurrent reviewers don't double-apply
+  const { data: claimed, error: claimErr } = await access.admin
     .from('approval_requests')
     .update({
       status: input.decision,
@@ -1035,8 +1130,27 @@ export async function reviewApprovalAction(input: {
       reviewed_at: new Date().toISOString(),
     })
     .eq('id', input.requestId)
+    .eq('status', 'pending')
+    .select('id')
+    .maybeSingle()
 
-  if (updErr) return { ok: false, error: updErr.message }
+  if (claimErr) return { ok: false, error: claimErr.message }
+  if (!claimed) {
+    return { ok: false, error: 'Request already reviewed by someone else.' }
+  }
+
+  if (input.decision === 'approved') {
+    const applied = await applyDeletion(
+      access,
+      req.kind as 'delete_student' | 'delete_class' | 'unenroll_student',
+      req.entity_id as string,
+      (req.payload || {}) as Record<string, unknown>
+    )
+    if (!applied.ok) {
+      // Leave decision as approved with note; entity may already be inactive
+      return { ok: false, error: applied.error }
+    }
+  }
 
   revalidateRoster()
   return { ok: true }
@@ -1080,23 +1194,38 @@ export async function restoreRevisionAction(
     }
   }
 
-  if (access.isTeacher && rev.actorId !== access.user.id) {
-    return {
-      ok: false,
-      error: 'Teachers can only undo their own changes. Ask principal for broader restore.',
+  if (access.isTeacher) {
+    if (rev.actorId !== access.user.id) {
+      return {
+        ok: false,
+        error: 'Teachers can only undo their own changes. Ask principal for broader restore.',
+      }
     }
-  }
-
-  if (access.isTeacher && rev.entityType === 'class') {
-    const owns = await teacherOwnsClass(
-      access.admin,
-      access.schoolId,
-      rev.entityId,
-      access.user.id
-    )
-    // After soft-delete active=false, ownership check may fail — allow if actor was self
-    if (!owns && rev.action !== 'soft_delete' && rev.action !== 'create') {
-      return { ok: false, error: 'Not your class.' }
+    // Undo-create soft-deletes school-wide — force approval path instead
+    if (rev.action === 'create' && rev.entityType === 'student') {
+      return {
+        ok: false,
+        error:
+          'Cannot undo student create (would remove school-wide). Use Request delete for principal approval.',
+      }
+    }
+    if (rev.entityType === 'class') {
+      const owns = await teacherOwnsClass(
+        access.admin,
+        access.schoolId,
+        rev.entityId,
+        access.user.id
+      )
+      if (!owns && rev.action !== 'soft_delete') {
+        return { ok: false, error: 'Not your class.' }
+      }
+    }
+    if (rev.entityType === 'student' && rev.action === 'soft_delete') {
+      // Only restore soft-delete if student is still only in teacher's classes? Allow restore of own soft-delete only for leadership; teachers shouldn't soft-delete without approval
+      return {
+        ok: false,
+        error: 'Only principal can restore soft-deleted students.',
+      }
     }
   }
 

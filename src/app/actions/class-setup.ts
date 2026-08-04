@@ -44,12 +44,16 @@ export async function updateCategory(
 
   const name = input.name.trim()
   if (!name) return { ok: false, error: 'Category name is required.' }
+  const weight = Number(input.weight)
+  if (!Number.isFinite(weight) || weight < 0 || weight > 100) {
+    return { ok: false, error: 'Weight must be between 0 and 100.' }
+  }
 
   const { error } = await access.admin
     .from('grade_categories')
     .update({
       name,
-      weight: Number(input.weight),
+      weight,
       drop_lowest: Math.max(0, Math.floor(Number(input.drop_lowest) || 0)),
     })
     .eq('id', categoryId)
