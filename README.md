@@ -32,7 +32,9 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 
 ### Public (unauthenticated) routes
 
-`/`, `/login`, `/about`, `/school`, `/privacy`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/api/health`, `/api/quickbooks/callback` (OAuth redirect; completes only with signed-in principal).
+Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/privacy`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/api/health`.
+
+**Not public:** `/api/quickbooks/callback` requires an existing principal/admin session (Intuit redirect after Connect).
 
 ## Modules
 
@@ -81,7 +83,7 @@ Pilot accounts are issued privately. Set school branding in **Principal → Go-l
 **Node 22** (matches CI) and **npm** via Corepack (`packageManager`: `npm@10.9.2` in `package.json`).
 
 ```bash
-# Optional: nvm use / fnm use if you keep a .nvmrc
+# Node 22: nvm use / fnm use (repo has .nvmrc)
 corepack enable
 npm install
 cp .env.example .env.local
@@ -166,7 +168,7 @@ POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate -- 017
 | `scripts/run-migration.mjs` | **Legacy: only 001** — do not use for full upgrades |
 | `scripts/apply-migration-007.mjs` | **Legacy: only 007** — use `db:migrate` instead |
 
-If you set only `POSTGRES_PASSWORD` and omit `DATABASE_URL` / `SUPABASE_PROJECT_REF`, older script defaults may target a **specific pilot project**. Always set `DATABASE_URL` or an explicit `SUPABASE_PROJECT_REF` for any non-default environment.
+Password-only apply **requires** `SUPABASE_PROJECT_REF` (scripts exit with an error if it is missing). Prefer `DATABASE_URL` so the target is unambiguous.
 
 ### Branding any school
 
@@ -260,7 +262,8 @@ Platform-provided (do not put secrets in git): `VERCEL_URL`, `VERCEL_ENV`, `VERC
 | Coverage whitelist | CI can be green while large areas have no threshold gate |
 | `npm run ci` ≠ GitHub Actions | Local `ci` skips Playwright |
 | go2rtc / MediaMTX | External camera stack — not installed by this repo |
-| Hardcoded pilot Supabase ref in old scripts | Always set `DATABASE_URL` or `SUPABASE_PROJECT_REF` |
+| Legacy migrators (`run-migration.mjs`, `apply-migration-007.mjs`) | Only 001 / only 007; use `npm run db:migrate` |
+| `/api/quickbooks/callback` | Not on the public allowlist — user must stay signed in through OAuth |
 
 ## Solid Systems checklist (Beacon)
 

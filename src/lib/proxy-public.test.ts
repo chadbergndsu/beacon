@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 /**
- * Pure mirror of public-path rules in supabase/proxy.ts.
- * Keeps middleware allowlist from silently re-locking health/kiosk APIs.
+ * Pure mirror of public-path rules in src/lib/supabase/proxy.ts (and README public routes).
+ * Keeps the allowlist from silently re-locking health/kiosk APIs or treating QB callback as public.
  */
 function isPublicPath(path: string): boolean {
   const PUBLIC_EXACT = new Set(['/', '/login', '/about', '/school'])

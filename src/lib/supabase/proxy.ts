@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { safeInternalPath } from '@/lib/safe-redirect'
 import { KIOSK_COOKIE, KIOSK_COOKIE_MAX_AGE_SEC } from '@/lib/badge/kiosk-cookie'
 
+/** Unauthenticated allowlist — keep in sync with README “Public routes” + proxy-public.test.ts */
 const PUBLIC_EXACT = new Set(['/', '/login', '/about', '/school'])
 
 export async function updateSession(request: NextRequest) {
