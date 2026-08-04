@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 import { applyDefaultGradeWeights } from '@/app/actions/class-setup'
 import { validateCategoryWeights } from '@/lib/grades'
+import { SkinPicker } from '@/components/skins/SkinPicker'
+import type { SkinId } from '@/lib/skins/catalog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -30,9 +32,11 @@ export type SettingsClassRow = {
 export function TeacherSettingsHub({
   teacherName,
   classes,
+  currentSkin = 'classic',
 }: {
   teacherName: string
   classes: SettingsClassRow[]
+  currentSkin?: SkinId
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -72,6 +76,10 @@ export function TeacherSettingsHub({
           {err}
         </p>
       )}
+
+      <div id="skins">
+        <SkinPicker currentSkin={currentSkin} />
+      </div>
 
       {/* Quick paths */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

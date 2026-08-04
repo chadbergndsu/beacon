@@ -34,4 +34,6 @@ export type ViewLayoutsMap = Partial<Record<ScreenId, ScreenLayout>>
 
 export type UserPreferences = {
   viewLayouts?: ViewLayoutsMap
+  /** Visual skin id — see lib/skins/catalog */
+  skin?: string
 }

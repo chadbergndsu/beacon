@@ -93,6 +93,15 @@ export function AppHeader({
               </p>
             </div>
           )}
+          {profile && (
+            <Link
+              href="/settings#skins"
+              className="rounded-xl border border-white/10 bg-white/10 px-2.5 py-2 text-xs font-medium transition hover:bg-white/15 sm:px-3"
+              title="Change Beacon skin"
+            >
+              Skin
+            </Link>
+          )}
           {showQuick && (
             <Link
               href="/teacher/quick"

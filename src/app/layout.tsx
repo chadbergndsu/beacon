@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next'
+import { cookies } from 'next/headers'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { DEFAULT_SKIN, SKIN_COOKIE, parseSkinId } from '@/lib/skins/catalog'
 import './globals.css'
 
 const geistSans = Geist({
@@ -37,16 +39,29 @@ export const viewport: Viewport = {
   ],
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const jar = await cookies()
+  const skin = parseSkinId(jar.get(SKIN_COOKIE)?.value || DEFAULT_SKIN)
+
   return (
     <html
       lang="en"
+      data-skin={skin}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* Prevent FOUC: re-apply stored skin before paint when cookie lag */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var k='beacon.skin';var s=localStorage.getItem(k);if(s)document.documentElement.setAttribute('data-skin',s);}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-full min-h-[100dvh] flex flex-col overflow-x-hidden">
         {children}
       </body>

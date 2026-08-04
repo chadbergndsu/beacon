@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -6,6 +7,12 @@ import {
   TeacherSettingsHub,
   type SettingsClassRow,
 } from '@/components/teacher/TeacherSettingsHub'
+import { loadUserPreferences } from '@/lib/view-prefs/store'
+import {
+  DEFAULT_SKIN,
+  SKIN_COOKIE,
+  parseSkinId,
+} from '@/lib/skins/catalog'
 import type { Role } from '@/lib/types'
 
 export default async function TeacherSettingsPage() {
@@ -83,6 +90,11 @@ export default async function TeacherSettingsPage() {
     categories: categoriesByClass.get(c.id as string) || [],
   }))
 
+  const jar = await cookies()
+  let skin = parseSkinId(jar.get(SKIN_COOKIE)?.value || DEFAULT_SKIN)
+  const prefs = await loadUserPreferences(user.id)
+  if (prefs.skin) skin = parseSkinId(prefs.skin)
+
   return (
     <div className="space-y-6">
       <div>
@@ -93,14 +105,15 @@ export default async function TeacherSettingsPage() {
           Settings
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-          Your classroom control center: students, classes, grade weights, and shortcuts into every
-          gradebook.
+          Your classroom control center: skins, students, classes, grade weights, and shortcuts into
+          every gradebook.
         </p>
       </div>
 
       <TeacherSettingsHub
         teacherName={profile.full_name || ''}
         classes={classes}
+        currentSkin={skin}
       />
     </div>
   )

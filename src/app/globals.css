@@ -59,8 +59,10 @@
   --radius-lg: var(--radius);
 }
 
+/* System dark only when no explicit skin (or classic) prefers dark */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-skin]),
+  :root[data-skin='classic'] {
     --background: #050b14;
     --foreground: #e8eef6;
     --card: #0c1524;
@@ -85,6 +87,294 @@
     --border: #1a2d45;
     --input: #1a2d45;
   }
+}
+
+/* ─── Beacon skins (data-skin on <html>) ─────────────────────────────────── */
+
+html[data-skin='cartoon'] {
+  --background: #fdf4ff;
+  --foreground: #3b0764;
+  --card: #ffffff;
+  --card-foreground: #3b0764;
+  --primary: #c026d3;
+  --primary-foreground: #fdf4ff;
+  --secondary: #fce7f3;
+  --secondary-foreground: #9d174d;
+  --muted: #fae8ff;
+  --muted-foreground: #86198f;
+  --accent: #f472b6;
+  --accent-foreground: #831843;
+  --navy: #6d28d9;
+  --navy-foreground: #faf5ff;
+  --success: #16a34a;
+  --success-soft: #dcfce7;
+  --warning: #ea580c;
+  --warning-soft: #ffedd5;
+  --danger: #e11d48;
+  --danger-soft: #ffe4e6;
+  --ring: #e879f9;
+  --border: #f0abfc;
+  --input: #f5d0fe;
+  --radius: 1.15rem;
+  --shadow-soft: 0 2px 0 #e9d5ff, 0 8px 24px rgb(192 38 211 / 0.12);
+  --shadow-lift: 0 4px 0 #d8b4fe, 0 12px 28px rgb(219 39 119 / 0.15);
+}
+
+html[data-skin='sports'] {
+  --background: #f0fdf4;
+  --foreground: #052e16;
+  --card: #ffffff;
+  --card-foreground: #052e16;
+  --primary: #16a34a;
+  --primary-foreground: #f0fdf4;
+  --secondary: #dcfce7;
+  --secondary-foreground: #14532d;
+  --muted: #ecfccb;
+  --muted-foreground: #3f6212;
+  --accent: #84cc16;
+  --accent-foreground: #1a2e05;
+  --navy: #14532d;
+  --navy-foreground: #f7fee7;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #ca8a04;
+  --warning-soft: #fef9c3;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --ring: #4ade80;
+  --border: #bbf7d0;
+  --input: #bbf7d0;
+  --radius: 0.65rem;
+  --shadow-soft: 0 1px 2px rgb(20 83 45 / 0.08), 0 8px 24px rgb(22 163 74 / 0.1);
+  --shadow-lift: 0 8px 28px rgb(22 163 74 / 0.18);
+}
+
+html[data-skin='midnight'] {
+  --background: #0a0614;
+  --foreground: #ede9fe;
+  --card: #150d28;
+  --card-foreground: #ede9fe;
+  --primary: #a78bfa;
+  --primary-foreground: #1e0b3d;
+  --secondary: #1e1035;
+  --secondary-foreground: #ddd6fe;
+  --muted: #1a0f2e;
+  --muted-foreground: #a1a1aa;
+  --accent: #c084fc;
+  --accent-foreground: #2e1065;
+  --navy: #0f0720;
+  --navy-foreground: #f5f3ff;
+  --success: #34d399;
+  --success-soft: #064e3b;
+  --warning: #fbbf24;
+  --warning-soft: #78350f;
+  --danger: #fb7185;
+  --danger-soft: #4c0519;
+  --ring: #c4b5fd;
+  --border: #2e1a4a;
+  --input: #2e1a4a;
+  --radius: 0.9rem;
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px rgb(88 28 135 / 0.25);
+  --shadow-lift: 0 8px 32px rgb(167 139 250 / 0.2);
+}
+
+html[data-skin='ocean'] {
+  --background: #ecfeff;
+  --foreground: #083344;
+  --card: #ffffff;
+  --card-foreground: #083344;
+  --primary: #0d9488;
+  --primary-foreground: #f0fdfa;
+  --secondary: #ccfbf1;
+  --secondary-foreground: #115e59;
+  --muted: #cffafe;
+  --muted-foreground: #0e7490;
+  --accent: #06b6d4;
+  --accent-foreground: #164e63;
+  --navy: #0c4a5e;
+  --navy-foreground: #ecfeff;
+  --success: #059669;
+  --success-soft: #d1fae5;
+  --warning: #d97706;
+  --warning-soft: #fef3c7;
+  --danger: #e11d48;
+  --danger-soft: #ffe4e6;
+  --ring: #2dd4bf;
+  --border: #a5f3fc;
+  --input: #a5f3fc;
+  --radius: 1rem;
+  --shadow-soft: 0 1px 2px rgb(8 51 68 / 0.06), 0 12px 28px rgb(13 148 136 / 0.1);
+  --shadow-lift: 0 10px 30px rgb(6 182 212 / 0.16);
+}
+
+html[data-skin='forest'] {
+  --background: #f7fee7;
+  --foreground: #1a2e05;
+  --card: #ffffff;
+  --card-foreground: #1a2e05;
+  --primary: #65a30d;
+  --primary-foreground: #f7fee7;
+  --secondary: #ecfccb;
+  --secondary-foreground: #3f6212;
+  --muted: #d9f99d;
+  --muted-foreground: #4d7c0f;
+  --accent: #84cc16;
+  --accent-foreground: #1a2e05;
+  --navy: #1a2e1a;
+  --navy-foreground: #f7fee7;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #b45309;
+  --warning-soft: #ffedd5;
+  --danger: #b91c1c;
+  --danger-soft: #fee2e2;
+  --ring: #a3e635;
+  --border: #bef264;
+  --input: #d9f99d;
+  --radius: 0.75rem;
+  --shadow-soft: 0 1px 2px rgb(26 46 5 / 0.06), 0 10px 26px rgb(101 163 13 / 0.1);
+  --shadow-lift: 0 8px 28px rgb(101 163 13 / 0.16);
+}
+
+html[data-skin='sunrise'] {
+  --background: #fff7ed;
+  --foreground: #431407;
+  --card: #ffffff;
+  --card-foreground: #431407;
+  --primary: #ea580c;
+  --primary-foreground: #fff7ed;
+  --secondary: #ffedd5;
+  --secondary-foreground: #9a3412;
+  --muted: #fed7aa;
+  --muted-foreground: #c2410c;
+  --accent: #f97316;
+  --accent-foreground: #7c2d12;
+  --navy: #9a3412;
+  --navy-foreground: #fff7ed;
+  --success: #16a34a;
+  --success-soft: #dcfce7;
+  --warning: #ca8a04;
+  --warning-soft: #fef9c3;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --ring: #fb923c;
+  --border: #fdba74;
+  --input: #fed7aa;
+  --radius: 1rem;
+  --shadow-soft: 0 1px 2px rgb(154 52 18 / 0.06), 0 12px 28px rgb(234 88 12 / 0.12);
+  --shadow-lift: 0 10px 32px rgb(249 115 22 / 0.18);
+}
+
+html[data-skin='campus'] {
+  --background: #faf5f0;
+  --foreground: #450a0a;
+  --card: #fffefb;
+  --card-foreground: #450a0a;
+  --primary: #b91c1c;
+  --primary-foreground: #fef2f2;
+  --secondary: #fee2e2;
+  --secondary-foreground: #7f1d1d;
+  --muted: #f5e6d8;
+  --muted-foreground: #7c2d12;
+  --accent: #dc2626;
+  --accent-foreground: #450a0a;
+  --navy: #7f1d1d;
+  --navy-foreground: #faf5f0;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #b45309;
+  --warning-soft: #ffedd5;
+  --danger: #991b1b;
+  --danger-soft: #fee2e2;
+  --ring: #f87171;
+  --border: #e7d5c5;
+  --input: #e7d5c5;
+  --radius: 0.5rem;
+  --shadow-soft: 0 1px 2px rgb(127 29 29 / 0.06), 0 10px 24px rgb(185 28 28 / 0.08);
+  --shadow-lift: 0 8px 28px rgb(185 28 28 / 0.14);
+}
+
+html[data-skin='chalk'] {
+  --background: #f4f1e8;
+  --foreground: #1a2f23;
+  --card: #faf8f1;
+  --card-foreground: #1a2f23;
+  --primary: #4d7c0f;
+  --primary-foreground: #f7fee7;
+  --secondary: #ecfccb;
+  --secondary-foreground: #365314;
+  --muted: #e8e4d4;
+  --muted-foreground: #3f6212;
+  --accent: #84cc16;
+  --accent-foreground: #1a2e05;
+  --navy: #1a2f23;
+  --navy-foreground: #f4f1e8;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #a16207;
+  --warning-soft: #fef9c3;
+  --danger: #b91c1c;
+  --danger-soft: #fee2e2;
+  --ring: #a3e635;
+  --border: #d4cfb8;
+  --input: #d4cfb8;
+  --radius: 0.4rem;
+  --shadow-soft: 0 1px 0 #d4cfb8, 0 8px 20px rgb(26 47 35 / 0.08);
+  --shadow-lift: 0 6px 22px rgb(77 124 15 / 0.12);
+}
+
+html[data-skin='neon'] {
+  --background: #050505;
+  --foreground: #f5f5f5;
+  --card: #121212;
+  --card-foreground: #f5f5f5;
+  --primary: #d946ef;
+  --primary-foreground: #1a001f;
+  --secondary: #1f1024;
+  --secondary-foreground: #f0abfc;
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+  --accent: #a3e635;
+  --accent-foreground: #0a0a0a;
+  --navy: #050505;
+  --navy-foreground: #ecfccb;
+  --success: #a3e635;
+  --success-soft: #1a2e05;
+  --warning: #facc15;
+  --warning-soft: #422006;
+  --danger: #fb7185;
+  --danger-soft: #4c0519;
+  --ring: #e879f9;
+  --border: #3f3f46;
+  --input: #27272a;
+  --radius: 0.35rem;
+  --shadow-soft: 0 0 0 1px rgb(217 70 239 / 0.15), 0 8px 24px rgb(0 0 0 / 0.5);
+  --shadow-lift: 0 0 24px rgb(217 70 239 / 0.25), 0 8px 32px rgb(0 0 0 / 0.4);
+}
+
+/* Skin-aware app chrome */
+html[data-skin] .beacon-shell header.sticky {
+  /* header keeps dark bar; tint via CSS variable if needed */
+}
+
+html[data-skin='cartoon'] .beacon-shell {
+  background-image: radial-gradient(circle at 10% 10%, rgb(244 114 182 / 0.12), transparent 40%),
+    radial-gradient(circle at 90% 0%, rgb(250 204 21 / 0.1), transparent 35%);
+}
+
+html[data-skin='sports'] .beacon-shell {
+  background-image: repeating-linear-gradient(
+    -12deg,
+    transparent,
+    transparent 28px,
+    rgb(34 197 94 / 0.04) 28px,
+    rgb(34 197 94 / 0.04) 29px
+  );
+}
+
+html[data-skin='chalk'] .beacon-shell main {
+  background-image: radial-gradient(rgb(26 47 35 / 0.04) 1px, transparent 1px);
+  background-size: 12px 12px;
 }
 
 * {
