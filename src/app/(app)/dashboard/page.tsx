@@ -231,6 +231,12 @@ export default async function DashboardPage() {
           {canPost && (
             <div className="flex flex-wrap gap-2">
               <Link
+                href="/teacher/classroom"
+                className="rounded-lg bg-violet-600 text-white px-3 py-2 text-sm font-semibold"
+              >
+                My classroom
+              </Link>
+              <Link
                 href="/teacher/quick"
                 className="hidden rounded-lg bg-emerald-600 text-white px-3 py-2 text-sm font-semibold sm:inline-flex"
               >
@@ -274,9 +280,19 @@ export default async function DashboardPage() {
           <section>
             <h2 className="text-lg font-semibold mb-3">Classes</h2>
             {classes.length === 0 ? (
-              <p className="text-sm text-muted-foreground rounded-xl border bg-background p-4">
-                No classes yet.
-              </p>
+              <div className="rounded-xl border border-violet-200 bg-violet-50/80 p-4 text-sm text-violet-950 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-100">
+                <p className="font-semibold">No classes yet — claim your classroom</p>
+                <p className="mt-1 text-xs leading-relaxed opacity-90">
+                  Create Abeka subjects, add students, and run grades. Deletions need principal
+                  approval; history lets you undo mistakes.
+                </p>
+                <Link
+                  href="/teacher/classroom"
+                  className="mt-3 inline-flex rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white"
+                >
+                  Open My classroom →
+                </Link>
+              </div>
             ) : (
               <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {classes.map((c) => (

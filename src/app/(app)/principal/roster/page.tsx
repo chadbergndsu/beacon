@@ -82,7 +82,12 @@ export default async function PrincipalRosterPage() {
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
           Put real people in Beacon: teachers and parents you know (by email), then students and
-          classes. Each login gets a temporary password you hand off once.
+          classes. Teachers can also own their own Abeka classes and students under{' '}
+          <strong>My classroom</strong>. Deletions go through{' '}
+          <a href="/principal/approvals" className="text-sky-700 underline">
+            Approvals &amp; history
+          </a>
+          .
         </p>
       </div>
 

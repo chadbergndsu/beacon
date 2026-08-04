@@ -23,12 +23,14 @@ export function AppHeader({
 
   const nav = [
     { href: '/dashboard', label: 'Home' },
+    ...(showQuick ? [{ href: '/teacher/classroom', label: 'My classroom' }] : []),
     ...(showQuick ? [{ href: '/teacher/quick', label: 'Quick mode' }] : []),
     ...(showQuick ? [{ href: '/teacher/lessons', label: 'Lesson plans' }] : []),
     ...(showQuick ? [{ href: '/teacher/calendar', label: 'Calendar' }] : []),
     ...(showQuick ? [{ href: '/teacher/printables', label: 'Printables' }] : []),
     ...(showQuick ? [{ href: '/teacher/scan', label: 'Scan' }] : []),
     ...(isPrincipal ? [{ href: '/principal', label: 'Principal office' }] : []),
+    ...(isPrincipal ? [{ href: '/principal/approvals', label: 'Approvals' }] : []),
     ...(isPrincipal ? [{ href: '/principal/release', label: 'Go-live' }] : []),
     { href: '/announcements', label: 'Announcements' },
     ...(staff ? [{ href: '/admin/emails', label: 'Comms' }] : []),

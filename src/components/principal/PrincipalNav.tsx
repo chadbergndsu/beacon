@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 const links = [
   { href: '/principal', label: 'Overview' },
   { href: '/principal/roster', label: 'Roster' },
+  { href: '/principal/approvals', label: 'Approvals & history' },
   { href: '/principal/badges', label: 'Badges & kiosk' },
   { href: '/principal/release', label: 'Go-live' },
   { href: '/principal/feedback', label: 'Pilot feedback' },

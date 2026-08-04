@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import {
   assignTeacherToClassAction,
+  createAbekaClassesAction,
   createClassAction,
   createPersonAccountAction,
   createStudentAction,
@@ -20,6 +21,12 @@ import {
   importStudentsCsvAction,
   linkParentToStudentAction,
 } from '@/app/actions/roster'
+import {
+  ABEKA_GRADES,
+  coreSubjectsForGrade,
+  suggestClassName,
+  subjectsForGrade,
+} from '@/lib/curriculum/abeka'
 import { STUDENT_CSV_TEMPLATE } from '@/lib/roster/csv'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -149,11 +156,14 @@ export function RosterHub({
   const [sg, setSg] = useState('')
   const [sClass, setSClass] = useState('')
 
-  // —— Class ——
+  // —— Class (Abeka-aware) ——
   const [cName, setCName] = useState('')
   const [cSubject, setCSubject] = useState('')
-  const [cGrade, setCGrade] = useState('')
+  const [cGrade, setCGrade] = useState('5')
   const [cTeacher, setCTeacher] = useState('')
+  const [abeaSubjects, setAbeaSubjects] = useState<string[]>(() =>
+    coreSubjectsForGrade('5').map((s) => s.id)
+  )
 
   // —— CSV ——
   const [csv, setCsv] = useState('')
@@ -493,15 +503,107 @@ export function RosterHub({
         )}
       </section>
 
-      {/* 3. Classes */}
+      {/* 3. Classes — Abeka + assign teacher */}
       <section className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
-        <h2 className="text-lg font-bold text-navy dark:text-sky-50">3. Classes</h2>
+        <h2 className="text-lg font-bold text-navy dark:text-sky-50">3. Classes (Abeka)</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Create a class and assign a teacher you already added.
+          Build grade + subject classes and assign a teacher. Teachers can also self-serve under My
+          classroom. Removals use Approvals &amp; history.
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+        <div className="mt-4">
+          <Label className="text-xs">Grade</Label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {ABEKA_GRADES.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => {
+                  setCGrade(g.id)
+                  setAbeaSubjects(coreSubjectsForGrade(g.id).map((s) => s.id))
+                }}
+                className={cn(
+                  'rounded-full border px-2.5 py-1 text-xs font-semibold',
+                  cGrade === g.id
+                    ? 'border-violet-600 bg-violet-600 text-white'
+                    : 'border-border bg-background'
+                )}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <Label className="text-xs">Abeka subjects to create</Label>
+          <div className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+            {subjectsForGrade(cGrade).map((s) => {
+              const on = abeaSubjects.includes(s.id)
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() =>
+                    setAbeaSubjects((prev) =>
+                      on ? prev.filter((x) => x !== s.id) : [...prev, s.id]
+                    )
+                  }
+                  className={cn(
+                    'rounded-xl border px-3 py-2 text-left text-sm',
+                    on ? 'border-violet-500 bg-violet-50' : 'border-border'
+                  )}
+                >
+                  <span className="font-medium">{s.label}</span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    {suggestClassName(cGrade, s)}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div>
-            <Label>Class name</Label>
+            <Label>Assign teacher</Label>
+            <select
+              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              value={cTeacher}
+              onChange={(e) => setCTeacher(e.target.value)}
+            >
+              <option value="">— assign later —</option>
+              {teachers.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.full_name || t.email}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <Button
+              type="button"
+              disabled={pending || abeaSubjects.length === 0}
+              onClick={() =>
+                run(
+                  () =>
+                    createAbekaClassesAction({
+                      gradeId: cGrade,
+                      subjectIds: abeaSubjects,
+                      teacherId: cTeacher || null,
+                    }),
+                  'Abeka classes created.'
+                )
+              }
+            >
+              Create selected Abeka classes
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <Label>Custom class name</Label>
             <Input
               className="mt-1"
               placeholder="5th Grade Homeroom"
@@ -519,14 +621,6 @@ export function RosterHub({
             />
           </div>
           <div>
-            <Label>Grade</Label>
-            <Input
-              className="mt-1"
-              value={cGrade}
-              onChange={(e) => setCGrade(e.target.value)}
-            />
-          </div>
-          <div>
             <Label>Teacher</Label>
             <select
               className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
@@ -541,27 +635,28 @@ export function RosterHub({
               ))}
             </select>
           </div>
+          <div className="flex items-end">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending || !cName.trim()}
+              onClick={() =>
+                run(
+                  () =>
+                    createClassAction({
+                      name: cName,
+                      subject: cSubject,
+                      gradeLevel: cGrade,
+                      teacherId: cTeacher || null,
+                    }),
+                  'Class created.'
+                )
+              }
+            >
+              Create one class
+            </Button>
+          </div>
         </div>
-        <Button
-          type="button"
-          className="mt-3"
-          variant="outline"
-          disabled={pending || !cName.trim()}
-          onClick={() =>
-            run(
-              () =>
-                createClassAction({
-                  name: cName,
-                  subject: cSubject,
-                  gradeLevel: cGrade,
-                  teacherId: cTeacher || null,
-                }),
-              'Class created.'
-            )
-          }
-        >
-          Create class
-        </Button>
 
         {classes.length > 0 && (
           <ul className="mt-4 space-y-2">
