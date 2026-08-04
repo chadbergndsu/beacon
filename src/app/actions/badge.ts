@@ -177,16 +177,12 @@ export async function kioskScanAction(input: {
     return { ok: false, error: 'Invalid kiosk link. Open kiosk from Principal → Badges.' }
   }
   // Public kiosk: physical badge/RFID/QR only — no name-tap by studentId
-  const raw = (input.rawCode || '').trim()
-  if (!raw || raw.length < 4) {
-    return {
-      ok: false,
-      error: 'Scan a badge, QR code, or RFID. Name search is only available for staff login.',
-    }
-  }
+  const { publicKioskScanCode } = await import('@/lib/badge/scan-guards')
+  const codeGate = publicKioskScanCode(input.rawCode)
+  if (!codeGate.ok) return codeGate
   return processBadgeScan({
     schoolId: school.schoolId,
-    rawCode: raw,
+    rawCode: codeGate.code,
     roomId: input.roomId,
     direction: input.direction,
     kioskLabel: input.kioskLabel || 'Room kiosk',
@@ -299,9 +295,12 @@ export async function staffScanAction(input: {
     return { ok: false, error: 'Staff only.' }
   }
   // Staff may use badge code or name-tap (studentId) — not available on public kiosk
-  if (!input.rawCode?.trim() && !input.studentId?.trim()) {
-    return { ok: false, error: 'Scan a badge or pick a student.' }
-  }
+  const { staffScanIdentity } = await import('@/lib/badge/scan-guards')
+  const idGate = staffScanIdentity({
+    rawCode: input.rawCode,
+    studentId: input.studentId,
+  })
+  if (!idGate.ok) return idGate
   return processBadgeScan({
     schoolId: profile.school_id,
     rawCode: input.rawCode,

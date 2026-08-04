@@ -168,9 +168,6 @@ export async function sendSystemEmail(input: {
   }
 
   const to = input.to_email.trim().toLowerCase()
-  if (!to.includes('@') || to.length > 200) {
-    return { ok: false, error: 'Valid email required.' }
-  }
   const subject = input.subject.trim()
   const body = input.body.trim()
   if (!subject || !body) return { ok: false, error: 'Subject and body required.' }
@@ -178,33 +175,19 @@ export async function sendSystemEmail(input: {
   if (body.length > 20_000) return { ok: false, error: 'Message is too long.' }
 
   // Prefer known school profiles; allow other addresses only when domain matches a school member
-  const { data: known } = await access.admin
+  const { data: peers } = await access.admin
     .from('profiles')
-    .select('id, email')
+    .select('email')
     .eq('school_id', access.profile.school_id)
-    .ilike('email', to)
-    .maybeSingle()
-
-  if (!known) {
-    const domain = to.split('@')[1] || ''
-    const { data: peers } = await access.admin
-      .from('profiles')
-      .select('email')
-      .eq('school_id', access.profile.school_id)
-      .not('email', 'is', null)
-      .limit(40)
-    const schoolDomains = new Set(
-      (peers ?? [])
-        .map((p) => String(p.email || '').split('@')[1]?.toLowerCase())
-        .filter(Boolean)
-    )
-    if (!domain || !schoolDomains.has(domain)) {
-      return {
-        ok: false,
-        error:
-          'Freeform mail only to known school profiles or the same email domain as school members.',
-      }
-    }
+    .not('email', 'is', null)
+    .limit(80)
+  const { freeformEmailAllowed } = await import('@/lib/email/freeform-policy')
+  const allowed = freeformEmailAllowed(
+    to,
+    (peers ?? []).map((p) => p.email as string | null)
+  )
+  if (!allowed.ok) {
+    return { ok: false, error: allowed.reason }
   }
 
   // Soft daily cap per school (in-memory best-effort)

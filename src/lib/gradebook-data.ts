@@ -13,7 +13,15 @@ export type ClassRow = {
   active: boolean | null
 }
 
-function canAccessClass(profile: Profile | null, user: User, classRow: ClassRow) {
+/**
+ * Pure multi-tenant class ACL (service-role callers still must enforce this).
+ * Leadership with null school_id fails closed — never a cross-tenant wildcard.
+ */
+export function canAccessClass(
+  profile: Profile | null,
+  user: Pick<User, 'id'>,
+  classRow: ClassRow
+): boolean {
   if (!profile) return false
   // Fail closed: missing school_id is never a wildcard across tenants
   if (profile.role === 'admin' || profile.role === 'staff' || profile.role === 'principal') {

@@ -57,6 +57,31 @@ describe('permissions', () => {
   })
   it('detects leadership', () => {
     expect(isLeadership('principal')).toBe(true)
+    expect(isLeadership('admin')).toBe(true)
+    expect(isLeadership('staff')).toBe(true)
     expect(isLeadership('teacher')).toBe(false)
+    expect(isLeadership('parent')).toBe(false)
+    expect(isLeadership(null)).toBe(false)
+  })
+
+  it('denies leadership grades when either school id missing', () => {
+    expect(
+      canEnterGrades('principal', null, 'u1', {
+        profileSchoolId: null,
+        classSchoolId: 's1',
+      })
+    ).toBe(false)
+    expect(
+      canEnterGrades('principal', null, 'u1', {
+        profileSchoolId: 's1',
+        classSchoolId: null,
+      })
+    ).toBe(false)
+    expect(
+      canEnterGrades('staff', null, 'u1', {
+        profileSchoolId: 's1',
+        classSchoolId: 's1',
+      })
+    ).toBe(true)
   })
 })

@@ -29,9 +29,25 @@ describe('badge codes', () => {
     // $10/hr = 1000 cents, 20 min → 30 min billable → 500 cents
     expect(computeAftercareAmountCents(20, 1000)).toBe(500)
     expect(computeAftercareAmountCents(5, 1000)).toBe(250) // min 15 min
+    expect(computeAftercareAmountCents(0, 1000)).toBe(0)
+    expect(computeAftercareAmountCents(30, 0)).toBe(0)
+    expect(computeAftercareAmountCents(-5, 1000)).toBe(0)
+    // exact 15 min
+    expect(computeAftercareAmountCents(15, 1200)).toBe(300)
+    // 16 min → 30 min block
+    expect(computeAftercareAmountCents(16, 1200)).toBe(600)
   })
 
   it('payload format', () => {
     expect(badgePayload('lca', 'ABC123')).toBe('BEACON|lca|ABC123')
+  })
+
+  it('truncates extremely long scanner input', () => {
+    const long = 'A'.repeat(100)
+    expect(parseScannerInput(long).length).toBeLessThanOrEqual(40)
+  })
+
+  it('strips non-alphanumeric noise', () => {
+    expect(parseScannerInput('ab-12_cd!')).toBe('AB12CD')
   })
 })
