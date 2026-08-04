@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   BookOpen,
+  Check,
   History,
   Loader2,
   ShieldAlert,
@@ -20,10 +21,12 @@ import {
   listPendingApprovalsAction,
   requestDeletionAction,
   restoreRevisionAction,
+  updateClassCallNumberAction,
 } from '@/app/actions/roster'
 import {
   ABEKA_GRADES,
   coreSubjectsForGrade,
+  suggestCallCode,
   suggestClassName,
   subjectsForGrade,
   type AbekaSubject,
@@ -41,6 +44,7 @@ export type TeacherClass = {
   name: string
   subject: string | null
   grade_level: string | null
+  call_number: string | null
   enrollment_count: number
 }
 
@@ -84,6 +88,9 @@ export function TeacherClassroomHub({
   )
   const [customName, setCustomName] = useState('')
   const [customSubject, setCustomSubject] = useState('')
+  const [customCall, setCustomCall] = useState('')
+  const [editCallId, setEditCallId] = useState<string | null>(null)
+  const [editCallVal, setEditCallVal] = useState('')
 
   // Student
   const [sf, setSf] = useState('')
@@ -189,11 +196,12 @@ export function TeacherClassroomHub({
                 key={g.id}
                 type="button"
                 onClick={() => onGradeChange(g.id)}
+                aria-pressed={gradeId === g.id}
                 className={cn(
-                  'rounded-full border px-2.5 py-1 text-xs font-semibold transition',
+                  'rounded-full border-2 px-3 py-1.5 text-xs font-bold transition shadow-sm',
                   gradeId === g.id
-                    ? 'border-violet-600 bg-violet-600 text-white'
-                    : 'border-border bg-background hover:border-violet-300'
+                    ? 'border-violet-700 bg-violet-700 text-white ring-2 ring-violet-300 ring-offset-2'
+                    : 'border-slate-300 bg-white text-slate-700 hover:border-violet-400 dark:bg-slate-900 dark:text-slate-100'
                 )}
               >
                 {g.label}
@@ -204,12 +212,35 @@ export function TeacherClassroomHub({
 
         <div>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label className="text-xs">Subjects for this grade</Label>
-            <Button type="button" size="sm" variant="ghost" onClick={pickCore}>
-              Abeka core slate
-            </Button>
+            <Label className="text-xs">
+              Subjects for this grade{' '}
+              <span className="font-normal text-muted-foreground">
+                ({selectedSubjects.length} selected — dark purple = on)
+              </span>
+            </Label>
+            <div className="flex gap-1">
+              <Button type="button" size="sm" variant="ghost" onClick={pickCore}>
+                Abeka core slate
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedSubjects([])}
+              >
+                Clear
+              </Button>
+            </div>
           </div>
-          <div className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+          {selectedSubjects.length > 0 && (
+            <p className="mt-2 rounded-lg border-2 border-violet-600 bg-violet-700 px-3 py-2 text-xs font-bold text-white">
+              Selected ({selectedSubjects.length}):{' '}
+              {selectedSubjects
+                .map((id) => availableSubjects.find((s) => s.id === id)?.short || id)
+                .join(' · ')}
+            </p>
+          )}
+          <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {availableSubjects.map((s: AbekaSubject) => {
               const on = selectedSubjects.includes(s.id)
               return (
@@ -217,16 +248,34 @@ export function TeacherClassroomHub({
                   key={s.id}
                   type="button"
                   onClick={() => toggleSubject(s.id)}
+                  aria-pressed={on}
                   className={cn(
-                    'rounded-xl border px-3 py-2 text-left text-sm transition',
+                    'relative rounded-xl border-2 px-3 py-2.5 text-left text-sm transition',
                     on
-                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/40'
-                      : 'border-border hover:bg-muted/50'
+                      ? 'border-violet-700 bg-violet-700 text-white shadow-md shadow-violet-500/30 ring-2 ring-violet-300 ring-offset-1'
+                      : 'border-slate-300 bg-white text-slate-900 hover:border-violet-400 hover:bg-violet-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100'
                   )}
                 >
-                  <span className="font-medium">{s.label}</span>
-                  <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                    → {suggestClassName(gradeId, s)}
+                  <span className="flex items-start justify-between gap-2">
+                    <span className="font-bold leading-tight">{s.label}</span>
+                    <span
+                      className={cn(
+                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 text-[10px]',
+                        on
+                          ? 'border-white bg-white text-violet-700'
+                          : 'border-slate-400 bg-transparent text-transparent'
+                      )}
+                    >
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                    </span>
+                  </span>
+                  <span
+                    className={cn(
+                      'mt-1 block text-[11px] font-medium',
+                      on ? 'text-violet-100' : 'text-muted-foreground'
+                    )}
+                  >
+                    {suggestClassName(gradeId, s)} · call {suggestCallCode(gradeId, s)}
                   </span>
                 </button>
               )
@@ -237,6 +286,7 @@ export function TeacherClassroomHub({
         <Button
           type="button"
           disabled={pending || selectedSubjects.length === 0}
+          className="bg-violet-700 hover:bg-violet-800"
           onClick={() =>
             run(
               () =>
@@ -253,8 +303,8 @@ export function TeacherClassroomHub({
           {selectedSubjects.length === 1 ? '' : 'es'} for me
         </Button>
 
-        <div className="border-t pt-4 grid gap-3 sm:grid-cols-3">
-          <div className="sm:col-span-1">
+        <div className="border-t pt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
             <Label className="text-xs">Or custom class name</Label>
             <Input
               className="mt-1"
@@ -272,6 +322,15 @@ export function TeacherClassroomHub({
               placeholder="Arithmetic"
             />
           </div>
+          <div>
+            <Label className="text-xs">Call # (optional)</Label>
+            <Input
+              className="mt-1 font-mono"
+              value={customCall}
+              onChange={(e) => setCustomCall(e.target.value)}
+              placeholder="SCI-301 or Abeka code"
+            />
+          </div>
           <div className="flex items-end">
             <Button
               type="button"
@@ -285,6 +344,7 @@ export function TeacherClassroomHub({
                       name: customName,
                       subject: customSubject || undefined,
                       gradeLevel: gradeId,
+                      callNumber: customCall || null,
                     }),
                   'Class created for you.'
                 )
@@ -294,15 +354,19 @@ export function TeacherClassroomHub({
             </Button>
           </div>
         </div>
+        <p className="text-[11px] text-muted-foreground">
+          Call numbers are optional — many schools attach a section/Abeka-style code for lookup.
+          Confirm the exact format with Chris if you need official Abeka product numbers.
+        </p>
 
         {classes.length > 0 && (
           <ul className="space-y-2 border-t pt-4">
             {classes.map((c) => (
               <li
                 key={c.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"
               >
-                <div>
+                <div className="min-w-0">
                   <Link
                     href={`/classes/${c.id}`}
                     className="font-semibold text-sky-800 hover:underline dark:text-sky-300"
@@ -312,28 +376,86 @@ export function TeacherClassroomHub({
                   <p className="text-xs text-muted-foreground">
                     {[c.subject, c.grade_level].filter(Boolean).join(' · ')} ·{' '}
                     {c.enrollment_count} students
+                    {c.call_number ? (
+                      <span className="ml-1 font-mono font-bold text-violet-800 dark:text-violet-300">
+                        · #{c.call_number}
+                      </span>
+                    ) : null}
                   </p>
+                  {editCallId === c.id ? (
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      <Input
+                        className="h-8 w-36 font-mono text-xs"
+                        value={editCallVal}
+                        onChange={(e) => setEditCallVal(e.target.value)}
+                        placeholder="Call #"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() =>
+                          run(async () => {
+                            const r = await updateClassCallNumberAction(
+                              c.id,
+                              editCallVal || null
+                            )
+                            if (r.ok) setEditCallId(null)
+                            return r
+                          }, 'Call number saved.')
+                        }
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditCallId(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="mt-0.5 text-[11px] font-semibold text-violet-700 underline"
+                      onClick={() => {
+                        setEditCallId(c.id)
+                        setEditCallVal(c.call_number || '')
+                      }}
+                    >
+                      {c.call_number ? 'Edit call #' : 'Add call #'}
+                    </button>
+                  )}
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="text-red-700"
-                  disabled={pending}
-                  onClick={() =>
-                    run(
-                      () =>
-                        requestDeletionAction({
-                          kind: 'delete_class',
-                          entityId: c.id,
-                          reason: 'Teacher requested archive',
-                        }),
-                      'Archive request sent to principal (or applied if you have leadership).'
-                    )
-                  }
-                >
-                  Request remove
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/classes/${c.id}`}>
+                    <Button type="button" size="sm">
+                      Gradebook
+                    </Button>
+                  </Link>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-red-700"
+                    disabled={pending}
+                    onClick={() =>
+                      run(
+                        () =>
+                          requestDeletionAction({
+                            kind: 'delete_class',
+                            entityId: c.id,
+                            reason: 'Teacher requested archive',
+                          }),
+                        'Archive request sent to principal (or applied if you have leadership).'
+                      )
+                    }
+                  >
+                    Request remove
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>

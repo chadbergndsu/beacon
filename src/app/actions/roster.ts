@@ -257,12 +257,15 @@ export async function createClassAction(input: {
   gradeLevel?: string
   teacherId?: string | null
   term?: string
+  /** Optional school / Abeka section call number (e.g. SCI-301) */
+  callNumber?: string | null
 }): Promise<{ ok: true; classId: string } | { ok: false; error: string }> {
   const access = await requireRosterStaff()
   if (!access.ok) return access
 
   const name = input.name.trim()
   if (!name) return { ok: false, error: 'Class name is required.' }
+  const call_number = input.callNumber?.trim() || null
 
   // Teachers always own what they create
   let teacherId: string | null = access.isTeacher
@@ -280,19 +283,30 @@ export async function createClassAction(input: {
     }
   }
 
-  const { data: cls, error } = await access.admin
+  const row: Record<string, unknown> = {
+    school_id: access.schoolId,
+    name,
+    subject: input.subject?.trim() || null,
+    grade_level: input.gradeLevel?.trim() || null,
+    term: input.term?.trim() || null,
+    teacher_id: teacherId,
+    active: true,
+  }
+  if (call_number) row.call_number = call_number
+
+  let { data: cls, error } = await access.admin
     .from('classes')
-    .insert({
-      school_id: access.schoolId,
-      name,
-      subject: input.subject?.trim() || null,
-      grade_level: input.gradeLevel?.trim() || null,
-      term: input.term?.trim() || null,
-      teacher_id: teacherId,
-      active: true,
-    })
+    .insert(row)
     .select('*')
     .single()
+
+  // Column may not exist until pending-014 — retry without call_number
+  if (error && call_number && /call_number|column/i.test(error.message)) {
+    delete row.call_number
+    const retry = await access.admin.from('classes').insert(row).select('*').single()
+    cls = retry.data
+    error = retry.error
+  }
 
   if (error || !cls) {
     return { ok: false, error: error?.message || 'Could not create class.' }
@@ -314,6 +328,65 @@ export async function createClassAction(input: {
 }
 
 /** Create several Abeka subjects for a grade (teacher self, or principal picks teacher). */
+export async function updateClassCallNumberAction(
+  classId: string,
+  callNumber: string | null
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const access = await requireRosterStaff()
+  if (!access.ok) return access
+
+  if (access.isTeacher) {
+    const owns = await teacherOwnsClass(
+      access.admin,
+      access.schoolId,
+      classId,
+      access.user.id
+    )
+    if (!owns) return { ok: false, error: 'You can only edit classes you teach.' }
+  }
+
+  const { data: before } = await access.admin
+    .from('classes')
+    .select('*')
+    .eq('id', classId)
+    .eq('school_id', access.schoolId)
+    .maybeSingle()
+  if (!before) return { ok: false, error: 'Class not found.' }
+
+  const value = callNumber?.trim() || null
+  const { error } = await access.admin
+    .from('classes')
+    .update({ call_number: value })
+    .eq('id', classId)
+    .eq('school_id', access.schoolId)
+
+  if (error) {
+    if (/call_number|column/i.test(error.message)) {
+      return {
+        ok: false,
+        error: 'Run scripts/pending-014-class-call-number.sql in Supabase first.',
+      }
+    }
+    return { ok: false, error: error.message }
+  }
+
+  await logRosterRevision(access.admin, {
+    schoolId: access.schoolId,
+    entityType: 'class',
+    entityId: classId,
+    action: 'update',
+    beforeData: before as Record<string, unknown>,
+    afterData: { ...before, call_number: value },
+    actorId: access.user.id,
+    actorRole: access.role,
+    note: 'Call number update',
+  })
+
+  revalidatePath(`/classes/${classId}`)
+  revalidateRoster()
+  return { ok: true }
+}
+
 export async function createAbekaClassesAction(input: {
   gradeId: string
   subjectIds: string[]

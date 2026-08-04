@@ -43,7 +43,7 @@ export default async function TeacherClassroomPage() {
 
   let classQuery = admin
     .from('classes')
-    .select('id, name, subject, grade_level, teacher_id')
+    .select('id, name, subject, grade_level, teacher_id, call_number')
     .eq('school_id', schoolId)
     .eq('active', true)
     .order('name')
@@ -52,9 +52,30 @@ export default async function TeacherClassroomPage() {
     classQuery = classQuery.eq('teacher_id', user.id)
   }
 
-  const { data: classRows } = await classQuery
-  const classesRaw = classRows ?? []
-  const classIds = classesRaw.map((c) => c.id as string)
+  type ClassRow = {
+    id: string
+    name: string
+    subject: string | null
+    grade_level: string | null
+    teacher_id: string | null
+    call_number?: string | null
+  }
+  let classesRaw: ClassRow[] = []
+  const { data: classRows, error: classErr } = await classQuery
+  if (classErr && /call_number|column/i.test(classErr.message)) {
+    let fallback = admin
+      .from('classes')
+      .select('id, name, subject, grade_level, teacher_id')
+      .eq('school_id', schoolId)
+      .eq('active', true)
+      .order('name')
+    if (isTeacherOnly) fallback = fallback.eq('teacher_id', user.id)
+    const r = await fallback
+    classesRaw = (r.data ?? []) as ClassRow[]
+  } else {
+    classesRaw = (classRows ?? []) as ClassRow[]
+  }
+  const classIds = classesRaw.map((c) => c.id)
 
   const enrollCount = new Map<string, number>()
   const studentClassMap = new Map<string, string[]>()
@@ -92,11 +113,12 @@ export default async function TeacherClassroomPage() {
   }
 
   const classes: TeacherClass[] = classesRaw.map((c) => ({
-    id: c.id as string,
-    name: c.name as string,
-    subject: (c.subject as string) || null,
-    grade_level: (c.grade_level as string) || null,
-    enrollment_count: enrollCount.get(c.id as string) || 0,
+    id: c.id,
+    name: c.name,
+    subject: c.subject || null,
+    grade_level: c.grade_level || null,
+    call_number: c.call_number ? String(c.call_number) : null,
+    enrollment_count: enrollCount.get(c.id) || 0,
   }))
 
   let revisions = await listRosterRevisions(admin, schoolId, 40)

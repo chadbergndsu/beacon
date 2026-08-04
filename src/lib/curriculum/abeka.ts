@@ -215,6 +215,19 @@ export function suggestClassName(gradeId: string, subject: AbekaSubject | { shor
   return `${gradeLabel} ${subject.short}`
 }
 
+/**
+ * Optional short call-code style label (not official Abeka SKUs).
+ * Schools often attach their own section/call numbers; this is a starter pattern.
+ */
+export function suggestCallCode(
+  gradeId: string,
+  subject: AbekaSubject | { id: string; short: string }
+): string {
+  const g = (gradeId || '').toUpperCase().replace(/[^A-Z0-9]/g, '') || 'X'
+  const sub = subject.id === 'homeroom' ? 'HR' : subject.short.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase()
+  return `${g}-${sub}`
+}
+
 export function subjectLabelFromId(id: string | null | undefined): string | null {
   if (!id) return null
   return ABEKA_SUBJECTS.find((s) => s.id === id)?.label || id

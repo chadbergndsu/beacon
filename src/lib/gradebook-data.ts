@@ -37,7 +37,7 @@ export async function loadClassForUser(
   const admin = createAdminClient()
   const { data } = await admin
     .from('classes')
-    .select('id, name, subject, grade_level, term, teacher_id, school_id, active')
+    .select('id, name, subject, grade_level, term, teacher_id, school_id, active, call_number')
     .eq('id', classId)
     .maybeSingle()
 

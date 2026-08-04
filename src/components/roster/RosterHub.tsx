@@ -523,10 +523,10 @@ export function RosterHub({
                   setAbeaSubjects(coreSubjectsForGrade(g.id).map((s) => s.id))
                 }}
                 className={cn(
-                  'rounded-full border px-2.5 py-1 text-xs font-semibold',
+                  'rounded-full border-2 px-3 py-1.5 text-xs font-bold shadow-sm',
                   cGrade === g.id
-                    ? 'border-violet-600 bg-violet-600 text-white'
-                    : 'border-border bg-background'
+                    ? 'border-violet-700 bg-violet-700 text-white ring-2 ring-violet-300 ring-offset-2'
+                    : 'border-slate-300 bg-white text-slate-700'
                 )}
               >
                 {g.label}
@@ -538,24 +538,37 @@ export function RosterHub({
         <div className="mt-3">
           <Label className="text-xs">Abeka subjects to create</Label>
           <div className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+            {abeaSubjects.length > 0 && (
+              <p className="mb-2 rounded-lg border-2 border-violet-600 bg-violet-700 px-3 py-2 text-xs font-bold text-white">
+                Selected ({abeaSubjects.length}): dark purple = on
+              </p>
+            )}
             {subjectsForGrade(cGrade).map((s) => {
               const on = abeaSubjects.includes(s.id)
               return (
                 <button
                   key={s.id}
                   type="button"
+                  aria-pressed={on}
                   onClick={() =>
                     setAbeaSubjects((prev) =>
                       on ? prev.filter((x) => x !== s.id) : [...prev, s.id]
                     )
                   }
                   className={cn(
-                    'rounded-xl border px-3 py-2 text-left text-sm',
-                    on ? 'border-violet-500 bg-violet-50' : 'border-border'
+                    'rounded-xl border-2 px-3 py-2.5 text-left text-sm transition',
+                    on
+                      ? 'border-violet-700 bg-violet-700 font-bold text-white shadow-md ring-2 ring-violet-300 ring-offset-1'
+                      : 'border-slate-300 bg-white text-slate-900 hover:border-violet-400'
                   )}
                 >
-                  <span className="font-medium">{s.label}</span>
-                  <span className="block text-[11px] text-muted-foreground">
+                  <span className={on ? 'font-bold' : 'font-medium'}>{s.label}</span>
+                  <span
+                    className={cn(
+                      'block text-[11px]',
+                      on ? 'text-violet-100' : 'text-muted-foreground'
+                    )}
+                  >
                     {suggestClassName(cGrade, s)}
                   </span>
                 </button>
