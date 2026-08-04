@@ -118,7 +118,8 @@ export function PilotSuggestionButton({
                     Pilot suggestion
                   </h2>
                   <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-                    Spotted a bug or have an idea? Send it while it&apos;s fresh
+                    Spotted a bug or have an idea? Sends straight to the Beacon
+                    builder (not the principal)
                     {userLabel ? ` — thanks, ${userLabel}` : ''}.
                   </p>
                 </div>
@@ -140,8 +141,7 @@ export function PilotSuggestionButton({
                   <div>
                     <p className="font-semibold">Got it — thank you!</p>
                     <p className="mt-1 text-xs opacity-90">
-                      Leadership can review pilot feedback from the Principal office. Keep the
-                      ideas coming.
+                      Sent to the Beacon product owner. Keep the ideas coming.
                     </p>
                     <Button
                       type="button"

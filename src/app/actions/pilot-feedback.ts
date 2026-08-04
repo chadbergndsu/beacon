@@ -48,6 +48,23 @@ export async function submitPilotFeedbackAction(input: {
   })
 
   if (!result.ok) return result
+
+  // Primary destination: product owner email (you) — principal is not notified.
+  const { notifyOwnerOfPilotFeedback } = await import(
+    '@/lib/pilot-feedback/notify-owner'
+  )
+  await notifyOwnerOfPilotFeedback({
+    feedbackId: result.id,
+    schoolId: profile?.school_id ?? null,
+    category,
+    message: input.message.trim(),
+    pagePath: input.pagePath?.slice(0, 500) ?? null,
+    pageTitle: input.pageTitle?.slice(0, 200) ?? null,
+    submitterName: profile?.full_name ?? null,
+    submitterEmail: profile?.email ?? user.email ?? null,
+    role: profile?.role ?? null,
+  })
+
   return { ok: true }
 }
 

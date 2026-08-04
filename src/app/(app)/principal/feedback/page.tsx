@@ -18,15 +18,15 @@ export default async function PrincipalFeedbackPage() {
           Suggestions &amp; issues
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-          Everything people send with the floating <strong>Suggestion</strong> button during the
-          pilot lands here
+          Read-only window for school leadership: you can see pilot suggestions here, but they
+          are <strong className="text-foreground">emailed to the Beacon product owner</strong> as
+          the primary inbox — not to the principal&apos;s email.
           {newCount > 0 ? (
             <>
               {' '}
-              — <strong className="text-foreground">{newCount} new</strong>
+              Currently <strong className="text-foreground">{newCount} new</strong>.
             </>
           ) : null}
-          . Mark items as you triage so nothing is lost.
         </p>
       </div>
 

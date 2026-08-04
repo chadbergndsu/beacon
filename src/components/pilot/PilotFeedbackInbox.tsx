@@ -34,8 +34,8 @@ export function PilotFeedbackInbox({ initialItems }: { initialItems: PilotFeedba
   if (items.length === 0) {
     return (
       <p className="rounded-xl border border-dashed bg-card p-6 text-sm text-muted-foreground">
-        No pilot suggestions yet. The floating <strong>Suggestion</strong> button on every page
-        feeds this inbox.
+        No pilot suggestions yet. The floating <strong>Suggestion</strong> button emails the
+        Beacon product owner; this list is your school&apos;s copy.
       </p>
     )
   }

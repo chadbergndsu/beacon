@@ -8,6 +8,7 @@ export type EmailKind =
   | 'message'
   | 'welcome'
   | 'test'
+  | 'pilot_feedback'
 
 export type EmailStatus = 'queued' | 'sent' | 'failed' | 'skipped'
 
