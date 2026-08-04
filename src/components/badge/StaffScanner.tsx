@@ -40,7 +40,6 @@ export function StaffScanner() {
 
   useEffect(() => {
     if (search.trim().length < 2) {
-      setHits([])
       return
     }
     const handle = setTimeout(() => {
@@ -50,6 +49,8 @@ export function StaffScanner() {
     }, 200)
     return () => clearTimeout(handle)
   }, [search])
+
+  const searchHits = search.trim().length < 2 ? [] : hits
 
   function scan(opts: { rawCode?: string; studentId?: string }) {
     if (!roomId) return
@@ -171,9 +172,9 @@ export function StaffScanner() {
           placeholder="Start typing last name…"
           disabled={pending || !roomId}
         />
-        {hits.length > 0 && (
+        {searchHits.length > 0 && (
           <ul className="mt-2 max-h-48 overflow-y-auto rounded-xl border divide-y bg-card">
-            {hits.map((h) => (
+            {searchHits.map((h) => (
               <li key={h.id}>
                 <button
                   type="button"

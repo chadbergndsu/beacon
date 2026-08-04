@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { effectiveRole, isLeadership, isSchoolStaff } from '@/lib/roles'
+import {
+  effectiveRole,
+  isLeadership,
+  isPrincipalOrAdmin,
+  isSchoolStaff,
+} from '@/lib/roles'
 import type { Role } from '@/lib/types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -71,7 +76,8 @@ export async function requireLeadershipRoster(): Promise<
 > {
   const access = await requireRosterStaff()
   if (!access.ok) return access
-  if (!access.isLeadership) {
+  // Approvals / hard delete: principal or admin only (not office staff)
+  if (!isPrincipalOrAdmin(access.role)) {
     return {
       ok: false,
       error: 'Only principal or admin can do this.',

@@ -47,7 +47,18 @@ describe('permissions', () => {
     expect(canEnterGrades('principal', 't1', 'user-1')).toBe(false)
   })
   it('lets only assigned teacher enter when not leadership', () => {
-    expect(canEnterGrades('teacher', 't1', 't1')).toBe(true)
+    expect(
+      canEnterGrades('teacher', 't1', 't1', {
+        profileSchoolId: 's1',
+        classSchoolId: 's1',
+      })
+    ).toBe(true)
+    expect(
+      canEnterGrades('teacher', 't1', 't1', {
+        profileSchoolId: 's1',
+        classSchoolId: 's2',
+      })
+    ).toBe(false)
     expect(canEnterGrades('teacher', 't1', 't2')).toBe(false)
     expect(canEnterGrades('parent', 't1', 'p1')).toBe(false)
   })

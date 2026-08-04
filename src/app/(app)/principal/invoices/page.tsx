@@ -11,7 +11,7 @@ export default async function PrincipalInvoicesPage() {
       <div>
         <h2 className="text-xl font-bold text-navy dark:text-sky-50">Invoices & payments</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Create family invoices and record payments. Synced to QuickBooks when connected.
+          Create family invoices and record payments. Stored in Beacon (QuickBooks live post not enabled yet).
         </p>
       </div>
       <InvoicesPanel

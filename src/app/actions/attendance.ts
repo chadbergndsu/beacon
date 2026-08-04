@@ -88,7 +88,10 @@ export async function saveAttendance(
       const tag = subjectTag(brand)
       const base = appBaseUrl()
       const studentIds = absentees.map((r) => r.studentId)
-      const parentsMap = await resolveParentsForStudents(studentIds)
+      const parentsMap = await resolveParentsForStudents(
+        studentIds,
+        access.classRow.school_id
+      )
 
       const { data: students } = await admin
         .from('students')

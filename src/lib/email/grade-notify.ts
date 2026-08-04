@@ -50,7 +50,7 @@ export async function notifyParentsOfGradeSave(opts: {
     : { data: [] as Grade[] }
 
   const grades = (allGrades ?? []) as Grade[]
-  const parentsMap = await resolveParentsForStudents(opts.studentIds)
+  const parentsMap = await resolveParentsForStudents(opts.studentIds, opts.schoolId)
 
   if (![...parentsMap.values()].some((v) => v.length)) {
     return { sent: 0, note: 'No parent links for updated students.' }

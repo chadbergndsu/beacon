@@ -56,7 +56,12 @@ export function canEnterGrades(
   }
 ): boolean {
   if (role === 'teacher') {
-    return teacherId === userId
+    if (teacherId !== userId) return false
+    // Same school wall as canAccessClass (service-role path must not cross tenants)
+    const ps = opts?.profileSchoolId
+    const cs = opts?.classSchoolId
+    if (!ps || !cs) return false
+    return ps === cs
   }
   if (isLeadership(role)) {
     const ps = opts?.profileSchoolId
@@ -65,6 +70,11 @@ export function canEnterGrades(
     return ps === cs
   }
   return false
+}
+
+/** Principal/admin only — not office staff (for deletes / approvals). */
+export function isPrincipalOrAdmin(role: Role | null | undefined): boolean {
+  return role === 'principal' || role === 'admin'
 }
 
 export function canPostAnnouncements(role: Role | null | undefined): boolean {

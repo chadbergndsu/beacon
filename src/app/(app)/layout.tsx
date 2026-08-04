@@ -17,8 +17,8 @@ import {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, user } = await getProfile()
   const brand = await loadSchoolBrand(profile?.school_id)
-  const { isEmailLive } = await import('@/lib/email/transport')
-  const emailLive = isEmailLive()
+  const { isEmailHonestLive } = await import('@/lib/email/transport')
+  const emailLive = isEmailHonestLive()
   const qbLive = isQuickBooksConfigured()
   const firstName = profile?.full_name?.trim().split(/\s+/)[0] || null
 

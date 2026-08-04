@@ -11,7 +11,9 @@ export async function saveGrades(
   classId: string,
   grades: Grade[],
   options?: { notifyParents?: boolean }
-): Promise<{ ok: true; notifyNote?: string } | { ok: false; error: string }> {
+): Promise<
+  { ok: true; notifyNote?: string; dropped?: number } | { ok: false; error: string }
+> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -52,6 +54,7 @@ export async function saveGrades(
   ) {
     return { ok: false, error: 'You do not have permission to save grades for this class.' }
   }
+  // Ensure teacher/leadership always pass school ids for ACL (fail closed if missing)
 
   if (grades.length === 0) {
     return { ok: true }
@@ -149,8 +152,14 @@ export async function saveGrades(
         : result.note || 'No parent emails to notify.'
   }
 
+  const dropped = grades.length - rows.length
   revalidatePath(`/classes/${classId}`)
   revalidatePath(`/classes/${classId}`, 'layout')
   revalidatePath('/admin/emails')
-  return { ok: true, notifyNote }
+  let note = notifyNote
+  if (dropped > 0) {
+    const dropMsg = `${dropped} row(s) skipped (not on class roster/assignments).`
+    note = note ? `${note} ${dropMsg}` : dropMsg
+  }
+  return { ok: true, notifyNote: note, dropped: dropped > 0 ? dropped : undefined }
 }

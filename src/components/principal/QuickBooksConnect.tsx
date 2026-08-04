@@ -244,8 +244,8 @@ export function QuickBooksConnect({
             <div className="flex items-start gap-2 text-sm text-emerald-800 dark:text-emerald-200">
               <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
               <p>
-                Invoices and payments created in Beacon will queue for QuickBooks. Live API posting
-                uses your Intuit app tokens after OAuth.
+                OAuth tokens are stored server-side. Beacon does not yet post
+                invoices/payments to the Intuit accounting API — billing stays local.
               </p>
             </div>
           )}

@@ -71,6 +71,21 @@ export function isEmailLive(): boolean {
   return isResendConfigured() || isSmtpConfigured()
 }
 
+/**
+ * Honest production readiness: transport configured AND not forced log-only
+ * by insecure Resend onboarding From address.
+ */
+export function isEmailHonestLive(): boolean {
+  if (!isEmailLive()) return false
+  const from = process.env.EMAIL_FROM?.trim() || 'Beacon <onboarding@resend.dev>'
+  if (/onboarding@resend\.dev/i.test(from)) {
+    const prod =
+      process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production'
+    if (prod) return false
+  }
+  return true
+}
+
 export function resolveSmtpConfig(): SmtpConfig | null {
   if (!isSmtpConfigured()) return null
 

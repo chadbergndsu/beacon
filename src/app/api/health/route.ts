@@ -25,8 +25,8 @@ export async function GET(req: NextRequest) {
   const hasUrl = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim())
   const hasAnon = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim())
   const hasService = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim())
-  const { isEmailLive } = await import('@/lib/email/transport')
-  const emailLive = isEmailLive()
+  const { isEmailHonestLive } = await import('@/lib/email/transport')
+  const emailLive = isEmailHonestLive()
 
   let dbOk = false
   let dbDetail = 'not checked'

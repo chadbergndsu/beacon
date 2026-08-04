@@ -225,11 +225,11 @@ async function loadOrMigrateAccessTokens(schoolId: string): Promise<{
     .maybeSingle()
   const settings = { ...((school?.settings || {}) as Record<string, unknown>) }
   const badge = { ...((settings.badge as Record<string, unknown>) || {}) }
-  let kiosk =
+  const kiosk =
     typeof badge.kioskToken === 'string' && badge.kioskToken.length >= 16
       ? badge.kioskToken
       : generateBadgeCode(10) + generateBadgeCode(10)
-  let device =
+  const device =
     typeof badge.deviceToken === 'string' && badge.deviceToken.length >= 16
       ? badge.deviceToken
       : generateDeviceToken()

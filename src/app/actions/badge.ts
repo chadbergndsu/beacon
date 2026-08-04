@@ -203,13 +203,14 @@ export async function kioskScanAction(input: {
  * Public name search disabled (PII + attendance forgery surface).
  * Use Teacher → Scan while logged in for name-based entry.
  */
-export async function kioskSearchAction(_input: {
-  token: string
-  query: string
+export async function kioskSearchAction(_input?: {
+  token?: string
+  query?: string
 }): Promise<
   | { ok: true; students: Awaited<ReturnType<typeof searchKioskStudents>> }
   | { ok: false; error: string }
 > {
+  void _input
   return {
     ok: false,
     error: 'Name search is disabled on public kiosks. Use a badge/QR or staff scan desk.',

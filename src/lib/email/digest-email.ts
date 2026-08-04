@@ -38,7 +38,7 @@ export async function emailDinnerDigestForStudent(opts: {
     grade_level: student.grade_level,
   })
 
-  const parentsMap = await resolveParentsForStudents([student.id])
+  const parentsMap = await resolveParentsForStudents([student.id], schoolId)
   const parents = parentsMap.get(student.id) || []
   if (!parents.length) {
     return {

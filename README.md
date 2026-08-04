@@ -14,16 +14,16 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 | DB | Supabase Postgres | Schema owned in `supabase/migrations/` |
 | Auth | Supabase Auth | Session checked before service-role use |
 | Host | Vercel + HTTPS | Default per Solid Systems |
-| Email | Resend (optional) | Log-only outbox without `RESEND_API_KEY` |
-| Billing | QuickBooks OAuth (optional) | Demo mode without Intuit keys |
+| Email | Resend and/or SMTP (cascade) | Log-only outbox without live transport; never use `onboarding@resend.dev` in prod |
+| Billing | QuickBooks OAuth (optional) | Demo/metadata only until live Intuit posting is built |
 
 ## Architecture (short)
 
 - **Multi-tenant:** `schools` + `school_id` on roster/grades; brand in `schools.settings.brand`
 - **Academics:** core tables (`classes`, `assignments`, `grades`, …)
 - **Suite modules:** prefer tables from migration `007`; JSON fallback only if tables missing
-- **Communications:** `email_outbox` + Resend; never silent — every attempt is recorded
-- **Ops:** principal Go-live UI + public `GET /api/health`
+- **Communications:** `email_outbox` + Resend→SMTP→log cascade; every attempt recorded
+- **Ops:** principal Go-live UI + `GET /api/health` (liveness) / secret header for readiness
 
 ## Modules
 
@@ -43,7 +43,9 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 | **Teacher Quick Mode** | Phone-first attendance / scores / pulse |
 | **Teacher printables** | Birthday Coupon Book (4th/5th) — printable classroom freebies |
 | **Go-live / onboarding** | Health probes, checklist, first-run setup % |
-| **Public** | School marketing site at `/school` (driven by school branding) |
+| **Badges & kiosk** | Room attendance, aftercare billable rooms, public `/kiosk` + RFID device API |
+| **Roster / approvals** | Teacher-owned classes/students; principal delete approvals + version history |
+| **Public** | School marketing site at `/school` (driven by school branding / `?school=` slug) |
 
 ### Market positioning (why not FACTS / Jupiter / PowerSchool)
 
@@ -97,7 +99,17 @@ DATABASE_URL='postgresql://…' node scripts/apply-migrations.mjs
 POSTGRES_PASSWORD='…' node scripts/apply-migrations.mjs
 ```
 
-**Pilot requirement:** migration `007` creates real tables for `attendance`, `lesson_plans`, `pulse_entries`, and `school_videos`. The app **writes to those tables first**. JSON in `schools.settings` is only a fallback if a table is missing (migration not applied yet).
+**Pilot requirement:** apply **`001`–`016`** in order (or `scripts/pending-011-to-015-all.sql` then `pending-016-security-rls-lockdown.sql` for late badge/security pieces).
+
+| Range | Why |
+|-------|-----|
+| **007** | attendance, lessons, pulse, videos tables |
+| **011–012** | badge/kiosk rooms, scans, aftercare, RFID |
+| **013** | roster revisions + delete approvals |
+| **015** | kiosk token vault (`school_access_tokens`) |
+| **016** | RLS lockdown (profile role/school_id, staff write scopes) |
+
+The app **prefers first-class tables**. JSON in `schools.settings` is only a fallback if a table is missing.
 
 ### Branding any school
 
@@ -112,28 +124,29 @@ Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user to prin
 
 | Mode | Behavior |
 |------|----------|
-| No `RESEND_API_KEY` | Emails **log-only** (outbox status `skipped`) — safe for dry-run |
-| Resend configured | Live delivery; verify domain in Resend; `EMAIL_FROM` must match that domain |
-| School brand email | Used as **Reply-To** so parents can answer the office (not a dead noreply) |
-| No Intuit keys | QuickBooks **Connect** activates a **labeled sandbox demo** only |
-| Intuit OAuth set | Live sandbox/production per `INTUIT_ENVIRONMENT` |
+| No Resend **and** no SMTP | Emails **log-only** (outbox `skipped`) — safe dry-run |
+| Resend and/or SMTP | Cascade: Resend → SMTP → log; `EMAIL_FROM` must be a **verified domain** (not `onboarding@resend.dev` in production) |
+| School brand email | Used as **Reply-To** so parents can answer the office |
+| No Intuit keys | QuickBooks **demo** status only (not “connected”) |
+| Intuit OAuth set | Tokens vaulted server-side; Beacon billing still **local** until QBO write API is built |
 
 **Production email checklist**
 
-1. [resend.com](https://resend.com) → Domains → add school domain → DNS verify  
-2. Vercel → `RESEND_API_KEY` + `EMAIL_FROM=School Name <office@yourdomain.org>` (Production)  
-3. Principal → Go-live → set school contact email (Reply-To)  
-4. **Comms** → Send delivery test → confirm inbox  
-5. Compose / Announcements / Dinner Table Digest email as needed  
+1. Verify domain (Resend and/or SMTP)  
+2. Vercel → `RESEND_API_KEY` and/or SMTP_* + `EMAIL_FROM=School Name <office@yourdomain.org>`  
+3. Optional: `BEACON_HEALTH_SECRET` for readiness probes (`x-beacon-health-secret` header)  
+4. Principal → Go-live → school contact email (Reply-To)  
+5. **Comms** → delivery test → confirm inbox  
 
-Leadership sees a trust banner until email + QB are production-ready. Details on **Go-live**.
+Leadership (and teachers for email) see a trust banner until transports are honest-live. Details on **Go-live**.
 
 ## Deploy
 
 1. Secrets live only in **Vercel Production env** (see `.env.example` for names).
-2. **Preferred:** push to `main` → Vercel deploys over HTTPS.
-3. Confirm `GET /api/health` returns `"status":"ok"`.
-4. Email: set Resend keys, then **Comms → Send live test**.
+2. **Preferred:** push to `main` → Vercel deploys over HTTPS (CI also runs Playwright e2e).
+3. Liveness: `GET /api/health` → bare `{ "status": "ok" }` (no DB check).  
+   Readiness: same path with header `x-beacon-health-secret: $BEACON_HEALTH_SECRET` (checks env + DB + honest email).
+4. Email: configure verified From + Resend/SMTP, then **Comms → delivery test**.
 
 ## Security / trust
 

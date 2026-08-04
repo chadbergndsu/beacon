@@ -70,9 +70,10 @@ export default async function PrincipalBadgesPage() {
           <p className="mt-1 text-xs">{setupError}</p>
           <p className="mt-2 text-xs">
             Supabase → SQL Editor → run{' '}
-            <code className="rounded bg-white px-1">pending-011</code> through{' '}
-            <code className="rounded bg-white px-1">pending-016</code> (or the combined scripts) →
-            refresh this page. Token vault requires 015; RLS lockdown requires 016.
+            <code className="rounded bg-white px-1">pending-011-to-015-all.sql</code> then{' '}
+            <code className="rounded bg-white px-1">pending-016-security-rls-lockdown.sql</code>{' '}
+            (or apply <code className="rounded bg-white px-1">supabase/migrations/</code> 011–016) →
+            refresh. Token vault = 015; RLS lockdown = 016.
           </p>
         </div>
       )}

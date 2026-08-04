@@ -29,7 +29,7 @@ export function InvoicesPanel({
     <div className="space-y-6">
       {qbConnected && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          QuickBooks connected — new invoices/payments will queue for sync.
+          QuickBooks connected in Beacon — invoices/payments stay local until live Intuit posting is enabled.
         </div>
       )}
 

@@ -170,7 +170,7 @@ export async function simulateQuickBooksSync(): Promise<
   revalidatePrincipal()
   return {
     ok: true,
-    message: `Synced ${state.products.length} items, ${state.invoices.length} invoices, ${state.payments.length} payments to QuickBooks${state.quickbooks.companyName ? ` (${state.quickbooks.companyName})` : ''}.`,
+    message: `Marked local Beacon billing as synced (${state.products.length} products, ${state.invoices.length} invoices, ${state.payments.length} payments). Live QuickBooks API posting is not enabled yet — this is metadata only${state.quickbooks.companyName ? ` · ${state.quickbooks.companyName}` : ''}.`,
   }
 }
 
@@ -250,6 +250,9 @@ export async function recordPayment(input: {
   const state = await loadBillingState(schoolId)
   const invoice = state.invoices.find((i) => i.id === input.invoiceId)
   if (!invoice) return { ok: false, error: 'Invoice not found.' }
+  if (invoice.status === 'paid') {
+    return { ok: false, error: 'Invoice is already paid.' }
+  }
 
   const payment: BillingPayment = {
     id: `pay_${crypto.randomUUID()}`,

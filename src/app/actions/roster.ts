@@ -268,7 +268,7 @@ export async function createClassAction(input: {
   const call_number = input.callNumber?.trim() || null
 
   // Teachers always own what they create
-  let teacherId: string | null = access.isTeacher
+  const teacherId: string | null = access.isTeacher
     ? access.user.id
     : input.teacherId || null
 
@@ -903,8 +903,9 @@ export async function requestDeletionAction(input: {
     payload.student_id = input.entityId
   }
 
-  // Leadership can execute immediately instead of queueing
-  if (access.isLeadership && input.kind !== 'unenroll_student') {
+  // Principal/admin can execute immediately; staff/teachers go through approval queue
+  const { isPrincipalOrAdmin } = await import('@/lib/roles')
+  if (isPrincipalOrAdmin(access.role) && input.kind !== 'unenroll_student') {
     const applied = await applyDeletion(
       access,
       input.kind,
@@ -915,11 +916,11 @@ export async function requestDeletionAction(input: {
     return {
       ok: true,
       requestId: 'immediate',
-      note: 'Leadership delete applied immediately (logged for undo).',
+      note: 'Principal/admin delete applied immediately (logged for undo).',
     }
   }
 
-  if (access.isLeadership && input.kind === 'unenroll_student') {
+  if (isPrincipalOrAdmin(access.role) && input.kind === 'unenroll_student') {
     const applied = await applyDeletion(
       access,
       input.kind,
@@ -935,13 +936,6 @@ export async function requestDeletionAction(input: {
   }
 
   // Cancel duplicate pending (unenroll: same student+class only)
-  let cancelQ = access.admin
-    .from('approval_requests')
-    .update({ status: 'cancelled' })
-    .eq('school_id', access.schoolId)
-    .eq('entity_id', input.entityId)
-    .eq('kind', input.kind)
-    .eq('status', 'pending')
   // Note: payload class_id filter via fetch+cancel is safer for unenroll
   if (input.kind === 'unenroll_student' && input.classId) {
     const { data: pendingUnenrolls } = await access.admin
@@ -961,7 +955,13 @@ export async function requestDeletionAction(input: {
         .in('id', ids)
     }
   } else {
-    await cancelQ
+    await access.admin
+      .from('approval_requests')
+      .update({ status: 'cancelled' })
+      .eq('school_id', access.schoolId)
+      .eq('entity_id', input.entityId)
+      .eq('kind', input.kind)
+      .eq('status', 'pending')
   }
 
   const { data: req, error } = await access.admin
@@ -1018,6 +1018,7 @@ async function applyDeletion(
       .from('students')
       .update({ active: false })
       .eq('id', entityId)
+      .eq('school_id', access.schoolId)
     if (error) return { ok: false, error: error.message }
     await logRosterRevision(access.admin, {
       schoolId: access.schoolId,
@@ -1045,6 +1046,7 @@ async function applyDeletion(
       .from('classes')
       .update({ active: false })
       .eq('id', entityId)
+      .eq('school_id', access.schoolId)
     if (error) return { ok: false, error: error.message }
     await logRosterRevision(access.admin, {
       schoolId: access.schoolId,
