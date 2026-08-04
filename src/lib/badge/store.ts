@@ -245,15 +245,14 @@ async function loadOrMigrateAccessTokens(schoolId: string): Promise<{
   )
 
   if (error) {
-    // Table missing — fall back to settings (pre-migration)
-    badge.kioskToken = kiosk
-    badge.deviceToken = device
-    settings.badge = badge
-    await admin.from('schools').update({ settings }).eq('id', schoolId)
-    return { kiosk_token: kiosk, device_token: device }
+    // Never write secrets into schools.settings (client-readable via RLS).
+    // Require migration 015/016 school_access_tokens table.
+    throw new Error(
+      'school_access_tokens unavailable. Run pending-015 and pending-016 in Supabase SQL Editor.'
+    )
   }
 
-  // Strip secrets from settings so clients cannot read them
+  // Strip any legacy secrets from settings so clients cannot read them
   if (badge.kioskToken || badge.deviceToken) {
     delete badge.kioskToken
     delete badge.deviceToken
@@ -283,12 +282,9 @@ export async function rotateDeviceToken(schoolId: string): Promise<string> {
     { onConflict: 'school_id' }
   )
   if (error) {
-    // fallback settings path
-    const { data } = await admin.from('schools').select('settings').eq('id', schoolId).maybeSingle()
-    const settings = { ...((data?.settings || {}) as Record<string, unknown>) }
-    const badge = { ...((settings.badge as Record<string, unknown>) || {}), deviceToken: token }
-    settings.badge = badge
-    await admin.from('schools').update({ settings }).eq('id', schoolId)
+    throw new Error(
+      'Could not rotate device token. Ensure school_access_tokens exists (pending-015/016).'
+    )
   }
   return token
 }
@@ -307,11 +303,9 @@ export async function rotateKioskToken(schoolId: string): Promise<string> {
     { onConflict: 'school_id' }
   )
   if (error) {
-    const { data } = await admin.from('schools').select('settings').eq('id', schoolId).maybeSingle()
-    const settings = { ...((data?.settings || {}) as Record<string, unknown>) }
-    const badge = { ...((settings.badge as Record<string, unknown>) || {}), kioskToken: token }
-    settings.badge = badge
-    await admin.from('schools').update({ settings }).eq('id', schoolId)
+    throw new Error(
+      'Could not rotate kiosk token. Ensure school_access_tokens exists (pending-015/016).'
+    )
   }
   return token
 }
@@ -336,14 +330,7 @@ export async function resolveSchoolByDeviceToken(
       return { schoolId: school.id as string, schoolName: (school.name as string) || 'School' }
     }
   }
-  // Legacy fallback (pre-015): scan settings — still works until migration
-  const { data: schools } = await admin.from('schools').select('id, name, settings').limit(200)
-  for (const s of schools ?? []) {
-    const settings = (s.settings || {}) as { badge?: { deviceToken?: string } }
-    if (settings.badge?.deviceToken === token) {
-      return { schoolId: s.id as string, schoolName: (s.name as string) || 'School' }
-    }
-  }
+  // No settings.badge fallback — secrets must live in school_access_tokens only
   return null
 }
 
@@ -480,13 +467,7 @@ export async function resolveSchoolByKioskToken(
       return { schoolId: school.id as string, schoolName: (school.name as string) || 'School' }
     }
   }
-  const { data: schools } = await admin.from('schools').select('id, name, settings').limit(200)
-  for (const s of schools ?? []) {
-    const settings = (s.settings || {}) as { badge?: { kioskToken?: string } }
-    if (settings.badge?.kioskToken === token) {
-      return { schoolId: s.id as string, schoolName: (s.name as string) || 'School' }
-    }
-  }
+  // No settings.badge fallback — secrets must live in school_access_tokens only
   return null
 }
 

@@ -18,7 +18,15 @@ export function effectiveRole(
 ): Role | null {
   if (!profile) return null
   const demo = demoPrincipalEmail()
-  if (demo && profile.email?.toLowerCase() === demo) return 'principal'
+  // Only elevate accounts that are already school staff — never promote parent/teacher
+  // via env misconfiguration alone.
+  if (
+    demo &&
+    profile.email?.toLowerCase() === demo &&
+    (profile.role === 'admin' || profile.role === 'staff' || profile.role === 'principal')
+  ) {
+    return 'principal'
+  }
   return profile.role
 }
 

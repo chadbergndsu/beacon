@@ -42,14 +42,17 @@ export default async function TeacherQuickPage({
       .order('name')
     classRows = data ?? []
   } else {
-    let q = admin
-      .from('classes')
-      .select('id, name, subject, teacher_id')
-      .eq('active', true)
-      .order('name')
-    if (schoolId) q = q.eq('school_id', schoolId)
-    const { data } = await q
-    classRows = data ?? []
+    if (schoolId) {
+      const { data } = await admin
+        .from('classes')
+        .select('id, name, subject, teacher_id')
+        .eq('active', true)
+        .eq('school_id', schoolId)
+        .order('name')
+      classRows = data ?? []
+    } else {
+      classRows = []
+    }
   }
 
   const today = new Date().toISOString().slice(0, 10)

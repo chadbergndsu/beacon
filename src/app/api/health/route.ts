@@ -1,12 +1,28 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
- * Public liveness / readiness probe for monitoring.
- * Never returns secret values — only booleans and coarse status.
+ * Public liveness: bare status only.
+ * Detailed readiness (DB / email posture) requires BEACON_HEALTH_SECRET header.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const generatedAt = new Date().toISOString()
+  const secret = process.env.BEACON_HEALTH_SECRET?.trim()
+  const provided =
+    req.headers.get('x-beacon-health-secret')?.trim() ||
+    req.nextUrl.searchParams.get('secret')?.trim()
+  const detailed = Boolean(secret && provided && secret === provided)
+
+  if (!detailed) {
+    return NextResponse.json(
+      { status: 'ok', generatedAt },
+      {
+        status: 200,
+        headers: { 'Cache-Control': 'no-store' },
+      }
+    )
+  }
+
   const hasUrl = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim())
   const hasAnon = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim())
   const hasService = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim())
@@ -32,21 +48,20 @@ export async function GET() {
   }
 
   const ok = hasUrl && hasAnon && hasService && dbOk
-  const body = {
-    status: ok ? 'ok' : 'degraded',
-    generatedAt,
-    checks: {
-      supabaseEnv: hasUrl && hasAnon && hasService,
-      database: dbOk,
-      databaseDetail: dbDetail,
-      emailLive,
+  return NextResponse.json(
+    {
+      status: ok ? 'ok' : 'degraded',
+      generatedAt,
+      checks: {
+        supabaseEnv: hasUrl && hasAnon && hasService,
+        database: dbOk,
+        databaseDetail: dbDetail,
+        emailLive,
+      },
     },
-  }
-
-  return NextResponse.json(body, {
-    status: ok ? 200 : 503,
-    headers: {
-      'Cache-Control': 'no-store',
-    },
-  })
+    {
+      status: ok ? 200 : 503,
+      headers: { 'Cache-Control': 'no-store' },
+    }
+  )
 }

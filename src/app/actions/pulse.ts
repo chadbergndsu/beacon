@@ -29,6 +29,27 @@ export async function submitPulse(
   if (!input.studentId) return { ok: false, error: 'Select a student.' }
   if (!input.overall) return { ok: false, error: 'Choose an overall pulse.' }
 
+  // Bind student to this class roster + school (integrity / parent-feed safety)
+  const adminCheck = createAdminClient()
+  const { data: enrolled } = await adminCheck
+    .from('enrollments')
+    .select('student_id')
+    .eq('class_id', classId)
+    .eq('student_id', input.studentId)
+    .maybeSingle()
+  if (!enrolled) {
+    return { ok: false, error: 'Student is not on this class roster.' }
+  }
+  const { data: studentRow } = await adminCheck
+    .from('students')
+    .select('id')
+    .eq('id', input.studentId)
+    .eq('school_id', access.classRow.school_id)
+    .maybeSingle()
+  if (!studentRow) {
+    return { ok: false, error: 'Student not found at your school.' }
+  }
+
   const entry: PulseEntry = {
     id: `pulse_${Date.now().toString(36)}`,
     classId,
@@ -84,10 +105,22 @@ export async function getStudentPulsesForViewer(studentId: string) {
       .eq('student_id', studentId)
       .maybeSingle()
     if (!data) return []
-  } else if (
-    profile.role !== 'teacher' &&
-    !isLeadership(profile.role)
-  ) {
+  } else if (profile.role === 'teacher') {
+    const { data: classes } = await admin
+      .from('classes')
+      .select('id')
+      .eq('teacher_id', user.id)
+      .eq('school_id', profile.school_id)
+    const classIds = (classes ?? []).map((c) => c.id)
+    if (!classIds.length) return []
+    const { data: enroll } = await admin
+      .from('enrollments')
+      .select('student_id')
+      .eq('student_id', studentId)
+      .in('class_id', classIds)
+      .limit(1)
+    if (!enroll?.length) return []
+  } else if (!isLeadership(profile.role)) {
     return []
   }
 

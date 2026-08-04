@@ -52,14 +52,17 @@ export default async function DashboardPage() {
       .eq('active', true)
       .order('name')
     classes = data ?? []
-  } else if (role === 'admin' || role === 'staff' || role === 'principal') {
-    let q = admin
+  } else if (
+    (role === 'admin' || role === 'staff' || role === 'principal') &&
+    schoolId
+  ) {
+    // Fail closed: no school_id → no class list (never all-tenants wildcard)
+    const { data } = await admin
       .from('classes')
       .select('id, name, subject, grade_level, term, teacher_id')
       .eq('active', true)
+      .eq('school_id', schoolId)
       .order('name')
-    if (schoolId) q = q.eq('school_id', schoolId)
-    const { data } = await q
     classes = data ?? []
   }
 

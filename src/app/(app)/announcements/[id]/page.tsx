@@ -22,7 +22,12 @@ export default async function AnnouncementDetailPage({
 
   if (!a) notFound()
 
-  if (profile?.role === 'parent' && a.audience !== 'parents' && a.audience !== 'all') {
+  // Tenant isolation: never show another school's announcement via service role
+  if (!profile?.school_id || a.school_id !== profile.school_id) {
+    notFound()
+  }
+
+  if (profile.role === 'parent' && a.audience !== 'parents' && a.audience !== 'all') {
     notFound()
   }
 

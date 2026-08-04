@@ -177,11 +177,16 @@ export async function deliverWithCascade(
       continue
     }
 
-    // log
+    // log — no full PII addresses in host logs
+    const to = String(email.to_email || '')
+    const toHint =
+      to.includes('@')
+        ? `${to.slice(0, 2)}…@${to.split('@')[1] || '?'}`
+        : '(invalid)'
     console.info('[beacon-email:log-only]', {
-      to: email.to_email,
-      subject: email.subject,
+      toHint,
       kind: email.kind,
+      subjectLen: String(email.subject || '').length,
       priorAttempts: attempts.length,
     })
     attempts.push({

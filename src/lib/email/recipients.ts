@@ -45,11 +45,22 @@ export async function resolveAnnouncementRecipients(opts: {
     let studentIds: string[] = []
 
     if (opts.classId) {
-      const { data: enroll } = await admin
-        .from('enrollments')
-        .select('student_id')
-        .eq('class_id', opts.classId)
-      studentIds = (enroll ?? []).map((e) => e.student_id)
+      // Class must belong to this school (cross-tenant class_id defense)
+      const { data: klass } = await admin
+        .from('classes')
+        .select('id')
+        .eq('id', opts.classId)
+        .eq('school_id', opts.schoolId)
+        .maybeSingle()
+      if (!klass) {
+        studentIds = []
+      } else {
+        const { data: enroll } = await admin
+          .from('enrollments')
+          .select('student_id')
+          .eq('class_id', opts.classId)
+        studentIds = (enroll ?? []).map((e) => e.student_id)
+      }
     } else {
       const { data: students } = await admin
         .from('students')

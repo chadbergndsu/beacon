@@ -11,7 +11,7 @@ import { loadMissingWorkForStudent } from '@/lib/insights/load-missing-work'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateTransparentGrade } from '@/lib/grades'
-import { parentCanViewStudent } from '@/lib/gradebook-data'
+import { parentCanViewStudent, teacherCanViewStudent } from '@/lib/gradebook-data'
 import { listPulsesForStudent } from '@/lib/school-modules/store'
 import { buildStudentDinnerAndConference } from '@/lib/insights/load-student-insights'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
@@ -29,15 +29,20 @@ export default async function StudentOverviewPage({
   const { data: student } = await admin.from('students').select('*').eq('id', studentId).maybeSingle()
   if (!student) notFound()
 
-  // Access: parent of student, or staff at same school
+  // Access: parent of student; leadership same school; teacher only if on roster of their class
   let allowed = false
   if (profile?.role === 'parent') {
     allowed = await parentCanViewStudent(user.id, studentId)
+  } else if (profile?.role === 'teacher' && profile.school_id) {
+    allowed =
+      profile.school_id === student.school_id &&
+      (await teacherCanViewStudent(user.id, studentId, profile.school_id))
   } else if (
     profile &&
-    ['admin', 'staff', 'teacher', 'principal'].includes(profile.role)
+    ['admin', 'staff', 'principal'].includes(profile.role) &&
+    profile.school_id
   ) {
-    allowed = !profile.school_id || profile.school_id === student.school_id
+    allowed = profile.school_id === student.school_id
   }
   if (!allowed) notFound()
 

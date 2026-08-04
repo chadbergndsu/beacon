@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { parentCanViewStudent } from '@/lib/gradebook-data'
+import { parentCanViewStudent, teacherCanViewStudent } from '@/lib/gradebook-data'
 import { listPulsesForStudent } from '@/lib/school-modules/store'
 import { loadAttendanceForStudent } from '@/lib/attendance/store'
 import { buildReportCard } from '@/lib/report-card'
@@ -29,11 +29,16 @@ export default async function ReportCardPage({
   let allowed = false
   if (profile?.role === 'parent') {
     allowed = await parentCanViewStudent(user.id, studentId)
+  } else if (profile?.role === 'teacher' && profile.school_id) {
+    allowed =
+      profile.school_id === student.school_id &&
+      (await teacherCanViewStudent(user.id, studentId, profile.school_id))
   } else if (
     profile &&
-    ['admin', 'staff', 'teacher', 'principal'].includes(profile.role)
+    ['admin', 'staff', 'principal'].includes(profile.role) &&
+    profile.school_id
   ) {
-    allowed = !profile.school_id || profile.school_id === student.school_id
+    allowed = profile.school_id === student.school_id
   }
   if (!allowed) notFound()
 

@@ -18,11 +18,15 @@ describe('effectiveRole', () => {
     expect(effectiveRole({ role: 'teacher', email: 't@school.org' })).toBe('teacher')
   })
 
-  it('elevates configured principal email when env set', () => {
+  it('elevates configured principal email only for staff/admin roles', () => {
     process.env.BEACON_PRINCIPAL_EMAIL = 'head@school.org'
     expect(demoPrincipalEmail()).toBe('head@school.org')
     expect(effectiveRole({ role: 'admin', email: 'head@school.org' })).toBe('principal')
+    expect(effectiveRole({ role: 'staff', email: 'head@school.org' })).toBe('principal')
     expect(effectiveRole({ role: 'admin', email: 'other@school.org' })).toBe('admin')
+    // Parents/teachers must not become principal via env alone
+    expect(effectiveRole({ role: 'parent', email: 'head@school.org' })).toBe('parent')
+    expect(effectiveRole({ role: 'teacher', email: 'head@school.org' })).toBe('teacher')
   })
 })
 

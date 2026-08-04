@@ -59,13 +59,18 @@ export async function createAnnouncement(input: {
   const audience = input.audience || 'parents'
   const classId = input.class_id || null
 
-  if (classId && access.profile.role === 'teacher') {
+  // Always bind class to this school (prevents cross-tenant class_id IDOR)
+  if (classId) {
     const { data: klass } = await access.admin
       .from('classes')
-      .select('id, teacher_id')
+      .select('id, teacher_id, school_id')
       .eq('id', classId)
+      .eq('school_id', access.profile.school_id)
       .maybeSingle()
-    if (!klass || klass.teacher_id !== access.user.id) {
+    if (!klass) {
+      return { ok: false, error: 'Class not found at your school.' }
+    }
+    if (access.profile.role === 'teacher' && klass.teacher_id !== access.user.id) {
       return { ok: false, error: 'You can only post announcements for your own classes.' }
     }
   }

@@ -15,11 +15,13 @@ export type ClassRow = {
 
 function canAccessClass(profile: Profile | null, user: User, classRow: ClassRow) {
   if (!profile) return false
+  // Fail closed: missing school_id is never a wildcard across tenants
   if (profile.role === 'admin' || profile.role === 'staff' || profile.role === 'principal') {
-    return !profile.school_id || profile.school_id === classRow.school_id
+    return Boolean(profile.school_id) && profile.school_id === classRow.school_id
   }
   // Teachers only their classes — not whole-school browse (FACTS-style leak risk)
   if (profile.role === 'teacher') {
+    if (!profile.school_id || profile.school_id !== classRow.school_id) return false
     return classRow.teacher_id === user.id
   }
   if (profile.role === 'parent') {
@@ -27,6 +29,29 @@ function canAccessClass(profile: Profile | null, user: User, classRow: ClassRow)
     return true
   }
   return false
+}
+
+/** Teacher may view a student only if enrolled in one of the teacher's classes. */
+export async function teacherCanViewStudent(
+  teacherId: string,
+  studentId: string,
+  schoolId: string
+): Promise<boolean> {
+  const admin = createAdminClient()
+  const { data: classes } = await admin
+    .from('classes')
+    .select('id')
+    .eq('teacher_id', teacherId)
+    .eq('school_id', schoolId)
+  const classIds = (classes ?? []).map((c) => c.id)
+  if (!classIds.length) return false
+  const { data: enroll } = await admin
+    .from('enrollments')
+    .select('student_id')
+    .eq('student_id', studentId)
+    .in('class_id', classIds)
+    .limit(1)
+  return Boolean(enroll?.length)
 }
 
 export async function loadClassForUser(

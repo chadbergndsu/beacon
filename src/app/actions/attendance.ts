@@ -37,11 +37,23 @@ export async function saveAttendance(
   if (!date) return { ok: false, error: 'Date is required.' }
   if (!rows.length) return { ok: false, error: 'No attendance rows.' }
 
+  // Only accept students enrolled in this class (and at this school)
+  const adminGate = createAdminClient()
+  const { data: enrollRows } = await adminGate
+    .from('enrollments')
+    .select('student_id')
+    .eq('class_id', classId)
+  const enrolled = new Set((enrollRows ?? []).map((e) => e.student_id as string))
+  const filtered = rows.filter((r) => enrolled.has(r.studentId))
+  if (!filtered.length) {
+    return { ok: false, error: 'No valid roster students in attendance rows.' }
+  }
+
   await upsertAttendanceBatch(
     access.classRow.school_id,
     classId,
     date,
-    rows,
+    filtered,
     access.user.id
   )
 
@@ -51,12 +63,17 @@ export async function saveAttendance(
     user_id: access.user.id,
     action: 'attendance.saved',
     table_name: 'attendance',
-    details: { classId, date, count: rows.length, notify: Boolean(options?.notifyParents) },
+    details: {
+      classId,
+      date,
+      count: filtered.length,
+      notify: Boolean(options?.notifyParents),
+    },
   })
 
   let notifyNote: string | undefined
   if (options?.notifyParents) {
-    const absentees = rows.filter((r) => r.status === 'absent' || r.status === 'tardy')
+    const absentees = filtered.filter((r) => r.status === 'absent' || r.status === 'tardy')
     if (!absentees.length) {
       notifyNote = 'No absent/tardy students — nothing to email.'
     } else {

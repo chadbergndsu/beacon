@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { ConferenceBriefView } from '@/components/insights/ConferenceBriefView'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { parentCanViewStudent } from '@/lib/gradebook-data'
+import { parentCanViewStudent, teacherCanViewStudent } from '@/lib/gradebook-data'
 import { buildStudentDinnerAndConference } from '@/lib/insights/load-student-insights'
 
 export default async function ConferenceBriefPage({
@@ -21,8 +21,16 @@ export default async function ConferenceBriefPage({
   let allowed = false
   if (profile?.role === 'parent') {
     allowed = await parentCanViewStudent(user.id, studentId)
-  } else if (profile && ['admin', 'staff', 'teacher', 'principal'].includes(profile.role)) {
-    allowed = !profile.school_id || profile.school_id === student.school_id
+  } else if (profile?.role === 'teacher' && profile.school_id) {
+    allowed =
+      profile.school_id === student.school_id &&
+      (await teacherCanViewStudent(user.id, studentId, profile.school_id))
+  } else if (
+    profile &&
+    ['admin', 'staff', 'principal'].includes(profile.role) &&
+    profile.school_id
+  ) {
+    allowed = profile.school_id === student.school_id
   }
   if (!allowed) notFound()
 

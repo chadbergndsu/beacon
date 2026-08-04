@@ -551,11 +551,15 @@ export async function createPersonAccountAction(input: {
   let userId: string
 
   if (existingProfile?.id) {
-    // Never take over accounts from another school
-    if (
-      existingProfile.school_id &&
-      existingProfile.school_id !== access.schoolId
-    ) {
+    // Never claim orphan (null school) or foreign-school profiles
+    if (!existingProfile.school_id) {
+      return {
+        ok: false,
+        error:
+          'That email already has an account without a school assignment. Contact support to attach them — do not reclaim via this form.',
+      }
+    }
+    if (existingProfile.school_id !== access.schoolId) {
       return {
         ok: false,
         error:
