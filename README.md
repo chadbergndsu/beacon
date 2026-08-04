@@ -41,6 +41,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 | **Missing Work Radar** | Calm past-due vs upcoming list (parent + teacher Today) |
 | **Teacher Today** | Per-class missing-work focus without district dashboards |
 | **Teacher Quick Mode** | Phone-first attendance / scores / pulse |
+| **Teacher printables** | Birthday Coupon Book (4th/5th) — printable classroom freebies |
 | **Go-live / onboarding** | Health probes, checklist, first-run setup % |
 | **Public** | School marketing site at `/school` (driven by school branding) |
 
