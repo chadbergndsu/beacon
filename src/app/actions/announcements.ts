@@ -167,11 +167,56 @@ export async function sendSystemEmail(input: {
     return { ok: false, error: 'Only leadership can send freeform system emails.' }
   }
 
-  const to = input.to_email.trim()
-  if (!to.includes('@')) return { ok: false, error: 'Valid email required.' }
+  const to = input.to_email.trim().toLowerCase()
+  if (!to.includes('@') || to.length > 200) {
+    return { ok: false, error: 'Valid email required.' }
+  }
   const subject = input.subject.trim()
   const body = input.body.trim()
   if (!subject || !body) return { ok: false, error: 'Subject and body required.' }
+  if (subject.length > 200) return { ok: false, error: 'Subject is too long.' }
+  if (body.length > 20_000) return { ok: false, error: 'Message is too long.' }
+
+  // Prefer known school profiles; allow other addresses only when domain matches a school member
+  const { data: known } = await access.admin
+    .from('profiles')
+    .select('id, email')
+    .eq('school_id', access.profile.school_id)
+    .ilike('email', to)
+    .maybeSingle()
+
+  if (!known) {
+    const domain = to.split('@')[1] || ''
+    const { data: peers } = await access.admin
+      .from('profiles')
+      .select('email')
+      .eq('school_id', access.profile.school_id)
+      .not('email', 'is', null)
+      .limit(40)
+    const schoolDomains = new Set(
+      (peers ?? [])
+        .map((p) => String(p.email || '').split('@')[1]?.toLowerCase())
+        .filter(Boolean)
+    )
+    if (!domain || !schoolDomains.has(domain)) {
+      return {
+        ok: false,
+        error:
+          'Freeform mail only to known school profiles or the same email domain as school members.',
+      }
+    }
+  }
+
+  // Soft daily cap per school (in-memory best-effort)
+  const { rateLimit } = await import('@/lib/security/rate-limit')
+  const rl = rateLimit({
+    key: `system-email:${access.profile.school_id}`,
+    limit: 40,
+    windowMs: 24 * 60 * 60 * 1000,
+  })
+  if (!rl.ok) {
+    return { ok: false, error: 'Daily freeform email limit reached. Try again tomorrow.' }
+  }
 
   const brand = await loadSchoolBrand(access.profile.school_id)
   const tag = subjectTag(brand)

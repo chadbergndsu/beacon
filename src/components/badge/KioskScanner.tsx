@@ -1,11 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
-import {
-  kioskPresenceAction,
-  kioskScanAction,
-  kioskSearchAction,
-} from '@/app/actions/badge'
+import { kioskPresenceAction, kioskScanAction } from '@/app/actions/badge'
 import type { ScanDirection, SchoolRoom } from '@/lib/badge/types'
 import { CameraQrScanner } from '@/components/badge/CameraQrScanner'
 import { Button } from '@/components/ui/button'
@@ -23,10 +19,6 @@ export function KioskScanner({
   const [roomId, setRoomId] = useState(rooms[0]?.id ?? '')
   const [direction, setDirection] = useState<ScanDirection>('in')
   const [code, setCode] = useState('')
-  const [search, setSearch] = useState('')
-  const [hits, setHits] = useState<
-    { id: string; name: string; badgeCode: string | null; gradeLevel: string | null }[]
-  >([])
   const [present, setPresent] = useState<
     { studentId: string; studentName: string; since: string }[]
   >([])
@@ -55,14 +47,13 @@ export function KioskScanner({
     return () => clearInterval(t)
   }, [])
 
-  function doScan(opts: { rawCode?: string; studentId?: string }) {
+  function doScan(rawCode: string) {
     if (!roomId) return
     setFlash(null)
     start(async () => {
       const r = await kioskScanAction({
         token,
-        rawCode: opts.rawCode,
-        studentId: opts.studentId,
+        rawCode,
         roomId,
         direction,
         kioskLabel: rooms.find((x) => x.id === roomId)?.name,
@@ -71,12 +62,9 @@ export function KioskScanner({
         setFlash({ ok: false, text: r.error })
       } else {
         setFlash({ ok: true, text: r.message })
-        // Smart flip: after IN, ready for next student still on IN; keep direction
         refreshPresence()
       }
       setCode('')
-      setSearch('')
-      setHits([])
       focusLock.current = true
       inputRef.current?.focus()
       setTimeout(() => setFlash(null), 6000)
@@ -86,20 +74,8 @@ export function KioskScanner({
   function submitCode(raw?: string) {
     const value = (raw ?? code).trim()
     if (!value) return
-    doScan({ rawCode: value })
+    doScan(value)
   }
-
-  useEffect(() => {
-    if (search.trim().length < 2) return
-    const handle = setTimeout(() => {
-      void kioskSearchAction({ token, query: search }).then((r) => {
-        if (r.ok) setHits(r.students)
-      })
-    }, 200)
-    return () => clearTimeout(handle)
-  }, [search, token])
-
-  const searchHits = search.trim().length < 2 ? [] : hits
 
   return (
     <div className="min-h-[100dvh] bg-slate-950 text-white flex flex-col">
@@ -110,9 +86,7 @@ export function KioskScanner({
           </p>
           <h1 className="text-lg font-bold">{schoolName}</h1>
         </div>
-        <p className="text-xs text-slate-400">
-          USB scan · camera · or search name
-        </p>
+        <p className="text-xs text-slate-400">USB badge · camera QR · RFID</p>
       </header>
 
       <main className="flex-1 mx-auto w-full max-w-xl px-4 py-5 space-y-4 pb-safe">
@@ -205,49 +179,10 @@ export function KioskScanner({
           </Button>
         </form>
 
-        <div>
-          <label className="block">
-            <span className="text-xs font-semibold uppercase text-slate-400">
-              No badge? Search name
-            </span>
-            <input
-              value={search}
-              onChange={(e) => {
-                focusLock.current = false
-                setSearch(e.target.value)
-              }}
-              onBlur={() => {
-                focusLock.current = true
-              }}
-              className="mt-1 w-full rounded-xl border border-white/15 bg-slate-900 px-3 py-3 text-sm text-white outline-none focus:border-sky-400"
-              placeholder="Start typing last name…"
-              disabled={pending || !roomId}
-            />
-          </label>
-          {searchHits.length > 0 && (
-            <ul className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-white/10 divide-y divide-white/10">
-              {searchHits.map((h) => (
-                <li key={h.id}>
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2.5 text-left text-sm hover:bg-white/10"
-                    onClick={() => doScan({ studentId: h.id })}
-                  >
-                    <span className="font-semibold">{h.name}</span>
-                    {h.gradeLevel && (
-                      <span className="text-slate-400"> · {h.gradeLevel}</span>
-                    )}
-                    {h.badgeCode && (
-                      <span className="ml-2 font-mono text-xs text-sky-300">
-                        {h.badgeCode}
-                      </span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <p className="text-xs text-slate-500 text-center">
+          No badge? Use <span className="text-slate-300">Teacher → Scan</span> while signed in
+          (name search is not available on public kiosks).
+        </p>
 
         {flash && (
           <div
@@ -285,16 +220,7 @@ export function KioskScanner({
                   className="flex items-center justify-between gap-2 rounded-lg bg-black/30 px-2 py-1.5"
                 >
                   <span>{p.studentName}</span>
-                  <button
-                    type="button"
-                    className="text-[11px] font-semibold text-amber-300"
-                    onClick={() => {
-                      setDirection('out')
-                      doScan({ studentId: p.studentId })
-                    }}
-                  >
-                    Check out
-                  </button>
+                  <span className="text-[11px] text-slate-500">Scan badge to check out</span>
                 </li>
               ))}
             </ul>

@@ -31,7 +31,7 @@ import { isSmsConfigured } from '@/lib/sms/twilio'
 import { isEmailLive } from '@/lib/email/transport'
 import { rateLimit } from '@/lib/security/rate-limit'
 
-async function requireBadgeAdmin() {
+async function requireBadgeAdmin(opts?: { secrets?: boolean; billing?: boolean }) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -51,7 +51,22 @@ async function requireBadgeAdmin() {
   if (!profile?.school_id || !isLeadership(role)) {
     return { ok: false as const, error: 'Principal/admin only.' }
   }
-  return { ok: true as const, schoolId: profile.school_id as string, user, admin }
+  // Token secrets + aftercare billing: principal/admin only (not office "staff")
+  if (opts?.secrets || opts?.billing) {
+    if (role !== 'principal' && role !== 'admin') {
+      return {
+        ok: false as const,
+        error: 'Only principal or admin can manage kiosk/device secrets and billing.',
+      }
+    }
+  }
+  return {
+    ok: true as const,
+    schoolId: profile.school_id as string,
+    user,
+    admin,
+    role: role as Role,
+  }
 }
 
 export async function ensureBadgesAction(): Promise<
@@ -95,7 +110,7 @@ export async function saveRoomAction(input: {
 export async function getKioskLinkAction(): Promise<
   { ok: true; token: string; path: string } | { ok: false; error: string }
 > {
-  const access = await requireBadgeAdmin()
+  const access = await requireBadgeAdmin({ secrets: true })
   if (!access.ok) return access
   try {
     await ensureDefaultRooms(access.schoolId)
@@ -110,7 +125,7 @@ export async function billAftercareAction(): Promise<
   | { ok: true; billed: number; totalCents: number; errors: string[] }
   | { ok: false; error: string }
 > {
-  const access = await requireBadgeAdmin()
+  const access = await requireBadgeAdmin({ billing: true })
   if (!access.ok) return access
   const r = await billClosedAftercareSessions(access.schoolId)
   revalidatePath('/principal/badges')
@@ -120,7 +135,9 @@ export async function billAftercareAction(): Promise<
 
 function kioskRateOk(token: string, action: string) {
   const key = `${action}:${token.slice(0, 12)}`
-  return rateLimit({ key, limit: 60, windowMs: 60_000 })
+  // Tighter public kiosk limits (in-memory per isolate — best-effort)
+  const limit = action === 'scan' ? 45 : 30
+  return rateLimit({ key, limit, windowMs: 60_000 })
 }
 
 /** Kiosk scan — authorized by kiosk token (no staff login on tablet). */
@@ -140,10 +157,17 @@ export async function kioskScanAction(input: {
   if (!school) {
     return { ok: false, error: 'Invalid kiosk link. Open kiosk from Principal → Badges.' }
   }
+  // Public kiosk: physical badge/RFID/QR only — no name-tap by studentId
+  const raw = (input.rawCode || '').trim()
+  if (!raw || raw.length < 4) {
+    return {
+      ok: false,
+      error: 'Scan a badge, QR code, or RFID. Name search is only available for staff login.',
+    }
+  }
   return processBadgeScan({
     schoolId: school.schoolId,
-    rawCode: input.rawCode,
-    studentId: input.studentId,
+    rawCode: raw,
     roomId: input.roomId,
     direction: input.direction,
     kioskLabel: input.kioskLabel || 'Room kiosk',
@@ -151,25 +175,20 @@ export async function kioskScanAction(input: {
   })
 }
 
-export async function kioskSearchAction(input: {
+/**
+ * Public name search disabled (PII + attendance forgery surface).
+ * Use Teacher → Scan while logged in for name-based entry.
+ */
+export async function kioskSearchAction(_input: {
   token: string
   query: string
 }): Promise<
   | { ok: true; students: Awaited<ReturnType<typeof searchKioskStudents>> }
   | { ok: false; error: string }
 > {
-  const rl = kioskRateOk(input.token, 'search')
-  if (!rl.ok) return { ok: false, error: 'Too many searches — wait a moment.' }
-  const school = await resolveSchoolByKioskToken(input.token)
-  if (!school) return { ok: false, error: 'Invalid kiosk.' }
-  const students = await searchKioskStudents(school.schoolId, input.query)
-  // Do not expose full badge codes on public kiosk search
   return {
-    ok: true,
-    students: students.map((s) => ({
-      ...s,
-      badgeCode: s.badgeCode ? `···${s.badgeCode.slice(-3)}` : null,
-    })),
+    ok: false,
+    error: 'Name search is disabled on public kiosks. Use a badge/QR or staff scan desk.',
   }
 }
 
@@ -191,7 +210,7 @@ export async function kioskPresenceAction(input: {
 export async function rotateKioskTokenAction(): Promise<
   { ok: true; token: string; path: string } | { ok: false; error: string }
 > {
-  const access = await requireBadgeAdmin()
+  const access = await requireBadgeAdmin({ secrets: true })
   if (!access.ok) return access
   try {
     const token = await rotateKioskToken(access.schoolId)
@@ -274,20 +293,29 @@ export async function loadBadgeDashboardAction() {
   const brand = await import('@/lib/school-brand').then((m) =>
     m.loadSchoolBrand(access.schoolId)
   )
-  const [badges, rooms, scans, openAftercare, token] = await Promise.all([
+  const [badges, rooms, scans, openAftercare] = await Promise.all([
     listStudentBadges(access.schoolId, brand.name),
     listRooms(access.schoolId),
     listRecentScans(access.schoolId, 30),
     listOpenAftercare(access.schoolId),
-    getOrCreateKioskToken(access.schoolId),
   ])
+  // Kiosk URL secret only for principal/admin
+  let kioskPath: string | null = null
+  if (access.role === 'principal' || access.role === 'admin') {
+    try {
+      const token = await getOrCreateKioskToken(access.schoolId)
+      kioskPath = `/kiosk/${token}`
+    } catch {
+      kioskPath = null
+    }
+  }
   return {
     ok: true as const,
     badges,
     rooms,
     scans,
     openAftercare,
-    kioskPath: `/kiosk/${token}`,
+    kioskPath,
   }
 }
 
@@ -317,7 +345,7 @@ export async function getDeviceTokenAction(): Promise<
     }
   | { ok: false; error: string }
 > {
-  const access = await requireBadgeAdmin()
+  const access = await requireBadgeAdmin({ secrets: true })
   if (!access.ok) return access
   try {
     const [deviceToken, notifyParents] = await Promise.all([
@@ -340,7 +368,7 @@ export async function getDeviceTokenAction(): Promise<
 export async function rotateDeviceTokenAction(): Promise<
   { ok: true; deviceToken: string } | { ok: false; error: string }
 > {
-  const access = await requireBadgeAdmin()
+  const access = await requireBadgeAdmin({ secrets: true })
   if (!access.ok) return access
   try {
     const deviceToken = await rotateDeviceToken(access.schoolId)

@@ -136,8 +136,24 @@ export function describeEmailStack(): {
 export async function deliverWithCascade(
   email: OutboundEmail,
   from: string,
-  replyTo?: string
+  replyTo?: string,
+  opts?: { forceLogOnly?: boolean; forceLogReason?: string }
 ): Promise<TransportSendResult> {
+  if (opts?.forceLogOnly) {
+    const reason = opts.forceLogReason || 'Forced log-only delivery.'
+    console.info('[beacon-email:log-only]', {
+      reason,
+      kind: email.kind,
+      subjectLen: String(email.subject || '').length,
+    })
+    return {
+      status: 'skipped',
+      provider: 'log',
+      error: reason,
+      attempts: [{ provider: 'log', status: 'skipped', error: reason }],
+    }
+  }
+
   const order = parseEmailTransports()
   const attempts: TransportSendResult['attempts'] = []
 

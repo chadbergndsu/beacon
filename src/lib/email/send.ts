@@ -17,10 +17,15 @@ import type {
 import type { SchoolBrand } from '@/lib/school-brand'
 import { sanitizeHeaderValue } from '@/lib/security/headers'
 
-const DEFAULT_FROM = process.env.EMAIL_FROM || 'Beacon <onboarding@resend.dev>'
+const FALLBACK_FROM = 'Beacon <onboarding@resend.dev>'
+
+/** True when from-address is Resend's shared onboarding sender (not production-safe). */
+export function isInsecureEmailFrom(from: string): boolean {
+  return /onboarding@resend\.dev/i.test(from)
+}
 
 function buildFromHeader(brand?: Pick<SchoolBrand, 'name' | 'shortName'> | null): string {
-  const raw = process.env.EMAIL_FROM?.trim() || DEFAULT_FROM
+  const raw = process.env.EMAIL_FROM?.trim() || FALLBACK_FROM
   // If EMAIL_FROM is already "Name <email>", keep it; else wrap with school display name
   if (raw.includes('<') && raw.includes('>')) {
     if (!brand) return raw
@@ -54,7 +59,18 @@ export async function queueAndSendEmail(
     to_name: email.to_name ? sanitizeHeaderValue(email.to_name, 80) : email.to_name,
   }
 
-  const sendResult = await deliverWithCascade(safeEmail, from, replyTo)
+  // Production: never send live mail as Resend onboarding@ (spoof/deliverability risk)
+  const prod = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production'
+  let sendResult
+  if (prod && isInsecureEmailFrom(from)) {
+    sendResult = await deliverWithCascade(safeEmail, from, replyTo, {
+      forceLogOnly: true,
+      forceLogReason:
+        'EMAIL_FROM is still onboarding@resend.dev — set a verified domain sender before live mail.',
+    })
+  } else {
+    sendResult = await deliverWithCascade(safeEmail, from, replyTo)
+  }
 
   const meta = {
     ...(safeEmail.meta ?? {}),
@@ -221,7 +237,7 @@ export async function getEmailDeliveryStats(
     queued: 0,
     last24h: 0,
     emailLive: transportIsEmailLive(),
-    fromAddress: process.env.EMAIL_FROM || DEFAULT_FROM,
+    fromAddress: process.env.EMAIL_FROM || FALLBACK_FROM,
   }
   for (const e of emails) {
     if (e.status === 'sent') stats.sent++

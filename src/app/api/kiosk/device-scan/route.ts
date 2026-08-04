@@ -45,15 +45,28 @@ export async function POST(request: Request) {
     )
   }
 
-  const rl = rateLimit({
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip')?.trim() ||
+    'unknown'
+  const rlToken = rateLimit({
     key: `device-scan:${deviceToken.slice(0, 16)}`,
+    limit: 90,
+    windowMs: 60_000,
+  })
+  const rlIp = rateLimit({
+    key: `device-scan-ip:${ip}`,
     limit: 120,
     windowMs: 60_000,
   })
-  if (!rl.ok) {
+  if (!rlToken.ok || !rlIp.ok) {
+    const retry = Math.max(
+      rlToken.ok ? 0 : rlToken.retryAfterMs,
+      rlIp.ok ? 0 : rlIp.retryAfterMs
+    )
     return NextResponse.json(
       { ok: false, error: 'Rate limited. Slow down.' },
-      { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } }
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(retry / 1000) || 60) } }
     )
   }
 
