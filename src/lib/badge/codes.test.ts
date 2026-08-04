@@ -1,0 +1,31 @@
+import { describe, expect, it } from 'vitest'
+import {
+  badgePayload,
+  computeAftercareAmountCents,
+  generateBadgeCode,
+  parseScannerInput,
+} from './codes'
+
+describe('badge codes', () => {
+  it('generates stable length codes', () => {
+    const c = generateBadgeCode(6)
+    expect(c).toHaveLength(6)
+    expect(c).toMatch(/^[A-Z0-9]+$/)
+  })
+
+  it('parses scanner payloads', () => {
+    expect(parseScannerInput('  ab12cd  ')).toBe('AB12CD')
+    expect(parseScannerInput('BEACON|lca|XY99ZZ')).toBe('XY99ZZ')
+    expect(parseScannerInput('https://beacon.example/kiosk?code=hello1')).toBe('HELLO1')
+  })
+
+  it('bills aftercare in 15-min blocks', () => {
+    // $10/hr = 1000 cents, 20 min → 30 min billable → 500 cents
+    expect(computeAftercareAmountCents(20, 1000)).toBe(500)
+    expect(computeAftercareAmountCents(5, 1000)).toBe(250) // min 15 min
+  })
+
+  it('payload format', () => {
+    expect(badgePayload('lca', 'ABC123')).toBe('BEACON|lca|ABC123')
+  })
+})

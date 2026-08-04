@@ -33,7 +33,9 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname
   const isAuthRoute = path === '/login'
-  const isPublic = PUBLIC_EXACT.has(path)
+  // Kiosk tablets use secret token URLs — no staff login
+  const isKiosk = path.startsWith('/kiosk/')
+  const isPublic = PUBLIC_EXACT.has(path) || isKiosk || path === '/privacy'
 
   if (!user && !isPublic) {
     const redirectUrl = request.nextUrl.clone()
