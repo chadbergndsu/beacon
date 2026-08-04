@@ -200,6 +200,11 @@ svg {
     max-width: none !important;
     padding: 0 !important;
   }
+  /* When a printable calls printScopedSection('…'), hide sibling tools on the hub */
+  body[data-print-section='score-sheets'] #birthday-coupons,
+  body[data-print-section='birthday-coupons'] #score-sheets {
+    display: none !important;
+  }
 }
 
 /* Premium card hover — only on fine pointers so phones don't jump */

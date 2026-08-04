@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Gift, Printer, Scissors } from 'lucide-react'
 import { BIRTHDAY_COUPONS } from '@/lib/printables/birthday-coupons'
-import { PrintButton } from '@/components/insights/PrintButton'
+import { printScopedSection } from '@/lib/printables/print-section'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -95,15 +95,13 @@ export function BirthdayCouponBook({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <PrintButton label="Print / Save PDF" />
           <Button
             type="button"
-            variant="outline"
             className="mt-3"
-            onClick={() => window.print()}
+            onClick={() => printScopedSection('birthday-coupons')}
           >
             <Printer className="mr-1.5 h-4 w-4" />
-            Print again
+            Print / Save PDF
           </Button>
           <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Scissors className="h-3.5 w-3.5" aria-hidden />
