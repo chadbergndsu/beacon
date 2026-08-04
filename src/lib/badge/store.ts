@@ -1310,6 +1310,8 @@ export async function billClosedAftercareSessions(
     try {
       await addInvoice(schoolId, invoice)
     } catch (e) {
+      const { reportError } = await import('@/lib/ops/report-error')
+      reportError(e, { surface: 'aftercare-bill', schoolId, sessionId: sess.id })
       errors.push(e instanceof Error ? e.message : 'invoice failed')
       continue
     }

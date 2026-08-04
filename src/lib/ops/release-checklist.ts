@@ -39,6 +39,12 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
     group: 'ops',
   },
   {
+    id: 'sentry',
+    label: 'Sentry DSN set for production errors',
+    help: 'SENTRY_DSN (server) + NEXT_PUBLIC_SENTRY_DSN (browser) on Vercel. Optional for pilot; recommended for public traffic.',
+    group: 'ops',
+  },
+  {
     id: 'kiosk_tokens',
     label: 'Kiosk tokens rotated after go-live',
     help: 'Principal → Badges: open kiosk once, then rotate if the link was ever shared outside the tablet. Re-open after expiry.',

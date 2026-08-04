@@ -106,6 +106,8 @@ export async function publishNtfy(
     }
     return { ok: true, skipped: false, endpoint: safeHost(ep.url) }
   } catch (e) {
+    const { reportError } = await import('@/lib/ops/report-error')
+    reportError(e, { surface: 'ntfy' })
     return {
       ok: false,
       skipped: false,

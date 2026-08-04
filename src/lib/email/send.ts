@@ -118,6 +118,15 @@ export async function queueAndSendEmail(
       .select('id')
       .maybeSingle()
 
+    if (sendResult.status === 'failed') {
+      const { reportError } = await import('@/lib/ops/report-error')
+      reportError(new Error(sendResult.error || error.message), {
+        surface: 'email',
+        kind: safeEmail.kind,
+        provider: sendResult.provider,
+      })
+    }
+
     return {
       id: audit?.id ?? 'unknown',
       status: sendResult.status,
@@ -125,6 +134,15 @@ export async function queueAndSendEmail(
       providerId: sendResult.providerId,
       provider: sendResult.provider,
     }
+  }
+
+  if (sendResult.status === 'failed') {
+    const { reportError } = await import('@/lib/ops/report-error')
+    reportError(new Error(sendResult.error || 'email failed'), {
+      surface: 'email',
+      kind: safeEmail.kind,
+      provider: sendResult.provider,
+    })
   }
 
   return {

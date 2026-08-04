@@ -277,6 +277,17 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     category: 'platform',
   })
 
+  const { isSentryConfigured } = await import('@/lib/ops/report-error')
+  checks.push({
+    id: 'sentry',
+    label: 'Error tracking (Sentry)',
+    status: isSentryConfigured() ? 'ok' : isProductionLike() ? 'warn' : 'info',
+    detail: isSentryConfigured()
+      ? 'SENTRY_DSN / NEXT_PUBLIC_SENTRY_DSN set — exceptions report via reportError + instrumentation'
+      : 'Optional: set SENTRY_DSN (server) and NEXT_PUBLIC_SENTRY_DSN (browser) on Vercel',
+    category: 'platform',
+  })
+
   checks.push({
     id: 'ferpa',
     label: 'Access model',

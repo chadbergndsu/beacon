@@ -5,7 +5,7 @@
  * Day: subjects stack with full lesson; "Done for today" hides without deleting.
  */
 
-import { useMemo, useState, useTransition } from 'react'
+import { useCallback, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -304,11 +304,14 @@ export function TeacherLessonPlanner({
     [classes]
   )
 
-  function planFor(classId: string, date: string): LessonPlan | null {
-    const matches = plans.filter((p) => p.classId === classId && p.date === date)
-    if (!matches.length) return null
-    return matches.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]
-  }
+  const planFor = useCallback(
+    (classId: string, date: string): LessonPlan | null => {
+      const matches = plans.filter((p) => p.classId === classId && p.date === date)
+      if (!matches.length) return null
+      return matches.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]
+    },
+    [plans]
+  )
 
   /** Day list: remaining work only unless showCompleted */
   const dayRows = useMemo(() => {
@@ -320,11 +323,11 @@ export function TeacherLessonPlanner({
         if (plan?.status === 'taught') return false
         return true
       })
-  }, [sortedClasses, plans, selectedDay, showCompleted])
+  }, [sortedClasses, planFor, selectedDay, showCompleted])
 
   const completedCount = useMemo(() => {
     return sortedClasses.filter((c) => planFor(c.id, selectedDay)?.status === 'taught').length
-  }, [sortedClasses, plans, selectedDay])
+  }, [sortedClasses, planFor, selectedDay])
 
   function shiftDay(n: number) {
     const d = new Date(selectedDay + 'T12:00:00')

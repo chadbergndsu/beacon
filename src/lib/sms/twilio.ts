@@ -98,6 +98,8 @@ export async function sendSms(input: {
     }
     return { ok: true, skipped: false, providerId: data.sid }
   } catch (e) {
+    const { reportError } = await import('@/lib/ops/report-error')
+    reportError(e, { surface: 'twilio-sms' })
     return {
       ok: false,
       skipped: false,

@@ -77,8 +77,8 @@ export function TeacherQuickMode({
   const [error, setError] = useState<string | null>(null)
 
   const bundle = classId ? bundles[classId] : undefined
-  const students = bundle?.students ?? []
-  const assignments = bundle?.assignments ?? []
+  const students = useMemo(() => bundle?.students ?? [], [bundle])
+  const assignments = useMemo(() => bundle?.assignments ?? [], [bundle])
   const today = bundle?.today ?? new Date().toISOString().slice(0, 10)
 
   // —— Score state ——

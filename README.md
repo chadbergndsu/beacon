@@ -216,7 +216,7 @@ Full list of names lives in **`.env.example`**. Summary:
 | School day TZ | `BEACON_SCHOOL_TZ` | Badge attendance calendar day (default `America/Chicago`) |
 | OAuth state | `BEACON_OAUTH_STATE_SECRET` | QB OAuth HMAC (else falls back to service role key) |
 | App URL | `NEXT_PUBLIC_APP_URL` | Absolute links in email |
-| Sentry | `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | Optional; `@sentry/nextjs` **not** installed by default — `reportError` logs to console and no-ops capture without the package |
+| Sentry | `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | Optional; package installed. Init only when DSN set. Server + browser + `global-error` + `reportError` on email/SMS/aftercare failures |
 | Playwright | `PLAYWRIGHT_BASE_URL`, `PLAYWRIGHT_PORT` | E2E against custom host/port |
 
 Platform-provided (do not put secrets in git): `VERCEL_URL`, `VERCEL_ENV`, `VERCEL_PROJECT_PRODUCTION_URL`, `NODE_ENV`, `CI`.
@@ -254,7 +254,7 @@ Platform-provided (do not put secrets in git): `VERCEL_URL`, `VERCEL_ENV`, `VERC
 | Go-live probes | Principal → Go-live |
 | Email delivery | Comms outbox (`sent` / `failed` / `skipped`) |
 | Staff actions | `audit_logs` |
-| Error product (Sentry) | Optional / not wired as a dependency; outbox + audit + health cover pilot |
+| Error product (Sentry) | `@sentry/nextjs` + `instrumentation.ts`; enable with `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` |
 
 ## Complexity & hidden dependencies (maintainers)
 
@@ -283,7 +283,7 @@ Platform-provided (do not put secrets in git): `VERCEL_URL`, `VERCEL_ENV`, `VERC
 | Dependabot (npm + actions) | Yes (`.github/dependabot.yml`) |
 | packageManager pin + Corepack in CI | Yes (`npm@10.9.2`) |
 | Secrets in platform env only | Yes (Vercel) |
-| Error tracking considered | Yes (Sentry optional/deferred; outbox/health now) |
+| Error tracking considered | Yes (`@sentry/nextjs` optional via DSN; outbox/health always) |
 | Deploy from Git | Preferred path on Vercel |
 | HTTPS only | Vercel |
 | Health check | `/api/health` + Go-live |

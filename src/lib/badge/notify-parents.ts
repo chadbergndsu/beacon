@@ -168,6 +168,8 @@ export async function notifyParentsOfAftercareScan(opts: {
       note: notes.length ? notes.join(' ') : undefined,
     }
   } catch (e) {
+    const { reportError } = await import('@/lib/ops/report-error')
+    reportError(e, { surface: 'aftercare-notify' })
     return {
       emailsSent: 0,
       smsSent: 0,
