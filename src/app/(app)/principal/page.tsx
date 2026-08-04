@@ -14,9 +14,12 @@ import { BeaconSignalCard } from '@/components/insights/BeaconSignalCard'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
+import { ViewSection } from '@/components/view-prefs/ViewSection'
+import { loadScreenLayout } from '@/lib/view-prefs/store'
 
 export default async function PrincipalOverviewPage() {
-  const { schoolId, profile } = await requirePrincipal()
+  const { schoolId, profile, user } = await requirePrincipal()
   const admin = createAdminClient()
   const [billing, signal] = await Promise.all([
     loadBillingState(schoolId),
@@ -50,37 +53,48 @@ export default async function PrincipalOverviewPage() {
   const openCents = openInvoices.reduce((s, i) => s + i.amountCents, 0)
 
   const qb = billing.quickbooks
+  const viewLayout = await loadScreenLayout(user.id, 'principal_overview', [
+    'beacon_signal',
+    'stats',
+    'quickbooks',
+    'announcements',
+    'shortcuts',
+  ])
 
   return (
-    <div className="space-y-6">
-      <BeaconSignalCard signal={signal} />
+    <ConfigurableView screenId="principal_overview" initialLayout={viewLayout}>
+      <ViewSection id="beacon_signal" title="Beacon Signal">
+        <BeaconSignalCard signal={signal} />
+      </ViewSection>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: 'Active classes', value: String(classCount ?? 0), icon: BookOpen },
-          { label: 'Students', value: String(studentCount ?? 0), icon: Shield },
-          { label: 'Open tuition', value: formatMoney(openCents), icon: Receipt },
-          { label: 'Payments collected', value: formatMoney(paidCents), icon: CreditCard },
-        ].map((s) => (
-          <Card key={s.label}>
-            <CardContent className="pt-5 flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
-                <s.icon className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {s.label}
-                </p>
-                <p className="text-2xl font-bold tabular-nums text-navy dark:text-sky-50 mt-0.5">
-                  {s.value}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <ViewSection id="stats" title="School stats">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: 'Active classes', value: String(classCount ?? 0), icon: BookOpen },
+            { label: 'Students', value: String(studentCount ?? 0), icon: Shield },
+            { label: 'Open tuition', value: formatMoney(openCents), icon: Receipt },
+            { label: 'Payments collected', value: formatMoney(paidCents), icon: CreditCard },
+          ].map((s) => (
+            <Card key={s.label}>
+              <CardContent className="pt-5 flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                  <s.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {s.label}
+                  </p>
+                  <p className="text-2xl font-bold tabular-nums text-navy dark:text-sky-50 mt-0.5">
+                    {s.value}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </ViewSection>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <ViewSection id="quickbooks" title="QuickBooks card">
         <Card className="overflow-hidden">
           <div className="border-b border-border bg-muted/30 px-5 py-4 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -129,7 +143,9 @@ export default async function PrincipalOverviewPage() {
             </Link>
           </CardContent>
         </Card>
+      </ViewSection>
 
+      <ViewSection id="announcements" title="Recent announcements">
         <Card>
           <div className="border-b border-border bg-muted/30 px-5 py-4">
             <h2 className="font-semibold text-navy dark:text-sky-50">Recent announcements</h2>
@@ -165,44 +181,50 @@ export default async function PrincipalOverviewPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </ViewSection>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-dashed border-sky-200 bg-sky-50/40 dark:bg-sky-950/20">
-          <CardContent className="pt-5 text-sm text-muted-foreground leading-relaxed">
-            <p>
-              <strong className="text-foreground">Principal layer</strong> is exclusive to{' '}
-              {profile.full_name || 'you'}. Beacon is the full school suite: teachers run classes,
-              families get clarity, and you run the office — including QuickBooks-linked tuition.
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-violet-200 bg-violet-50/50 dark:bg-violet-950/20 dark:border-violet-800">
-          <CardContent className="pt-5 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="font-semibold text-navy dark:text-sky-50">Leadership tools</p>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Videos, whole-child Pulse board, and a private coffee-break game.
+      <ViewSection id="shortcuts" title="Office shortcuts">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="border-dashed border-sky-200 bg-sky-50/40 dark:bg-sky-950/20">
+            <CardContent className="pt-5 text-sm text-muted-foreground leading-relaxed">
+              <p>
+                <strong className="text-foreground">Principal layer</strong> is exclusive to{' '}
+                {profile.full_name || 'you'}. Beacon is the full school suite: teachers run classes,
+                families get clarity, and you run the office — including QuickBooks-linked tuition.
               </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/principal/videos">
-                <Button size="md">Video module</Button>
-              </Link>
-              <Link href="/principal/pulse">
-                <Button size="md" variant="outline">
-                  Pulse board
-                </Button>
-              </Link>
-              <Link href="/principal/break">
-                <Button size="md" variant="ghost">
-                  Tetris
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+              <p className="mt-2 text-xs">
+                Prefer a leaner office? Use <strong>Edit view</strong> to hide cards you do not use
+                daily.
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-violet-200 bg-violet-50/50 dark:bg-violet-950/20 dark:border-violet-800">
+            <CardContent className="pt-5 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold text-navy dark:text-sky-50">Leadership tools</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Videos, whole-child Pulse board, and a private coffee-break game.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/principal/videos">
+                  <Button size="md">Video module</Button>
+                </Link>
+                <Link href="/principal/pulse">
+                  <Button size="md" variant="outline">
+                    Pulse board
+                  </Button>
+                </Link>
+                <Link href="/principal/break">
+                  <Button size="md" variant="ghost">
+                    Tetris
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </ViewSection>
+    </ConfigurableView>
   )
 }

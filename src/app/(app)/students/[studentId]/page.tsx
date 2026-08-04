@@ -5,6 +5,8 @@ import { StudentPulseTimeline } from '@/components/pulse/StudentPulseTimeline'
 import { DinnerTableCard } from '@/components/insights/DinnerTableCard'
 import { EmailDigestButton } from '@/components/insights/EmailDigestButton'
 import { MissingWorkRadar } from '@/components/insights/MissingWorkRadar'
+import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
+import { ViewSection } from '@/components/view-prefs/ViewSection'
 import { loadMissingWorkForStudent } from '@/lib/insights/load-missing-work'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -12,6 +14,7 @@ import { calculateTransparentGrade } from '@/lib/grades'
 import { parentCanViewStudent } from '@/lib/gradebook-data'
 import { listPulsesForStudent } from '@/lib/school-modules/store'
 import { buildStudentDinnerAndConference } from '@/lib/insights/load-student-insights'
+import { loadScreenLayout } from '@/lib/view-prefs/store'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
 export default async function StudentOverviewPage({
@@ -88,75 +91,102 @@ export default async function StudentOverviewPage({
     loadMissingWorkForStudent(studentId, name),
   ])
 
+  const viewLayout = await loadScreenLayout(user.id, 'student_overview', [
+    'header',
+    'dinner_table',
+    'missing_work',
+    'pulse',
+    'grades',
+  ])
+
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-          <Link href="/dashboard" className="hover:underline">
-            Dashboard
-          </Link>
-          {' / '}
-          Student
-        </p>
-        <h1 className="text-2xl font-bold tracking-tight mt-1">{name}</h1>
-        <p className="text-sm text-muted-foreground">
-          {student.grade_level ? `Grade ${student.grade_level}` : 'Student'} · Academics + Beacon
-          Pulse
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Link
-            href={`/students/${studentId}/report-card`}
-            className="inline-flex rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            Report card →
-          </Link>
-          <Link
-            href={`/students/${studentId}/conference`}
-            className="inline-flex rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-900 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
-          >
-            Conference brief →
-          </Link>
-          {profile &&
-            ['admin', 'staff', 'teacher', 'principal'].includes(profile.role) && (
-              <EmailDigestButton studentId={studentId} />
-            )}
+    <ConfigurableView screenId="student_overview" initialLayout={viewLayout}>
+      <ViewSection id="header" title="Student header" locked>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+            <Link href="/dashboard" className="hover:underline">
+              Dashboard
+            </Link>
+            {' / '}
+            Student
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight mt-1">{name}</h1>
+          <p className="text-sm text-muted-foreground">
+            {student.grade_level ? `Grade ${student.grade_level}` : 'Student'} · Academics + Beacon
+            Pulse
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Link
+              href={`/students/${studentId}/report-card`}
+              className="inline-flex rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              Report card →
+            </Link>
+            <Link
+              href={`/students/${studentId}/conference`}
+              className="inline-flex rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-900 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
+            >
+              Conference brief →
+            </Link>
+            {profile &&
+              ['admin', 'staff', 'teacher', 'principal'].includes(profile.role) && (
+                <EmailDigestButton studentId={studentId} />
+              )}
+          </div>
         </div>
-      </div>
+      </ViewSection>
 
-      <DinnerTableCard digest={dinner} />
-      <MissingWorkRadar summaries={[missingWork]} title={`${name.split(' ')[0]}'s missing work`} />
+      <ViewSection id="dinner_table" title="Dinner Table Digest">
+        <DinnerTableCard digest={dinner} />
+      </ViewSection>
 
-      <StudentPulseTimeline pulses={pulses} studentName={name} />
+      <ViewSection id="missing_work" title="Missing work">
+        <MissingWorkRadar
+          summaries={[missingWork]}
+          title={`${name.split(' ')[0]}'s missing work`}
+        />
+      </ViewSection>
 
-      {sections.length === 0 ? (
-        <p className="rounded-xl border p-4 text-sm text-muted-foreground">No class enrollments.</p>
-      ) : (
-        <div className="space-y-8">
-          {sections.map(({ classRow, result }) => (
-            <section key={classRow.id} className="rounded-2xl border bg-background p-6 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold">{classRow.name}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {[classRow.subject, classRow.term].filter(Boolean).join(' · ')}
-                  </p>
+      <ViewSection id="pulse" title="Pulse timeline">
+        <StudentPulseTimeline pulses={pulses} studentName={name} />
+      </ViewSection>
+
+      <ViewSection id="grades" title="Class grades">
+        {sections.length === 0 ? (
+          <p className="rounded-xl border p-4 text-sm text-muted-foreground">
+            No class enrollments.
+          </p>
+        ) : (
+          <div className="space-y-8">
+            {sections.map(({ classRow, result }) => (
+              <section
+                key={classRow.id}
+                className="rounded-2xl border bg-background p-6 shadow-sm"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                  <div>
+                    <h2 className="text-lg font-semibold">{classRow.name}</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {[classRow.subject, classRow.term].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/classes/${classRow.id}/students/${studentId}`}
+                    className="text-sm font-medium text-sky-700 hover:underline"
+                  >
+                    Class detail →
+                  </Link>
                 </div>
-                <Link
-                  href={`/classes/${classRow.id}/students/${studentId}`}
-                  className="text-sm font-medium text-sky-700 hover:underline"
-                >
-                  Class detail →
-                </Link>
-              </div>
-              <TransparentGradeView
-                result={result}
-                studentName={name}
-                photoUrl={student.photo_url}
-              />
-            </section>
-          ))}
-        </div>
-      )}
-    </div>
+                <TransparentGradeView
+                  result={result}
+                  studentName={name}
+                  photoUrl={student.photo_url}
+                />
+              </section>
+            ))}
+          </div>
+        )}
+      </ViewSection>
+    </ConfigurableView>
   )
 }
