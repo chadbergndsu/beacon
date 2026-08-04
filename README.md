@@ -16,7 +16,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 | Auth | Supabase Auth | App code uses `getUser()` before service-role; edge refreshes cookies via `getClaims()` |
 | Host | Vercel + HTTPS | Default per Solid Systems |
 | Email | Resend and/or SMTP (cascade) | Log-only outbox without live transport; never use `onboarding@resend.dev` in prod |
-| Billing | QuickBooks OAuth (optional) | Tokens on `quickbooks_connections`; invoices/payments **local** until live Intuit posting |
+| Billing | QuickBooks OAuth (optional) | Tokens on `quickbooks_connections`; **Push to QuickBooks** posts customers/invoices/payments via Accounting API when connected |
 | Cameras | hls.js + go2rtc/MediaMTX URLs | Stored in `schools.settings` modules JSON (no dedicated camera table) |
 | SMS | Twilio (optional) | Aftercare parent notify |
 | Rate limits | In-memory; Upstash optional | Kiosk / device / login |
@@ -190,7 +190,7 @@ Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user when th
 | Resend and/or SMTP | Cascade: Resend → SMTP → log; `EMAIL_FROM` must be a **verified domain** (not `onboarding@resend.dev` in production) |
 | School brand email | Used as **Reply-To** so parents can answer the office |
 | No Intuit keys | QuickBooks **demo** status only (not “connected”) |
-| Intuit OAuth set | Tokens vaulted on `quickbooks_connections` (not returned to clients); Beacon invoices/payments still **local** until QBO write API is built |
+| Intuit OAuth set | Tokens vaulted on `quickbooks_connections`; **Push to QuickBooks** (and auto-push on create when sync prefs on) writes customers/invoices/payments via QBO API. Local rows stay canonical if push fails. |
 
 **Production email checklist**
 

@@ -482,3 +482,72 @@ export function formatMoney(cents: number, currency = 'USD') {
 export function aftercareInvoiceSourceKey(sessionId: string): string {
   return `aftercare_session:${sessionId}`
 }
+
+/** Server-only OAuth vault (never returned via loadBillingState / client actions). */
+export async function loadQbVault(schoolId: string): Promise<{
+  status: string
+  environment: 'sandbox' | 'production'
+  realmId: string | null
+  accessToken: string | null
+  refreshToken: string | null
+  tokenExpiresAt: string | null
+  syncCustomers: boolean
+  syncInvoices: boolean
+  syncPayments: boolean
+} | null> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('quickbooks_connections')
+    .select(
+      'status, environment, realm_id, access_token_encrypted, refresh_token_encrypted, token_expires_at, sync_customers, sync_invoices, sync_payments'
+    )
+    .eq('school_id', schoolId)
+    .maybeSingle()
+  if (error || !data) return null
+  return {
+    status: String(data.status || 'disconnected'),
+    environment: data.environment === 'production' ? 'production' : 'sandbox',
+    realmId: data.realm_id != null ? String(data.realm_id) : null,
+    accessToken: data.access_token_encrypted != null ? String(data.access_token_encrypted) : null,
+    refreshToken:
+      data.refresh_token_encrypted != null ? String(data.refresh_token_encrypted) : null,
+    tokenExpiresAt: data.token_expires_at != null ? String(data.token_expires_at) : null,
+    syncCustomers: data.sync_customers !== false,
+    syncInvoices: data.sync_invoices !== false,
+    syncPayments: data.sync_payments !== false,
+  }
+}
+
+export async function markInvoiceQbSynced(
+  schoolId: string,
+  invoiceId: string,
+  qbInvoiceId: string
+): Promise<void> {
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('billing_invoices')
+    .update({
+      qb_invoice_id: qbInvoiceId,
+      qb_synced_at: new Date().toISOString(),
+    })
+    .eq('id', invoiceId)
+    .eq('school_id', schoolId)
+  if (error) throw new Error(error.message)
+}
+
+export async function markPaymentQbSynced(
+  schoolId: string,
+  paymentId: string,
+  qbPaymentId: string
+): Promise<void> {
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('billing_payments')
+    .update({
+      qb_payment_id: qbPaymentId,
+      qb_synced_at: new Date().toISOString(),
+    })
+    .eq('id', paymentId)
+    .eq('school_id', schoolId)
+  if (error) throw new Error(error.message)
+}

@@ -87,6 +87,12 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
     group: 'trust',
   },
   {
+    id: 'qb_push',
+    label: 'QuickBooks push verified (or N/A)',
+    help: 'If using live QBO: Connect → create a test invoice → Push to QuickBooks → confirm in sandbox company. Demo mode is labeled and does not call Intuit.',
+    group: 'trust',
+  },
+  {
     id: 'qb_mode',
     label: 'QuickBooks mode labeled',
     help: 'Sandbox demo vs live OAuth is clear to the office — no surprise invoices.',

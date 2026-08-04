@@ -6,8 +6,8 @@ import { Building2, CheckCircle2, Link2, RefreshCw, Unplug } from 'lucide-react'
 import {
   disconnectQuickBooks,
   saveSyncPreferences,
-  simulateQuickBooksSync,
   startQuickBooksConnect,
+  syncQuickBooksNow,
 } from '@/app/actions/billing'
 import type { QuickBooksConnection } from '@/lib/billing/types'
 import { Badge } from '@/components/ui/badge'
@@ -211,7 +211,9 @@ export function QuickBooksConnect({
                   disabled={pending}
                   onClick={() =>
                     start(async () => {
-                      const res = await simulateQuickBooksSync()
+                      setError(null)
+                      setMessage(null)
+                      const res = await syncQuickBooksNow()
                       if (!res.ok) setError(res.error)
                       else setMessage(res.message)
                       router.refresh()
@@ -219,7 +221,7 @@ export function QuickBooksConnect({
                   }
                 >
                   <RefreshCw className="h-4 w-4" />
-                  Sync now
+                  {pending ? 'Pushing…' : 'Push to QuickBooks'}
                 </Button>
                 <Button
                   variant="outline"
@@ -244,10 +246,23 @@ export function QuickBooksConnect({
             <div className="flex items-start gap-2 text-sm text-emerald-800 dark:text-emerald-200">
               <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
               <p>
-                OAuth tokens are stored server-side. Beacon does not yet post
-                invoices/payments to the Intuit accounting API — billing stays local.
+                OAuth tokens are vaulted server-side. <strong>Push to QuickBooks</strong> creates
+                customers, invoices, and payments in QBO for items that are not yet synced (respects
+                the checkboxes above). Local Beacon billing remains the system of record if a push
+                fails.
               </p>
             </div>
+          )}
+          {connection.lastError && connection.status === 'connected' && (
+            <p className="text-sm text-amber-900 dark:text-amber-100">
+              Last sync issue: {connection.lastError}
+            </p>
+          )}
+          {connection.status === 'error' && (
+            <p className="text-sm text-red-800 dark:text-red-200">
+              Connection error{connection.lastError ? `: ${connection.lastError}` : ''}. Reconnect
+              QuickBooks.
+            </p>
           )}
         </CardContent>
       </Card>

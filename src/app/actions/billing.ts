@@ -134,44 +134,40 @@ export async function saveSyncPreferences(input: {
   return { ok: true }
 }
 
+/** @deprecated use syncQuickBooksNow — kept as alias for older UI bundles */
 export async function simulateQuickBooksSync(): Promise<
   { ok: true; message: string } | { ok: false; error: string }
 > {
-  const { schoolId, user } = await requirePrincipal()
-  const state = await loadBillingState(schoolId)
-  if (state.quickbooks.status === 'demo') {
-    return {
-      ok: false,
-      error: 'Demo QuickBooks cannot sync. Configure INTUIT credentials for live OAuth.',
-    }
-  }
-  if (state.quickbooks.status !== 'connected') {
-    return { ok: false, error: 'Connect QuickBooks before syncing.' }
-  }
+  return syncQuickBooksNow()
+}
 
-  await updateQuickBooks(schoolId, {
-    lastSyncAt: new Date().toISOString(),
-    lastError: null,
-  })
+/** Push local invoices/payments to QuickBooks Online (live API when connected). */
+export async function syncQuickBooksNow(): Promise<
+  { ok: true; message: string } | { ok: false; error: string }
+> {
+  const { schoolId, user } = await requirePrincipal()
+  const { syncSchoolToQuickBooks } = await import('@/lib/billing/qbo-sync')
+  const result = await syncSchoolToQuickBooks(schoolId)
 
   const admin = createAdminClient()
   await admin.from('audit_logs').insert({
     school_id: schoolId,
     user_id: user.id,
-    action: 'quickbooks.sync',
+    action: result.ok ? 'quickbooks.sync' : 'quickbooks.sync_partial',
     table_name: 'quickbooks_connections',
     details: {
-      products: state.products.length,
-      invoices: state.invoices.length,
-      payments: state.payments.length,
+      invoicesPushed: result.invoicesPushed,
+      paymentsPushed: result.paymentsPushed,
+      skipped: result.skipped,
+      errors: result.errors.slice(0, 10),
     },
   })
 
   revalidatePrincipal()
-  return {
-    ok: true,
-    message: `Marked local Beacon billing as synced (${state.products.length} products, ${state.invoices.length} invoices, ${state.payments.length} payments). Live QuickBooks API posting is not enabled yet — this is metadata only${state.quickbooks.companyName ? ` · ${state.quickbooks.companyName}` : ''}.`,
+  if (!result.ok && result.invoicesPushed === 0 && result.paymentsPushed === 0) {
+    return { ok: false, error: result.message }
   }
+  return { ok: true, message: result.message }
 }
 
 export async function createBillingProduct(input: {
@@ -228,6 +224,14 @@ export async function createTuitionInvoice(input: {
   }
   await addInvoice(schoolId, invoice)
 
+  let qbNote: string | undefined
+  if (state.quickbooks.status === 'connected' && state.quickbooks.syncInvoices) {
+    const { pushInvoiceToQbo } = await import('@/lib/billing/qbo-sync')
+    const push = await pushInvoiceToQbo(schoolId, invoice)
+    if (!push.ok) qbNote = `Local invoice saved; QuickBooks push failed: ${push.error}`
+    else qbNote = `QuickBooks invoice #${push.qbInvoiceId}`
+  }
+
   const admin = createAdminClient()
   await admin.from('audit_logs').insert({
     school_id: schoolId,
@@ -235,10 +239,11 @@ export async function createTuitionInvoice(input: {
     action: 'billing.invoice_created',
     table_name: 'billing_invoices',
     record_id: null,
-    details: invoice,
+    details: { ...invoice, qbNote },
   })
 
   revalidatePrincipal()
+  void qbNote
   return { ok: true }
 }
 
@@ -262,10 +267,12 @@ export async function recordPayment(input: {
     method: input.method,
     status: 'succeeded',
     paidAt: new Date().toISOString(),
-    notes: state.quickbooks.status === 'connected' ? 'Queued for QuickBooks payment sync' : null,
+    notes:
+      state.quickbooks.status === 'connected' && state.quickbooks.syncPayments
+        ? 'Pending QuickBooks payment sync'
+        : null,
     createdAt: new Date().toISOString(),
-    qbPaymentId:
-      state.quickbooks.status === 'connected' ? `qb-demo-${Date.now().toString(36)}` : null,
+    qbPaymentId: null,
   }
   // addPayment CAS-marks invoice paid; concurrent double-pay is dropped
   const after = await addPayment(schoolId, payment)
@@ -276,6 +283,12 @@ export async function recordPayment(input: {
   }
   if (!paymentLanded && !stillOpen) {
     return { ok: false, error: 'Invoice is already paid.' }
+  }
+
+  if (state.quickbooks.status === 'connected' && state.quickbooks.syncPayments) {
+    const { pushPaymentToQbo } = await import('@/lib/billing/qbo-sync')
+    const inv = after.invoices.find((i) => i.id === invoice.id) || invoice
+    await pushPaymentToQbo(schoolId, payment, inv)
   }
 
   const admin = createAdminClient()
