@@ -24,7 +24,10 @@ export function createMockAdmin(handlers: Record<string, MockTableHandler>) {
     const chain = () => api
 
     api.select = () => {
-      state.op = 'select'
+      // Supabase pattern: .update().eq().select() — select after write is "returning", not a new select
+      if (state.op === 'select') {
+        state.op = 'select'
+      }
       return chain()
     }
     api.insert = (payload: unknown) => {

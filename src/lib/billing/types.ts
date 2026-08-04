@@ -33,6 +33,8 @@ export type BillingProduct = {
   currency: string
   frequency: BillingFrequency
   active: boolean
+  /** Stable per-school key (e.g. aftercare, tuition_k5). Not always set. */
+  code?: string | null
   qbItemId?: string | null
 }
 
@@ -48,6 +50,8 @@ export type BillingInvoice = {
   status: InvoiceStatus
   dueDate: string | null
   qbInvoiceId?: string | null
+  /** Idempotency key, e.g. aftercare_session:<uuid> */
+  sourceKey?: string | null
   createdAt: string
 }
 

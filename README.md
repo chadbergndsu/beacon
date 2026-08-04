@@ -99,17 +99,19 @@ DATABASE_URL='postgresql://…' node scripts/apply-migrations.mjs
 POSTGRES_PASSWORD='…' node scripts/apply-migrations.mjs
 ```
 
-**Pilot requirement:** apply **`001`–`016`** in order (or `scripts/pending-011-to-015-all.sql` then `pending-016-security-rls-lockdown.sql` for late badge/security pieces).
+**Pilot requirement:** apply **`001`–`017`** in order (or late pieces: `pending-011-to-015-all.sql`, `pending-016-security-rls-lockdown.sql`, then **`pending-017-billing-first-class.sql`**).
 
 | Range | Why |
 |-------|-----|
+| **006** | `billing_*` + `quickbooks_connections` tables |
 | **007** | attendance, lessons, pulse, videos tables |
 | **011–012** | badge/kiosk rooms, scans, aftercare, RFID |
 | **013** | roster revisions + delete approvals |
 | **015** | kiosk token vault (`school_access_tokens`) |
 | **016** | RLS lockdown (profile role/school_id, staff write scopes) |
+| **017** | billing first-class: product `code`, invoice `source_key`, demo QB status, parent read RLS, migrate JSON → tables |
 
-The app **prefers first-class tables**. JSON in `schools.settings` is only a fallback if a table is missing.
+**Billing money path** uses `billing_products` / `billing_invoices` / `billing_payments` / `quickbooks_connections` only (no `schools.settings.billing` RMW). Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`.
 
 ### Branding any school
 
@@ -128,7 +130,7 @@ Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user to prin
 | Resend and/or SMTP | Cascade: Resend → SMTP → log; `EMAIL_FROM` must be a **verified domain** (not `onboarding@resend.dev` in production) |
 | School brand email | Used as **Reply-To** so parents can answer the office |
 | No Intuit keys | QuickBooks **demo** status only (not “connected”) |
-| Intuit OAuth set | Tokens vaulted server-side; Beacon billing still **local** until QBO write API is built |
+| Intuit OAuth set | Tokens vaulted on `quickbooks_connections` (not returned to clients); Beacon invoices/payments still **local** until QBO write API is built |
 
 **Production email checklist**
 

@@ -56,31 +56,24 @@ export async function GET(request: Request) {
     }
 
     const tokens = await exchangeQuickBooksCode(code, realmId)
+    const expiresAt = new Date(
+      Date.now() + (tokens.expiresIn || 3600) * 1000
+    ).toISOString()
 
-    // Server-only token vault under schools.settings.qbTokens (never returned to client)
-    const { data: schoolRow } = await admin
-      .from('schools')
-      .select('settings')
-      .eq('id', profile.school_id)
-      .maybeSingle()
-    const settings = { ...((schoolRow?.settings || {}) as Record<string, unknown>) }
-    settings.qbTokens = {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt: Date.now() + (tokens.expiresIn || 3600) * 1000,
-      realmId,
-      updatedAt: new Date().toISOString(),
-    }
-    await admin.from('schools').update({ settings }).eq('id', profile.school_id)
-
+    // Vault tokens on quickbooks_connections (never returned to client via loadBillingState)
     await updateQuickBooks(profile.school_id, {
       status: 'connected',
+      environment: (process.env.INTUIT_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox',
       realmId,
       companyName: `QuickBooks Company ${realmId.slice(0, 6)}…`,
       connectedAt: new Date().toISOString(),
       lastSyncAt: new Date().toISOString(),
       lastError: null,
       connectedByName: profile.full_name,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      tokenExpiresAt: expiresAt,
+      connectedBy: user.id,
     })
 
     await admin.from('audit_logs').insert({

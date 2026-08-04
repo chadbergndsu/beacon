@@ -189,7 +189,7 @@ export async function createBillingProduct(input: {
   }
 
   const product: BillingProduct = {
-    id: `prod_${crypto.randomUUID()}`,
+    id: crypto.randomUUID(),
     name,
     description: input.description.trim(),
     amountCents,
@@ -215,7 +215,7 @@ export async function createTuitionInvoice(input: {
   if (!input.familyName.trim()) return { ok: false, error: 'Family name required.' }
 
   const invoice: BillingInvoice = {
-    id: `inv_${crypto.randomUUID()}`,
+    id: crypto.randomUUID(),
     familyName: input.familyName.trim(),
     parentEmail: input.parentEmail.trim(),
     productId: product.id,
@@ -255,7 +255,7 @@ export async function recordPayment(input: {
   }
 
   const payment: BillingPayment = {
-    id: `pay_${crypto.randomUUID()}`,
+    id: crypto.randomUUID(),
     invoiceId: invoice.id,
     amountCents: invoice.amountCents,
     currency: invoice.currency,
@@ -267,7 +267,16 @@ export async function recordPayment(input: {
     qbPaymentId:
       state.quickbooks.status === 'connected' ? `qb-demo-${Date.now().toString(36)}` : null,
   }
-  await addPayment(schoolId, payment)
+  // addPayment CAS-marks invoice paid; concurrent double-pay is dropped
+  const after = await addPayment(schoolId, payment)
+  const stillOpen = after.invoices.find((i) => i.id === invoice.id && i.status !== 'paid')
+  const paymentLanded = after.payments.some((p) => p.id === payment.id)
+  if (!paymentLanded && stillOpen) {
+    return { ok: false, error: 'Could not record payment — try again.' }
+  }
+  if (!paymentLanded && !stillOpen) {
+    return { ok: false, error: 'Invoice is already paid.' }
+  }
 
   const admin = createAdminClient()
   await admin.from('audit_logs').insert({

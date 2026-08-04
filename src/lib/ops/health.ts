@@ -100,6 +100,10 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     ['school_access_tokens', 'Kiosk token vault (015)'],
     ['roster_revisions', 'Roster versions (013)'],
     ['approval_requests', 'Delete approvals (013)'],
+    ['billing_products', 'Billing products (006/017)'],
+    ['billing_invoices', 'Billing invoices (006/017)'],
+    ['billing_payments', 'Billing payments (006/017)'],
+    ['quickbooks_connections', 'QuickBooks connections (006/017)'],
   ] as const
 
   for (const [table, label] of tables) {

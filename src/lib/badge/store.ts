@@ -1,7 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { upsertAttendanceBatch } from '@/lib/attendance/store'
-import { addInvoice, loadBillingState, upsertProduct } from '@/lib/billing/store'
-import type { BillingInvoice, BillingProduct } from '@/lib/billing/types'
+import {
+  addInvoice,
+  aftercareInvoiceSourceKey,
+  ensureProductByCode,
+} from '@/lib/billing/store'
+import type { BillingInvoice } from '@/lib/billing/types'
 import {
   computeAftercareAmountCents,
   generateBadgeCode,
@@ -1118,19 +1122,22 @@ export async function billClosedAftercareSessions(
     }
   }
 
-  const billing = await loadBillingState(schoolId)
-  let product = billing.products.find((p) => p.id === 'prod_aftercare')
-  if (!product) {
-    product = {
-      id: 'prod_aftercare',
+  let product
+  try {
+    product = await ensureProductByCode(schoolId, 'aftercare', {
       name: 'After school care',
       description: 'Hourly aftercare from badge check-in/out',
       amountCents: 800,
       currency: 'USD',
       frequency: 'one_time',
       active: true,
-    } satisfies BillingProduct
-    await upsertProduct(schoolId, product)
+    })
+  } catch (e) {
+    return {
+      billed: 0,
+      totalCents: 0,
+      errors: [e instanceof Error ? e.message : 'Could not ensure aftercare product'],
+    }
   }
 
   let billed = 0
@@ -1139,7 +1146,8 @@ export async function billClosedAftercareSessions(
 
   for (const raw of sessions ?? []) {
     const sess = mapSession(raw as Record<string, unknown>)
-    const invoiceId = `inv_ac_${sess.id}`
+    const sourceKey = aftercareInvoiceSourceKey(sess.id)
+    const invoiceId = crypto.randomUUID()
 
     const { data: student } = await admin
       .from('students')
@@ -1190,7 +1198,8 @@ export async function billClosedAftercareSessions(
       studentId: sess.studentId,
       familyName,
       parentEmail,
-      productId: 'prod_aftercare',
+      productId: product.id,
+      sourceKey,
       description: `Aftercare ${student.first_name} ${student.last_name} · ${sess.minutes ?? 0} min`,
       amountCents: amount,
       currency: 'USD',
@@ -1199,7 +1208,7 @@ export async function billClosedAftercareSessions(
       createdAt: new Date().toISOString(),
     }
 
-    // Durable invoice first — only then CAS claim closed → billed (rebillable if claim fails)
+    // Durable invoice first (idempotent via source_key) — then CAS claim closed → billed
     try {
       await addInvoice(schoolId, invoice)
     } catch (e) {
@@ -1207,9 +1216,19 @@ export async function billClosedAftercareSessions(
       continue
     }
 
+    // Resolve invoice id if a concurrent insert won the source_key race
+    let claimInvoiceId = invoiceId
+    const { data: invRow } = await admin
+      .from('billing_invoices')
+      .select('id')
+      .eq('school_id', schoolId)
+      .eq('source_key', sourceKey)
+      .maybeSingle()
+    if (invRow?.id) claimInvoiceId = String(invRow.id)
+
     const { data: claimed, error: claimErr } = await admin
       .from('aftercare_sessions')
-      .update({ status: 'billed', invoice_id: invoiceId })
+      .update({ status: 'billed', invoice_id: claimInvoiceId })
       .eq('id', sess.id)
       .eq('status', 'closed')
       .is('invoice_id', null)
@@ -1217,7 +1236,7 @@ export async function billClosedAftercareSessions(
       .maybeSingle()
 
     if (claimErr || !claimed) {
-      // Concurrent worker or already claimed; invoice is idempotent by id
+      // Concurrent worker or already claimed; invoice is idempotent by source_key
       continue
     }
 
