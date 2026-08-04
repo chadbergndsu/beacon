@@ -1,7 +1,10 @@
 /**
  * Safer schools.settings updates: merge keys into a fresh read of the blob.
- * Reduces cross-feature stomps vs blind full rewrites. Not a full multi-instance
- * lock — money data still better as first-class tables long-term.
+ * Reduces cross-feature stomps vs blind full rewrites. Not a full multi-instance lock.
+ *
+ * Money path is table-backed (`billing_*` / `quickbooks_connections`) — do not store
+ * invoices/payments/products in settings. Use this for brand, release checklist,
+ * badge prefs, suite-module JSON fallback, cameras, etc.
  */
 import { createAdminClient } from '@/lib/supabase/admin'
 

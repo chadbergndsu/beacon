@@ -66,7 +66,8 @@ export default async function PrincipalApprovalsPage() {
 
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-950">
         First time: run{' '}
-        <code className="rounded bg-white px-1">scripts/pending-013-roster-versions.sql</code> in
+        <code className="rounded bg-white px-1">migration 013</code> (
+        <code className="rounded bg-white px-1">npm run db:migrate</code>) in
         Supabase SQL Editor so approvals and history tables exist.
       </div>
 

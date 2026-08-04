@@ -121,9 +121,10 @@ export default async function PrincipalReleasePage() {
         <p className="font-semibold text-sky-950 dark:text-sky-100">Next env steps (server)</p>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sky-900/90 dark:text-sky-200/90">
           <li>
-            Apply migrations: <code className="text-xs">node scripts/apply-migrations.mjs</code>{' '}
-            with <code className="text-xs">DATABASE_URL</code> or{' '}
-            <code className="text-xs">POSTGRES_PASSWORD</code>
+            Apply migrations: <code className="text-xs">npm run db:migrate</code> with{' '}
+            <code className="text-xs">DATABASE_URL</code>, or{' '}
+            <code className="text-xs">POSTGRES_PASSWORD</code> +{' '}
+            <code className="text-xs">SUPABASE_PROJECT_REF</code>
           </li>
           <li>
             Live email: verify domain at resend.com → set{' '}

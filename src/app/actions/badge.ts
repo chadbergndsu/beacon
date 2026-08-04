@@ -87,7 +87,7 @@ export async function ensureBadgesAction(): Promise<
       error:
         e instanceof Error
           ? e.message
-          : 'Could not assign badges. Run pending-011-badge-kiosk.sql?',
+          : 'Could not assign badges. Apply migration 011?',
     }
   }
 }

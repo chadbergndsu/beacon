@@ -740,7 +740,7 @@ export function TeacherClassroomHub({
         {revisions.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No history yet — or run{' '}
-            <code className="rounded bg-muted px-1">pending-013-roster-versions.sql</code>.
+            <code className="rounded bg-muted px-1">migration 013 (roster versions)</code>.
           </p>
         ) : (
           <ul className="max-h-72 space-y-2 overflow-y-auto text-sm">

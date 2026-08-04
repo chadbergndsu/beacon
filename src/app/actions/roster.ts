@@ -300,7 +300,7 @@ export async function createClassAction(input: {
     .select('*')
     .single()
 
-  // Column may not exist until pending-014 — retry without call_number
+  // Column may not exist until migration 014 — retry without call_number
   if (error && call_number && /call_number|column/i.test(error.message)) {
     delete row.call_number
     const retry = await access.admin.from('classes').insert(row).select('*').single()
@@ -364,7 +364,7 @@ export async function updateClassCallNumberAction(
     if (/call_number|column/i.test(error.message)) {
       return {
         ok: false,
-        error: 'Run scripts/pending-014-class-call-number.sql in Supabase first.',
+        error: 'Apply migration 014 (class call number) first — npm run db:migrate.',
       }
     }
     return { ok: false, error: error.message }
@@ -984,7 +984,7 @@ export async function requestDeletionAction(input: {
       return {
         ok: false,
         error:
-          'Approval tables missing. Run scripts/pending-013-roster-versions.sql in Supabase.',
+          'Approval tables missing — apply migration 013 (npm run db:migrate).',
       }
     }
     return { ok: false, error: error?.message || 'Could not create approval request.' }
@@ -1119,7 +1119,7 @@ export async function reviewApprovalAction(input: {
   if (error || !req) {
     return {
       ok: false,
-      error: error?.message || 'Request not found. Run pending-013-roster-versions.sql?',
+      error: error?.message || 'Request not found. Apply migration 013?',
     }
   }
   if (req.status !== 'pending') {
@@ -1206,7 +1206,7 @@ export async function restoreRevisionAction(
   if (!rev) {
     return {
       ok: false,
-      error: 'Revision not found. Run pending-013-roster-versions.sql if tables are missing.',
+      error: 'Revision not found. Apply migration 013 if tables are missing.',
     }
   }
 

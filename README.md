@@ -4,26 +4,35 @@
 
 Multi-tenant by design: each `schools` row carries its own name, branding, roster, and settings. JupiterEd familiarity where it helps teachers, cleaner than Blackbaud where families need clarity.
 
-This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/solid-systems-standards)** — see `AGENTS.md`.
+This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/solid-systems-standards)** — see `AGENTS.md` (global standards template). **Beacon-specific setup and truth live in this README** and `.env.example`.
 
 ## Stack
 
 | Layer | Choice | Notes |
 |-------|--------|--------|
-| App | Next.js App Router + TypeScript + Tailwind | Portable web frontend |
-| DB | Supabase Postgres | Schema owned in `supabase/migrations/` |
-| Auth | Supabase Auth | Session checked before service-role use |
+| App | Next.js 16 App Router + React 19 + TypeScript + Tailwind 4 | Portable web frontend |
+| Auth edge | `src/proxy.ts` → Supabase SSR session | Public routes listed below; fail-closed without Supabase env on prod/preview |
+| DB | Supabase Postgres | Schema owned in `supabase/migrations/` (**001–017**) |
+| Auth | Supabase Auth | App code uses `getUser()` before service-role; edge refreshes cookies via `getClaims()` |
 | Host | Vercel + HTTPS | Default per Solid Systems |
 | Email | Resend and/or SMTP (cascade) | Log-only outbox without live transport; never use `onboarding@resend.dev` in prod |
-| Billing | QuickBooks OAuth (optional) | Demo/metadata only until live Intuit posting is built |
+| Billing | QuickBooks OAuth (optional) | Tokens on `quickbooks_connections`; invoices/payments **local** until live Intuit posting |
+| Cameras | hls.js + go2rtc/MediaMTX URLs | Stored in `schools.settings` modules JSON (no dedicated camera table) |
+| SMS | Twilio (optional) | Aftercare parent notify |
+| Rate limits | In-memory; Upstash optional | Kiosk / device / login |
 
 ## Architecture (short)
 
 - **Multi-tenant:** `schools` + `school_id` on roster/grades; brand in `schools.settings.brand`
 - **Academics:** core tables (`classes`, `assignments`, `grades`, …)
-- **Suite modules:** prefer tables from migration `007`; JSON fallback only if tables missing
+- **Suite modules (007):** prefer tables for attendance, lessons, pulse, videos; **JSON fallback** only if those tables are missing. **Cameras always stay in settings JSON.**
+- **Billing (006 + 017):** `billing_products` / `billing_invoices` / `billing_payments` / `quickbooks_connections` only — **no** `schools.settings.billing` money path
 - **Communications:** `email_outbox` + Resend→SMTP→log cascade; every attempt recorded
-- **Ops:** principal Go-live UI + `GET /api/health` (liveness) / secret header for readiness
+- **Ops:** Principal Go-live UI (`probeOpsHealth`) + public `GET /api/health` (see Health below)
+
+### Public (unauthenticated) routes
+
+`/`, `/login`, `/about`, `/school`, `/privacy`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/api/health`, `/api/quickbooks/callback` (OAuth redirect; completes only with signed-in principal).
 
 ## Modules
 
@@ -63,55 +72,101 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 **Production:** https://beacon.commoncentsip.com  
 **School site:** https://beacon.commoncentsip.com/school  
 **Go-live (principal):** https://beacon.commoncentsip.com/principal/release  
-**Health:** https://beacon.commoncentsip.com/api/health  
+**Health (liveness):** https://beacon.commoncentsip.com/api/health  
 
 Pilot accounts are issued privately. Set school branding in **Principal → Go-live**.
 
 ## Local setup
 
+**Node 22** (matches CI) and **npm** via Corepack (`packageManager`: `npm@10.9.2` in `package.json`).
+
 ```bash
+# Optional: nvm use / fnm use if you keep a .nvmrc
+corepack enable
 npm install
 cp .env.example .env.local
-# Fill Supabase URL + keys (never commit real secrets)
+```
+
+**Required in `.env.local` for a real app session:**
+
+| Variable | Why |
+|----------|-----|
+| `NEXT_PUBLIC_SUPABASE_URL` | Auth + client |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth + client |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server actions / admin client (never expose to browser) |
+
+Then apply **migrations 001–017** (see below) and:
+
+```bash
 npm run dev
 ```
+
+Without migrations, core tables may exist from 001 only; billing, kiosk vault, roster approvals, and RLS lockdown will be missing or degraded.
 
 ### Quality automation
 
 ```bash
 npm run lint
-npm run lint:fix   # ESLint auto-fix (formatter gate)
+npm run lint:fix      # ESLint --fix only (no separate Prettier/Biome)
 npm run typecheck
-npm test
+npm test                 # vitest unit tests
+npm run test:coverage    # vitest + coverage thresholds (gated files in vitest.config.ts)
 npm run build
-npm run ci          # lint + typecheck + test + build
+npm run ci               # lint + typecheck + test:coverage + build  (no e2e)
 ```
 
-GitHub Actions runs `npm run ci` on push/PR to `main` (see `.github/workflows/ci.yml`).
+**GitHub Actions** (`.github/workflows/ci.yml`) on push/PR to `main` does **not** call `npm run ci`. It runs the same quality steps as separate jobs, then **Playwright public smoke**:
+
+```bash
+npm run build            # required first for local e2e (webServer uses `next start`)
+npm run test:e2e:install # once: Chromium (+ OS deps in CI)
+npm run test:e2e         # default: http://127.0.0.1:3010
+# Or against a running host:
+# PLAYWRIGHT_BASE_URL=https://beacon.commoncentsip.com npm run test:e2e
+```
+
+Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, security/*, badge codes/guards, freeform-policy, class-access) — not the entire tree. See `vitest.config.ts`.
 
 ### Database migrations
 
-Apply SQL in `supabase/migrations/` **in order** (Supabase SQL Editor), or:
+**Source of truth:** `supabase/migrations/` files **001–017** in filename order.
 
 ```bash
-DATABASE_URL='postgresql://…' node scripts/apply-migrations.mjs
-# or
-POSTGRES_PASSWORD='…' node scripts/apply-migrations.mjs
-```
+# Preferred
+DATABASE_URL='postgresql://postgres:…@db.<ref>.supabase.co:5432/postgres' npm run db:migrate
 
-**Pilot requirement:** apply **`001`–`017`** in order (or late pieces: `pending-011-to-015-all.sql`, `pending-016-security-rls-lockdown.sql`, then **`pending-017-billing-first-class.sql`**).
+# Or password + explicit project ref (never rely on a silent default)
+POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='your-project-ref' npm run db:migrate
+
+# Apply one prefix only, e.g. 017
+POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate -- 017
+```
 
 | Range | Why |
 |-------|-----|
+| **001–005** | Core schema, gradebook RLS, email outbox, principal role |
 | **006** | `billing_*` + `quickbooks_connections` tables |
 | **007** | attendance, lessons, pulse, videos tables |
+| **008–010** | email comms, preferences, pilot feedback |
 | **011–012** | badge/kiosk rooms, scans, aftercare, RFID |
-| **013** | roster revisions + delete approvals |
+| **013–014** | roster revisions + delete approvals; class call number |
 | **015** | kiosk token vault (`school_access_tokens`) |
 | **016** | RLS lockdown (profile role/school_id, staff write scopes) |
-| **017** | billing first-class: product `code`, invoice `source_key`, demo QB status, parent read RLS, migrate JSON → tables |
+| **017** | billing first-class: product `code`, invoice `source_key`, demo QB status, parent read RLS, one-time migrate legacy JSON → tables |
 
-**Billing money path** uses `billing_products` / `billing_invoices` / `billing_payments` / `quickbooks_connections` only (no `schools.settings.billing` RMW). Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`.
+**Billing money path** uses tables only. Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`.
+
+#### Operator notes (avoid footguns)
+
+| Path | Use it for |
+|------|------------|
+| `npm run db:migrate` → `scripts/apply-migrations.mjs` | **Preferred** full apply; tracks `beacon_schema_migrations` |
+| Supabase SQL Editor + files under `supabase/migrations/` | Manual apply in order |
+| `scripts/pending-*.sql` | Optional **paste copies** for the SQL Editor — prefer canonical migrations; some bundles are partial |
+| `scripts/run-migration.mjs` | **Legacy: only 001** — do not use for full upgrades |
+| `scripts/apply-migration-007.mjs` | **Legacy: only 007** — use `db:migrate` instead |
+
+If you set only `POSTGRES_PASSWORD` and omit `DATABASE_URL` / `SUPABASE_PROJECT_REF`, older script defaults may target a **specific pilot project**. Always set `DATABASE_URL` or an explicit `SUPABASE_PROJECT_REF` for any non-default environment.
 
 ### Branding any school
 
@@ -120,7 +175,7 @@ POSTGRES_PASSWORD='…' node scripts/apply-migrations.mjs
 3. Save school name, short name, mission, website, contact  
 4. Public `/school`, login, headers, and emails use that brand  
 
-Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user to principal when needed for seed accounts.
+Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user when their profile role is already **admin, staff, or principal** (not parent/teacher). Alias: `BEACON_DEMO_PRINCIPAL_EMAIL`.
 
 ### Email & QuickBooks
 
@@ -142,12 +197,35 @@ Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user to prin
 
 Leadership (and teachers for email) see a trust banner until transports are honest-live. Details on **Go-live**.
 
+### Optional integrations
+
+Full list of names lives in **`.env.example`**. Summary:
+
+| Integration | Env | Purpose |
+|-------------|-----|---------|
+| Pilot owner email | `BEACON_FEEDBACK_TO` / `BEACON_OWNER_EMAIL` | Suggestion button inbox (**not** the principal) |
+| ntfy push | `BEACON_NTFY_*` | Owner phone alerts |
+| Twilio SMS | `TWILIO_*` | Aftercare parent SMS |
+| Upstash Redis | `UPSTASH_REDIS_REST_*` | Durable rate limits (else in-memory per instance) |
+| School day TZ | `BEACON_SCHOOL_TZ` | Badge attendance calendar day (default `America/Chicago`) |
+| OAuth state | `BEACON_OAUTH_STATE_SECRET` | QB OAuth HMAC (else falls back to service role key) |
+| App URL | `NEXT_PUBLIC_APP_URL` | Absolute links in email |
+| Sentry | `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | Optional; `@sentry/nextjs` **not** installed by default — `reportError` logs to console and no-ops capture without the package |
+| Playwright | `PLAYWRIGHT_BASE_URL`, `PLAYWRIGHT_PORT` | E2E against custom host/port |
+
+Platform-provided (do not put secrets in git): `VERCEL_URL`, `VERCEL_ENV`, `VERCEL_PROJECT_PRODUCTION_URL`, `NODE_ENV`, `CI`.
+
 ## Deploy
 
 1. Secrets live only in **Vercel Production env** (see `.env.example` for names).
-2. **Preferred:** push to `main` → Vercel deploys over HTTPS (CI also runs Playwright e2e).
-3. Liveness: `GET /api/health` → bare `{ "status": "ok" }` (no DB check).  
-   Readiness: same path with header `x-beacon-health-secret: $BEACON_HEALTH_SECRET` (checks env + DB + honest email).
+2. **Preferred:** push to `main` → Vercel deploys over HTTPS. CI runs typecheck, lint, coverage, build, and Playwright smoke (see above).
+3. **Health**
+   - **Liveness** (public): `GET /api/health` → `{ "status": "ok", "generatedAt": "…" }` (no DB, no `checks`).
+   - **Readiness** (secret header only — not query string):  
+     `x-beacon-health-secret: $BEACON_HEALTH_SECRET` →  
+     `{ status, generatedAt, checks: { supabaseEnv, database, databaseDetail, emailLive } }`  
+     HTTP **200** if env+DB OK, else **503**.
+   - **Go-live** (authenticated principal): richer table/integration probes in the UI — separate from `/api/health`.
 4. Email: configure verified From + Resend/SMTP, then **Comms → delivery test**.
 
 ## Security / trust
@@ -155,19 +233,34 @@ Leadership (and teachers for email) see a trust banner until transports are hone
 - Parents only access students linked in `parent_students`
 - Staff scoped by `school_id`
 - Principal office requires principal or admin role
-- Service role used only after `getUser()` session check
+- Service role used only after a verified session in app code; edge session refresh is cookie-based in `src/proxy.ts`
+- Production/preview without Supabase public env returns **503** on non-public routes (fail closed)
 - No hard-coded single-school principal identity
 - `.gitignore` blocks `.env*`; only `.env.example` is committed
+- There is **no** `AUTH_OPEN` break-glass in this product (that pattern appears only in global Solid Systems text)
 
 ## Observability
 
 | Signal | Where |
 |--------|--------|
-| App health | `GET /api/health` |
+| App liveness | `GET /api/health` |
+| App readiness | Same + `x-beacon-health-secret` |
 | Go-live probes | Principal → Go-live |
 | Email delivery | Comms outbox (`sent` / `failed` / `skipped`) |
 | Staff actions | `audit_logs` |
-| Error product (Sentry) | Considered for later; outbox + audit + health cover pilot |
+| Error product (Sentry) | Optional / not wired as a dependency; outbox + audit + health cover pilot |
+
+## Complexity & hidden dependencies (maintainers)
+
+| Item | Notes |
+|------|--------|
+| Dual SQL copies (`migrations/` vs `scripts/pending-*`) | Prefer migrations; pending files can lag if edited alone |
+| Suite JSON fallback (007) | Soft-degrades pilots; **billing does not** soft-degrade to settings |
+| Cameras in settings JSON | Intentional; no first-class camera table |
+| Coverage whitelist | CI can be green while large areas have no threshold gate |
+| `npm run ci` ≠ GitHub Actions | Local `ci` skips Playwright |
+| go2rtc / MediaMTX | External camera stack — not installed by this repo |
+| Hardcoded pilot Supabase ref in old scripts | Always set `DATABASE_URL` or `SUPABASE_PROJECT_REF` |
 
 ## Solid Systems checklist (Beacon)
 
@@ -176,14 +269,18 @@ Leadership (and teachers for email) see a trust banner until transports are hone
 | README (purpose, stack, setup, architecture, deploy) | Yes |
 | `.env.example`, no committed secrets | Yes |
 | `.gitignore` | Yes |
-| Linter + fix (`eslint` / `lint:fix`) | Yes |
+| Linter + fix (`eslint` / `lint:fix`) | Yes (ESLint only; no Prettier) |
 | TypeScript | Yes |
-| Core logic tests (vitest) | Yes |
+| Core logic tests (vitest) + coverage gate on security surface | Yes |
+| GitHub Actions (typecheck, lint, coverage, build, e2e) | Yes |
+| Dependabot (npm + actions) | Yes (`.github/dependabot.yml`) |
+| packageManager pin + Corepack in CI | Yes (`npm@10.9.2`) |
 | Secrets in platform env only | Yes (Vercel) |
-| Error tracking considered | Yes (Sentry deferred; outbox/health now) |
+| Error tracking considered | Yes (Sentry optional/deferred; outbox/health now) |
 | Deploy from Git | Preferred path on Vercel |
 | HTTPS only | Vercel |
 | Health check | `/api/health` + Go-live |
+| Branch protection + required reviews | Configure in GitHub org settings (not in-repo) |
 
 ## Repo
 

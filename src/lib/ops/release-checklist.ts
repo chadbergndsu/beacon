@@ -10,14 +10,20 @@ export type ChecklistItem = {
 export const RELEASE_CHECKLIST: ChecklistItem[] = [
   {
     id: 'migrations',
-    label: 'Database migrations 001–016 applied',
-    help: 'Core + badge/kiosk (011–012), roster versions (013), security vault (015), RLS lockdown (016). Check Go-live health tables.',
+    label: 'Database migrations 001–017 applied',
+    help: 'Prefer: npm run db:migrate (supabase/migrations). Includes badge/kiosk (011–012), roster (013), token vault (015), RLS (016), billing first-class (017). Check Go-live health tables.',
     group: 'ops',
   },
   {
     id: 'security_016',
     label: 'Security RLS lockdown (016) run',
-    help: 'Supabase SQL Editor: scripts/pending-016-security-rls-lockdown.sql — locks profile role/school_id and parent write access.',
+    help: 'Apply supabase/migrations/016_security_rls_lockdown.sql (or scripts/pending-016-security-rls-lockdown.sql) — locks profile role/school_id and parent write access.',
+    group: 'ops',
+  },
+  {
+    id: 'billing_017',
+    label: 'Billing first-class tables (017) run',
+    help: 'Apply 017_billing_first_class.sql — product code, invoice source_key, demo QB status, parent invoice RLS. Money is not in schools.settings.',
     group: 'ops',
   },
   {

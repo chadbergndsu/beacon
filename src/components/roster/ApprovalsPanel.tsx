@@ -152,7 +152,7 @@ export function ApprovalsPanel({
         {revisions.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No revisions yet. Run{' '}
-            <code className="rounded bg-muted px-1">scripts/pending-013-roster-versions.sql</code>{' '}
+            <code className="rounded bg-muted px-1">migration 013</code>{' '}
             if tables are missing.
           </p>
         ) : (

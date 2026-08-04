@@ -151,7 +151,7 @@ export default async function TeacherClassroomPage() {
       }))
     }
   } catch {
-    // tables may not exist until pending-013
+    // tables may not exist until migration 013
   }
 
   return (

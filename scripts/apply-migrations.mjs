@@ -1,9 +1,12 @@
 /**
  * Apply all SQL migrations in supabase/migrations/ in order.
+ * Preferred entrypoint: npm run db:migrate
  *
  *   DATABASE_URL='postgresql://…' node scripts/apply-migrations.mjs
- *   POSTGRES_PASSWORD='…' node scripts/apply-migrations.mjs
- *   node scripts/apply-migrations.mjs 007   # only one file prefix
+ *   POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='your-ref' node scripts/apply-migrations.mjs
+ *   node scripts/apply-migrations.mjs 017   # only one file prefix
+ *
+ * Source of truth: supabase/migrations/ (not scripts/pending-*.sql).
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -13,17 +16,18 @@ import pg from 'pg'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const migrationsDir = path.join(root, 'supabase/migrations')
-const projectRef = process.env.SUPABASE_PROJECT_REF || 'lqswgkjotjmltoyfnggj'
+const projectRef = process.env.SUPABASE_PROJECT_REF?.trim()
 const pwd = process.env.POSTGRES_PASSWORD || process.env.SUPABASE_DB_PASSWORD
 const connectionString =
   process.env.DATABASE_URL ||
-  (pwd
+  (pwd && projectRef
     ? `postgresql://postgres:${encodeURIComponent(pwd)}@db.${projectRef}.supabase.co:5432/postgres`
     : null)
 
 if (!connectionString) {
   console.error(
-    'Set DATABASE_URL or POSTGRES_PASSWORD (Supabase project database password).'
+    'Set DATABASE_URL, or both POSTGRES_PASSWORD (or SUPABASE_DB_PASSWORD) and SUPABASE_PROJECT_REF.\n' +
+      'No default project ref — prevents applying SQL to the wrong Supabase project.'
   )
   process.exit(1)
 }

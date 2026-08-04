@@ -191,7 +191,7 @@ export async function setStudentRfidUid(
     if (/rfid_uid|column/i.test(error.message)) {
       return {
         ok: false,
-        error: 'Run scripts/pending-012-rfid-notify.sql to add rfid_uid column.',
+        error: 'Apply migration 012 (rfid_uid) — npm run db:migrate or supabase/migrations/012_rfid_parent_notify.sql',
       }
     }
     return { ok: false, error: error.message }
@@ -252,7 +252,7 @@ async function loadOrMigrateAccessTokens(schoolId: string): Promise<{
     // Never write secrets into schools.settings (client-readable via RLS).
     // Require migration 015/016 school_access_tokens table.
     throw new Error(
-      'school_access_tokens unavailable. Run pending-015 and pending-016 in Supabase SQL Editor.'
+      'school_access_tokens missing — apply migrations 015+016 (npm run db:migrate).'
     )
   }
 
@@ -287,7 +287,7 @@ export async function rotateDeviceToken(schoolId: string): Promise<string> {
   )
   if (error) {
     throw new Error(
-      'Could not rotate device token. Ensure school_access_tokens exists (pending-015/016).'
+      'Could not rotate device token. Ensure school_access_tokens exists (migrations 015+016).'
     )
   }
   return token
@@ -308,7 +308,7 @@ export async function rotateKioskToken(schoolId: string): Promise<string> {
   )
   if (error) {
     throw new Error(
-      'Could not rotate kiosk token. Ensure school_access_tokens exists (pending-015/016).'
+      'Could not rotate kiosk token. Ensure school_access_tokens exists (migrations 015+016).'
     )
   }
   return token
@@ -396,7 +396,7 @@ export async function listRoomsResult(
     if (/does not exist|schema cache|relation/i.test(msg)) {
       return {
         ok: false,
-        error: 'Badge rooms table missing. Run pending-011-badge-kiosk.sql.',
+        error: 'Badge rooms table missing — apply migration 011 (npm run db:migrate).',
       }
     }
     return { ok: false, error: msg }
@@ -964,7 +964,7 @@ export async function processBadgeScan(input: {
       return {
         ok: false,
         error:
-          'Badge tables not installed. Run scripts/pending-011-badge-kiosk.sql in Supabase SQL Editor.',
+          'Badge tables not installed — apply migration 011 (npm run db:migrate).',
       }
     }
     return { ok: false, error: scanErr.message }
@@ -1116,7 +1116,7 @@ export async function billClosedAftercareSessions(
       totalCents: 0,
       errors: [
         error.message.includes('does not exist')
-          ? 'Run pending-011-badge-kiosk.sql first.'
+          ? 'Apply migration 011 first (npm run db:migrate).'
           : error.message,
       ],
     }

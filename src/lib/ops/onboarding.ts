@@ -168,7 +168,7 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
     badgeStep.done = roomsOk
     badgeStep.detail = roomsOk
       ? 'Rooms configured — open kiosk from Badges'
-      : 'Run pending-011 + open Principal → Badges'
+      : 'Apply migration 011 + open Principal → Badges'
   }
 
   // silence unused

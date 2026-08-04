@@ -132,7 +132,9 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
           ? 'Missing — apply core migrations 001–008'
           : suiteOptional
             ? 'Missing — suite features fall back to JSON until migration 007'
-            : `Missing — run scripts/pending for this feature (${label})`,
+            : table.startsWith('billing_') || table === 'quickbooks_connections'
+              ? 'Missing — apply migrations 006 + 017 (npm run db:migrate); no settings JSON fallback'
+              : `Missing — apply matching supabase/migrations file or npm run db:migrate (${label})`,
       category: 'data',
     })
   }

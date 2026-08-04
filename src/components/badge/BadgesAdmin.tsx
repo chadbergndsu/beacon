@@ -88,8 +88,8 @@ export function BadgesAdmin({
           </li>
         </ol>
         <p className="mt-2 text-[11px] opacity-80">
-          First time: run <code>pending-011-badge-kiosk.sql</code> and{' '}
-          <code>pending-012-rfid-notify.sql</code> in Supabase if tables/columns are missing.
+          First time: apply migrations 011–012 via <code>npm run db:migrate</code> if tables or
+          RFID columns are missing.
         </p>
       </div>
 
@@ -163,7 +163,7 @@ export function BadgesAdmin({
         </div>
         <p className="text-[11px] text-muted-foreground">
           Tokens are stored in a service-only table (not visible to parents). Run{' '}
-          <code className="rounded bg-muted px-1">pending-015-security-hardening.sql</code> once.
+          <code className="rounded bg-muted px-1">migration 015 (token vault)</code> once.
         </p>
       </section>
 
@@ -387,7 +387,7 @@ export function BadgesAdmin({
           <p className="text-[11px] text-muted-foreground">
             Tap a blank card on a reader that types the UID, paste it here. Same code works on
             kiosk USB scanners. Requires SQL{' '}
-            <code className="rounded bg-muted px-1">pending-012-rfid-notify.sql</code>.
+            <code className="rounded bg-muted px-1">migration 012 (RFID)</code>.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="sm:col-span-1">

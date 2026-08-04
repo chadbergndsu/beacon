@@ -45,7 +45,7 @@ export default async function PrincipalBadgesPage() {
     setupError =
       e instanceof Error
         ? e.message
-        : 'Badge tables may be missing — run scripts/pending-011-badge-kiosk.sql in Supabase.'
+        : 'Badge tables may be missing — apply migration 011 (npm run db:migrate).'
   }
 
   return (
@@ -69,11 +69,9 @@ export default async function PrincipalBadgesPage() {
           <p className="font-semibold">Setup needed</p>
           <p className="mt-1 text-xs">{setupError}</p>
           <p className="mt-2 text-xs">
-            Supabase → SQL Editor → run{' '}
-            <code className="rounded bg-white px-1">pending-011-to-015-all.sql</code> then{' '}
-            <code className="rounded bg-white px-1">pending-016-security-rls-lockdown.sql</code>{' '}
-            (or apply <code className="rounded bg-white px-1">supabase/migrations/</code> 011–016) →
-            refresh. Token vault = 015; RLS lockdown = 016.
+            Prefer <code className="rounded bg-white px-1">npm run db:migrate</code> (migrations
+            001–017 under <code className="rounded bg-white px-1">supabase/migrations/</code>).
+            Badge/kiosk needs 011–012; token vault 015; RLS 016. Then refresh this page.
           </p>
         </div>
       )}
