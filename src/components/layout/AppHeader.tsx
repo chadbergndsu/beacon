@@ -10,30 +10,32 @@ import { cn } from '@/lib/utils'
 
 type NavItem = { href: string; label: string }
 
-function buildNav(role: Profile['role'] | null): NavItem[] {
+/**
+ * Role-aware primary nav — short labels, no duplicate “levels” mixed in one blob.
+ * Principals: school leadership links (teacher tools live under Office pages / Quick).
+ * Teachers: classroom tools.
+ * Parents: family links only.
+ */
+export function buildNav(role: Profile['role'] | null): NavItem[] {
   const isPrincipal = role === 'principal' || role === 'admin'
-  const staff = canAccessEmailOutbox(role)
-  const teacherTools = isSchoolStaff(role) && !isPrincipal
+  const staffComms = canAccessEmailOutbox(role)
 
-  // Principal: lean top bar — full suite lives under Office + principal subnav
   if (isPrincipal) {
     return [
       { href: '/dashboard', label: 'Home' },
       { href: '/principal', label: 'Office' },
       { href: '/principal/roster', label: 'Roster' },
       { href: '/principal/approvals', label: 'Approvals' },
-      { href: '/principal/release', label: 'Go-live' },
       { href: '/principal/badges', label: 'Badges' },
-      { href: '/announcements', label: 'Announcements' },
-      ...(staff ? [{ href: '/admin/emails', label: 'Comms' }] : []),
+      { href: '/principal/release', label: 'Go-live' },
+      { href: '/announcements', label: 'News' },
+      ...(staffComms ? [{ href: '/admin/emails', label: 'Comms' }] : []),
       { href: '/settings', label: 'Settings' },
-      { href: '/teacher/quick', label: 'Quick' },
-      { href: '/school', label: 'School' },
+      { href: '/school', label: 'School site' },
     ]
   }
 
-  // Teachers / staff
-  if (teacherTools || isSchoolStaff(role)) {
+  if (isSchoolStaff(role)) {
     return [
       { href: '/dashboard', label: 'Home' },
       { href: '/teacher/classroom', label: 'Classroom' },
@@ -42,19 +44,18 @@ function buildNav(role: Profile['role'] | null): NavItem[] {
       { href: '/teacher/calendar', label: 'Calendar' },
       { href: '/teacher/printables', label: 'Printables' },
       { href: '/teacher/scan', label: 'Scan' },
-      { href: '/announcements', label: 'Announcements' },
-      ...(staff ? [{ href: '/admin/emails', label: 'Comms' }] : []),
+      { href: '/announcements', label: 'News' },
+      ...(staffComms ? [{ href: '/admin/emails', label: 'Comms' }] : []),
       { href: '/settings', label: 'Settings' },
-      { href: '/school', label: 'School' },
+      { href: '/school', label: 'School site' },
     ]
   }
 
-  // Parents / others
   return [
     { href: '/dashboard', label: 'Home' },
-    { href: '/announcements', label: 'Announcements' },
+    { href: '/announcements', label: 'News' },
     { href: '/settings', label: 'Settings' },
-    { href: '/school', label: 'School' },
+    { href: '/school', label: 'School site' },
     { href: '/about', label: 'About' },
   ]
 }
@@ -68,101 +69,100 @@ export function AppHeader({
 }) {
   const pathname = usePathname() || '/'
   const role = profile?.role ?? null
-  const showQuick = isSchoolStaff(role)
   const nav = buildNav(role)
-
   const activeHref = resolveActiveNavHref(
     pathname,
     nav.map((item) => item.href)
   )
+  const displayName = profile?.full_name?.trim() || profile?.email || 'Account'
+  const roleText = roleLabel(role)
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#06101f] text-white pt-safe">
-      {/* Row 1: brand + user — never shares space with nav links */}
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-6 sm:py-3">
-        <Link
-          href="/dashboard"
-          className="group flex min-w-0 shrink items-center gap-2 sm:gap-2.5"
-        >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 text-sm font-black text-white shadow-lg shadow-sky-500/25 transition group-hover:scale-105 sm:h-9 sm:w-9">
-            B
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-[15px] font-bold leading-none tracking-tight">Beacon</p>
-            <p className="mt-0.5 hidden truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300/85 sm:mt-1 sm:block">
-              School suite · {schoolShortName}
-            </p>
-          </div>
-        </Link>
-
-        <div className="relative z-20 flex shrink-0 items-center gap-1.5 sm:gap-2">
-          {profile && (
-            <div className="hidden max-w-[9.5rem] rounded-lg bg-[#06101f] px-2 py-1 text-right sm:block lg:max-w-[12rem]">
-              <p className="truncate text-sm font-semibold leading-tight">
-                {profile.full_name || profile.email}
-              </p>
-              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-300/80">
-                {roleLabel(role)}
+    <header className="sticky top-0 z-50 text-white pt-safe">
+      {/* ── Level 1: brand + identity (never shares a row with nav links) ── */}
+      <div className="border-b border-white/10 bg-[#030a14]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-3 py-3 sm:px-6">
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 text-sm font-black shadow-md shadow-sky-500/20">
+              B
+            </span>
+            <div className="min-w-0 leading-tight">
+              <p className="text-base font-bold tracking-tight">Beacon</p>
+              <p className="truncate text-[11px] font-medium text-sky-300/90">
+                {schoolShortName}
               </p>
             </div>
-          )}
-          {profile && (
-            <Link
-              href="/settings#skins"
-              className="shrink-0 rounded-xl border border-white/10 bg-white/10 px-2.5 py-2 text-xs font-medium transition hover:bg-white/15"
-              title="Change Beacon skin"
-            >
-              Skin
-            </Link>
-          )}
-          {showQuick && (
-            <Link
-              href="/teacher/quick"
-              className={cn(
-                'shrink-0 rounded-xl px-2.5 py-2 text-xs font-bold text-white shadow-md sm:hidden',
-                activeHref === '/teacher/quick'
-                  ? 'bg-emerald-500 shadow-emerald-500/25'
-                  : 'bg-sky-500 shadow-sky-500/25 hover:bg-sky-400'
-              )}
-            >
-              Quick
-            </Link>
-          )}
-          <form action={logout} className="shrink-0">
-            <button
-              type="submit"
-              className="rounded-xl border border-white/10 bg-white/10 px-2.5 py-2 text-xs font-medium transition hover:bg-white/15 sm:px-3.5 sm:text-sm"
-            >
-              Sign out
-            </button>
-          </form>
+          </Link>
+
+          <div className="flex shrink-0 items-center gap-2">
+            {profile && (
+              <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 py-1 pl-3 pr-1.5 sm:flex">
+                <div className="min-w-0 text-right">
+                  <p className="max-w-[10rem] truncate text-xs font-semibold leading-none lg:max-w-[14rem]">
+                    {displayName}
+                  </p>
+                  {roleText ? (
+                    <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-300/75">
+                      {roleText}
+                    </p>
+                  ) : null}
+                </div>
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-600 text-xs font-bold"
+                  aria-hidden
+                >
+                  {displayName.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+            {profile && (
+              <Link
+                href="/settings#skins"
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:bg-white/10"
+              >
+                Skin
+              </Link>
+            )}
+            <form action={logout}>
+              <button
+                type="submit"
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:bg-white/10 sm:px-3.5"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </div>
 
-      {/* Row 2: scrollable nav — all breakpoints, never under user chip */}
-      <nav
-        className="mobile-scroll-x gap-1.5 border-t border-white/[0.06] px-3 py-2 text-sm sm:px-6"
-        aria-label="Main"
-      >
-        {nav.map((item) => {
-          const active = item.href === activeHref
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? 'page' : undefined}
-              className={cn(
-                'shrink-0 whitespace-nowrap rounded-lg px-3 py-2 font-medium transition',
-                active
-                  ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/25'
-                  : 'bg-white/10 text-slate-100 hover:bg-white/15'
-              )}
-            >
-              {item.label}
-            </Link>
-          )
-        })}
-      </nav>
+      {/* ── Level 2: primary navigation (own bar, own scroll) ── */}
+      <div className="border-b border-white/10 bg-[#0a1628]">
+        <div className="mx-auto max-w-7xl px-2 sm:px-4">
+          <nav
+            className="flex gap-1 overflow-x-auto py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Main navigation"
+          >
+            {nav.map((item) => {
+              const active = item.href === activeHref
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition whitespace-nowrap',
+                    active
+                      ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20'
+                      : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
+      </div>
     </header>
   )
 }
