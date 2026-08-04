@@ -35,7 +35,10 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = path === '/login'
   // Kiosk tablets use secret token URLs — no staff login
   const isKiosk = path.startsWith('/kiosk/')
-  const isPublic = PUBLIC_EXACT.has(path) || isKiosk || path === '/privacy'
+  // ESP32 / RFID hardware posts with a device token (not a user session)
+  const isDeviceApi = path.startsWith('/api/kiosk/')
+  const isPublic =
+    PUBLIC_EXACT.has(path) || isKiosk || isDeviceApi || path === '/privacy'
 
   if (!user && !isPublic) {
     const redirectUrl = request.nextUrl.clone()

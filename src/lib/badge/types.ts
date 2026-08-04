@@ -48,6 +48,7 @@ export type StudentBadge = {
   lastName: string
   gradeLevel: string | null
   badgeCode: string
+  rfidUid: string | null
   schoolName: string
 }
 
@@ -61,6 +62,7 @@ export type ScanResult = {
   aftercareMinutes?: number | null
   amountCents?: number | null
   attendanceMarked?: boolean
+  parentNotify?: { emailsSent: number; smsSent: number; note?: string }
 } | {
   ok: false
   error: string

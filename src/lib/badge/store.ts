@@ -5,8 +5,11 @@ import type { BillingInvoice, BillingProduct } from '@/lib/billing/types'
 import {
   computeAftercareAmountCents,
   generateBadgeCode,
+  generateDeviceToken,
+  normalizeCode,
   parseScannerInput,
 } from './codes'
+import { notifyParentsOfAftercareScan } from './notify-parents'
 import type {
   AftercareSession,
   BadgeScan,
@@ -105,24 +108,177 @@ export async function listStudentBadges(
 ): Promise<StudentBadge[]> {
   await ensureStudentBadgeCodes(schoolId)
   const admin = createAdminClient()
-  const { data } = await admin
+  type StudentBadgeRow = {
+    id: string
+    first_name: string
+    last_name: string
+    grade_level: string | null
+    badge_code: string | null
+    rfid_uid?: string | null
+  }
+
+  const withRfid = await admin
     .from('students')
-    .select('id, first_name, last_name, grade_level, badge_code')
+    .select('id, first_name, last_name, grade_level, badge_code, rfid_uid')
     .eq('school_id', schoolId)
     .eq('active', true)
     .order('last_name')
     .order('first_name')
 
-  return (data ?? [])
+  let rows: StudentBadgeRow[] = []
+  if (withRfid.error && /rfid_uid|column/i.test(withRfid.error.message)) {
+    const fallback = await admin
+      .from('students')
+      .select('id, first_name, last_name, grade_level, badge_code')
+      .eq('school_id', schoolId)
+      .eq('active', true)
+      .order('last_name')
+      .order('first_name')
+    rows = (fallback.data ?? []) as StudentBadgeRow[]
+  } else {
+    rows = (withRfid.data ?? []) as StudentBadgeRow[]
+  }
+
+  return rows
     .filter((s) => s.badge_code)
     .map((s) => ({
-      id: s.id as string,
-      firstName: s.first_name as string,
-      lastName: s.last_name as string,
-      gradeLevel: (s.grade_level as string) || null,
+      id: s.id,
+      firstName: s.first_name,
+      lastName: s.last_name,
+      gradeLevel: s.grade_level || null,
       badgeCode: String(s.badge_code).toUpperCase(),
+      rfidUid: s.rfid_uid ? String(s.rfid_uid).toUpperCase() : null,
       schoolName,
     }))
+}
+
+/** Assign / clear RFID or NFC card UID for a student (same lookup path as badge_code). */
+export async function setStudentRfidUid(
+  schoolId: string,
+  studentId: string,
+  rfidUid: string | null
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const admin = createAdminClient()
+  const value = rfidUid ? normalizeCode(rfidUid) : null
+  if (value && value.length < 4) {
+    return { ok: false, error: 'RFID UID too short (min 4 characters).' }
+  }
+  if (value) {
+    const { data: clash } = await admin
+      .from('students')
+      .select('id, first_name, last_name')
+      .eq('school_id', schoolId)
+      .eq('rfid_uid', value)
+      .neq('id', studentId)
+      .maybeSingle()
+    if (clash) {
+      return {
+        ok: false,
+        error: `UID already on ${clash.first_name} ${clash.last_name}.`,
+      }
+    }
+  }
+  const { error } = await admin
+    .from('students')
+    .update({ rfid_uid: value })
+    .eq('id', studentId)
+    .eq('school_id', schoolId)
+  if (error) {
+    if (/rfid_uid|column/i.test(error.message)) {
+      return {
+        ok: false,
+        error: 'Run scripts/pending-012-rfid-notify.sql to add rfid_uid column.',
+      }
+    }
+    return { ok: false, error: error.message }
+  }
+  return { ok: true }
+}
+
+export async function getOrCreateDeviceToken(schoolId: string): Promise<string> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('schools')
+    .select('settings')
+    .eq('id', schoolId)
+    .maybeSingle()
+  const settings = { ...((data?.settings || {}) as Record<string, unknown>) }
+  const badge = {
+    ...((settings.badge as Record<string, unknown>) || {}),
+  }
+  if (typeof badge.deviceToken === 'string' && badge.deviceToken.length >= 16) {
+    return badge.deviceToken
+  }
+  const token = generateDeviceToken()
+  badge.deviceToken = token
+  settings.badge = badge
+  await admin.from('schools').update({ settings }).eq('id', schoolId)
+  return token
+}
+
+export async function rotateDeviceToken(schoolId: string): Promise<string> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('schools')
+    .select('settings')
+    .eq('id', schoolId)
+    .maybeSingle()
+  const settings = { ...((data?.settings || {}) as Record<string, unknown>) }
+  const badge = {
+    ...((settings.badge as Record<string, unknown>) || {}),
+  }
+  const token = generateDeviceToken()
+  badge.deviceToken = token
+  settings.badge = badge
+  await admin.from('schools').update({ settings }).eq('id', schoolId)
+  return token
+}
+
+export async function resolveSchoolByDeviceToken(
+  token: string
+): Promise<{ schoolId: string; schoolName: string } | null> {
+  if (!token || token.length < 12) return null
+  const admin = createAdminClient()
+  const { data: schools } = await admin.from('schools').select('id, name, settings')
+  for (const s of schools ?? []) {
+    const settings = (s.settings || {}) as { badge?: { deviceToken?: string } }
+    if (settings.badge?.deviceToken === token) {
+      return { schoolId: s.id as string, schoolName: (s.name as string) || 'School' }
+    }
+  }
+  return null
+}
+
+export async function setAftercareNotifyPreference(
+  schoolId: string,
+  enabled: boolean
+): Promise<void> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('schools')
+    .select('settings')
+    .eq('id', schoolId)
+    .maybeSingle()
+  const settings = { ...((data?.settings || {}) as Record<string, unknown>) }
+  const badge = {
+    ...((settings.badge as Record<string, unknown>) || {}),
+    notifyParentsOnAftercare: enabled,
+  }
+  settings.badge = badge
+  await admin.from('schools').update({ settings }).eq('id', schoolId)
+}
+
+export async function getAftercareNotifyPreference(schoolId: string): Promise<boolean> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('schools')
+    .select('settings')
+    .eq('id', schoolId)
+    .maybeSingle()
+  const settings = (data?.settings || {}) as {
+    badge?: { notifyParentsOnAftercare?: boolean }
+  }
+  return settings.badge?.notifyParentsOnAftercare !== false
 }
 
 export async function listRooms(schoolId: string): Promise<SchoolRoom[]> {
@@ -418,6 +574,7 @@ export async function processBadgeScan(input: {
     school_id: string
     active: boolean | null
     badge_code: string | null
+    rfid_uid: string | null
   }
 
   let student: StudentRow | null = null
@@ -426,7 +583,7 @@ export async function processBadgeScan(input: {
   if (input.studentId) {
     const { data } = await admin
       .from('students')
-      .select('id, first_name, last_name, school_id, active, badge_code')
+      .select('id, first_name, last_name, school_id, active, badge_code, rfid_uid')
       .eq('id', input.studentId)
       .eq('school_id', input.schoolId)
       .maybeSingle()
@@ -436,15 +593,29 @@ export async function processBadgeScan(input: {
     const code = parseScannerInput(input.rawCode || '')
     resolvedCode = code
     if (!code || code.length < 4) {
-      return { ok: false, error: 'Scan a valid badge code.' }
+      return { ok: false, error: 'Scan a valid badge or RFID code.' }
     }
-    const { data } = await admin
+    // Prefer badge_code, then rfid_uid (USB wedge / ESP32 readers)
+    const { data: byBadge } = await admin
       .from('students')
-      .select('id, first_name, last_name, school_id, active, badge_code')
+      .select('id, first_name, last_name, school_id, active, badge_code, rfid_uid')
       .eq('school_id', input.schoolId)
       .eq('badge_code', code)
       .maybeSingle()
-    student = (data as StudentRow | null) ?? null
+    student = (byBadge as StudentRow | null) ?? null
+    if (!student) {
+      const { data: byRfid, error: rfidErr } = await admin
+        .from('students')
+        .select('id, first_name, last_name, school_id, active, badge_code, rfid_uid')
+        .eq('school_id', input.schoolId)
+        .eq('rfid_uid', code)
+        .maybeSingle()
+      if (rfidErr && /rfid_uid|column/i.test(rfidErr.message)) {
+        // Column not migrated yet — ignore RFID path
+      } else {
+        student = (byRfid as StudentRow | null) ?? null
+      }
+    }
     if (!student || student.active === false) {
       return { ok: false, error: `No student found for code ${code}.` }
     }
@@ -603,6 +774,26 @@ export async function processBadgeScan(input: {
     return { ok: false, error: scanErr.message }
   }
 
+  let parentNotify: { emailsSent: number; smsSent: number; note?: string } | undefined
+  if (purpose === 'aftercare') {
+    parentNotify = await notifyParentsOfAftercareScan({
+      schoolId: input.schoolId,
+      studentId: student.id,
+      studentName,
+      roomName: room.name,
+      direction: input.direction,
+      minutes: aftercareMinutes,
+      amountCents,
+      sessionId,
+    })
+    if (parentNotify.emailsSent || parentNotify.smsSent) {
+      const bits: string[] = []
+      if (parentNotify.emailsSent) bits.push(`${parentNotify.emailsSent} email`)
+      if (parentNotify.smsSent) bits.push(`${parentNotify.smsSent} SMS`)
+      message = `${message} · parents notified (${bits.join(', ')})`
+    }
+  }
+
   return {
     ok: true,
     studentName,
@@ -613,7 +804,65 @@ export async function processBadgeScan(input: {
     aftercareMinutes,
     amountCents,
     attendanceMarked,
+    parentNotify,
   }
+}
+
+/**
+ * Device / RFID hardware path: resolve school by device token, optional auto IN/OUT.
+ */
+export async function processDeviceScan(input: {
+  deviceToken: string
+  rawCode: string
+  roomId: string
+  direction?: ScanDirection | 'auto'
+  deviceLabel?: string
+}): Promise<ScanResult> {
+  const school = await resolveSchoolByDeviceToken(input.deviceToken)
+  if (!school) {
+    return { ok: false, error: 'Invalid device token.' }
+  }
+
+  let direction: ScanDirection = input.direction === 'out' ? 'out' : 'in'
+  if (!input.direction || input.direction === 'auto') {
+    // Look up student first, then toggle on room presence
+    const code = parseScannerInput(input.rawCode)
+    if (!code || code.length < 4) {
+      return { ok: false, error: 'Scan a valid badge or RFID code.' }
+    }
+    const admin = createAdminClient()
+    let studentId: string | null = null
+    const { data: byBadge } = await admin
+      .from('students')
+      .select('id')
+      .eq('school_id', school.schoolId)
+      .eq('badge_code', code)
+      .maybeSingle()
+    studentId = (byBadge?.id as string) || null
+    if (!studentId) {
+      const { data: byRfid } = await admin
+        .from('students')
+        .select('id')
+        .eq('school_id', school.schoolId)
+        .eq('rfid_uid', code)
+        .maybeSingle()
+      studentId = (byRfid?.id as string) || null
+    }
+    if (studentId) {
+      const present = await listRoomPresence(school.schoolId, input.roomId)
+      const isIn = present.some((p) => p.studentId === studentId)
+      direction = isIn ? 'out' : 'in'
+    }
+  }
+
+  return processBadgeScan({
+    schoolId: school.schoolId,
+    rawCode: input.rawCode,
+    roomId: input.roomId,
+    direction,
+    kioskLabel: input.deviceLabel || 'RFID reader',
+    source: 'rfid-device',
+  })
 }
 
 async function markPresentForStudent(

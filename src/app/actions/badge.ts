@@ -10,6 +10,8 @@ import {
   billClosedAftercareSessions,
   ensureDefaultRooms,
   ensureStudentBadgeCodes,
+  getAftercareNotifyPreference,
+  getOrCreateDeviceToken,
   getOrCreateKioskToken,
   listOpenAftercare,
   listRecentScans,
@@ -18,9 +20,14 @@ import {
   listStudentBadges,
   processBadgeScan,
   resolveSchoolByKioskToken,
+  rotateDeviceToken,
   searchKioskStudents,
+  setAftercareNotifyPreference,
+  setStudentRfidUid,
   upsertRoom,
 } from '@/lib/badge/store'
+import { isSmsConfigured } from '@/lib/sms/twilio'
+import { isEmailLive } from '@/lib/email/transport'
 
 async function requireBadgeAdmin() {
   const supabase = await createClient()
@@ -245,5 +252,79 @@ export async function loadBadgeDashboardAction() {
     scans,
     openAftercare,
     kioskPath: `/kiosk/${token}`,
+  }
+}
+
+export async function setStudentRfidAction(input: {
+  studentId: string
+  rfidUid: string
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const access = await requireBadgeAdmin()
+  if (!access.ok) return access
+  const r = await setStudentRfidUid(
+    access.schoolId,
+    input.studentId,
+    input.rfidUid.trim() || null
+  )
+  if (r.ok) revalidatePath('/principal/badges')
+  return r
+}
+
+export async function getDeviceTokenAction(): Promise<
+  | {
+      ok: true
+      deviceToken: string
+      apiPath: string
+      emailLive: boolean
+      smsConfigured: boolean
+      notifyParents: boolean
+    }
+  | { ok: false; error: string }
+> {
+  const access = await requireBadgeAdmin()
+  if (!access.ok) return access
+  try {
+    const [deviceToken, notifyParents] = await Promise.all([
+      getOrCreateDeviceToken(access.schoolId),
+      getAftercareNotifyPreference(access.schoolId),
+    ])
+    return {
+      ok: true,
+      deviceToken,
+      apiPath: '/api/kiosk/device-scan',
+      emailLive: isEmailLive(),
+      smsConfigured: isSmsConfigured(),
+      notifyParents,
+    }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Device token failed' }
+  }
+}
+
+export async function rotateDeviceTokenAction(): Promise<
+  { ok: true; deviceToken: string } | { ok: false; error: string }
+> {
+  const access = await requireBadgeAdmin()
+  if (!access.ok) return access
+  try {
+    const deviceToken = await rotateDeviceToken(access.schoolId)
+    revalidatePath('/principal/badges')
+    return { ok: true, deviceToken }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Rotate failed' }
+  }
+}
+
+export async function setAftercareNotifyAction(enabled: boolean): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  const access = await requireBadgeAdmin()
+  if (!access.ok) return access
+  try {
+    await setAftercareNotifyPreference(access.schoolId, enabled)
+    revalidatePath('/principal/badges')
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Save failed' }
   }
 }

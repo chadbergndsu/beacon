@@ -3,6 +3,7 @@ export type EmailKind =
   | 'system'
   | 'grade_notice'
   | 'attendance_notice'
+  | 'aftercare_notice'
   | 'dinner_digest'
   | 'missing_work'
   | 'message'

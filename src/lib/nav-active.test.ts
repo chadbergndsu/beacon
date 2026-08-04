@@ -33,7 +33,9 @@ describe('resolveActiveNavHref', () => {
     expect(resolveActiveNavHref('/principal/release', nav)).toBe(
       '/principal/release'
     )
-    expect(resolveActiveNavHref('/principal/feedback', nav)).toBe('/principal')
+    // Overview is exact-only so deep principal pages do not stay green on Overview
+    expect(resolveActiveNavHref('/principal/feedback', nav)).toBeNull()
+    expect(resolveActiveNavHref('/principal', nav)).toBe('/principal')
   })
 
   it('treats / as home', () => {

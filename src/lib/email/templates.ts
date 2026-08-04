@@ -213,6 +213,63 @@ export function gradeNoticeBodies(opts: {
   return { text, html }
 }
 
+export function aftercareNoticeBodies(opts: {
+  brand: SchoolBrand
+  parentName: string
+  studentName: string
+  roomName: string
+  direction: 'in' | 'out'
+  timeLabel: string
+  minutes?: number | null
+  amountCents?: number | null
+  appUrl?: string
+}): { text: string; html: string } {
+  const action =
+    opts.direction === 'in'
+      ? `checked in to ${opts.roomName}`
+      : `checked out of ${opts.roomName}`
+  const detailParts: string[] = [`Time: ${opts.timeLabel}`]
+  if (opts.direction === 'out' && opts.minutes != null) {
+    detailParts.push(`Duration: ${opts.minutes} min`)
+  }
+  if (opts.direction === 'out' && opts.amountCents != null && opts.amountCents > 0) {
+    detailParts.push(`Billable: $${(opts.amountCents / 100).toFixed(2)}`)
+  }
+
+  const text = [
+    `Hello ${opts.parentName || 'Parent'},`,
+    '',
+    `${opts.studentName} ${action}.`,
+    ...detailParts,
+    '',
+    plainFooter(opts.brand),
+  ].join('\n')
+
+  const tone =
+    opts.direction === 'in'
+      ? { bg: '#ecfdf5', border: '#a7f3d0', color: '#065f46' }
+      : { bg: '#fff7ed', border: '#fed7aa', color: '#9a3412' }
+
+  const html = brandedEmailShell({
+    brand: opts.brand,
+    eyebrow: 'Aftercare update',
+    bodyHtml: `
+      <p>Hello ${escapeHtml(opts.parentName || 'Parent')},</p>
+      <div style="margin:16px 0;padding:14px 16px;border-radius:12px;background:${tone.bg};border:1px solid ${tone.border}">
+        <p style="margin:0;font-size:18px;font-weight:700;color:${tone.color}">
+          ${escapeHtml(opts.studentName)} ${escapeHtml(action)}
+        </p>
+        <p style="margin:8px 0 0;color:${tone.color};font-size:14px">${escapeHtml(detailParts.join(' · '))}</p>
+      </div>
+      <p style="color:#64748b;font-size:13px">Questions? Contact the school office.</p>
+    `,
+    ctaLabel: opts.appUrl ? 'Open Beacon' : undefined,
+    ctaHref: opts.appUrl,
+  })
+
+  return { text, html }
+}
+
 export function attendanceNoticeBodies(opts: {
   brand: SchoolBrand
   parentName: string

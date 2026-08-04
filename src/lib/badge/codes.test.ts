@@ -19,6 +19,12 @@ describe('badge codes', () => {
     expect(parseScannerInput('https://beacon.example/kiosk?code=hello1')).toBe('HELLO1')
   })
 
+  it('parses RFID hex with separators', () => {
+    expect(parseScannerInput('a1:b2:c3:d4')).toBe('A1B2C3D4')
+    expect(parseScannerInput('04 1A 2B 3C 4D')).toBe('041A2B3C4D')
+    expect(parseScannerInput('https://beacon.example/x?rfid=deadbeef')).toBe('DEADBEEF')
+  })
+
   it('bills aftercare in 15-min blocks', () => {
     // $10/hr = 1000 cents, 20 min → 30 min billable → 500 cents
     expect(computeAftercareAmountCents(20, 1000)).toBe(500)

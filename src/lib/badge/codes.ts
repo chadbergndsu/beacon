@@ -17,37 +17,64 @@ export function generateBadgeCode(length = 6): string {
   return out
 }
 
+/** Secret token for wall-mounted ESP32 / RFID readers posting to the device API. */
+export function generateDeviceToken(): string {
+  return `dev_${generateBadgeCode(8)}${generateBadgeCode(8)}`
+}
+
 /**
- * Accept raw scanner input:
- * - plain code: ABC123
+ * Normalize RFID / NFC / badge scanner input to a lookup key.
+ * Accepts:
+ * - plain badge: ABC123
+ * - RFID hex with colons/spaces: A1:B2:C3:D4 → A1B2C3D4
  * - payload: BEACON|schoolSlug|ABC123
  * - URL ending with code
+ * - leading zeros preserved after hex strip
  */
 export function parseScannerInput(raw: string): string {
   const trimmed = raw.trim()
   if (!trimmed) return ''
 
-  // Prefer query param before uppercasing destroys nothing meaningful
   try {
     if (/^https?:\/\//i.test(trimmed)) {
       const u = new URL(trimmed)
-      const q = u.searchParams.get('code') || u.searchParams.get('badge')
-      if (q) return q.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+      const q =
+        u.searchParams.get('code') ||
+        u.searchParams.get('badge') ||
+        u.searchParams.get('rfid') ||
+        u.searchParams.get('uid')
+      if (q) return normalizeCode(q)
       const parts = u.pathname.split('/').filter(Boolean)
-      if (parts.length) {
-        return parts[parts.length - 1]!.toUpperCase().replace(/[^A-Z0-9]/g, '')
-      }
+      if (parts.length) return normalizeCode(parts[parts.length - 1]!)
     }
   } catch {
     // not a URL
   }
 
-  let s = trimmed.toUpperCase()
+  let s = trimmed
   if (s.includes('|')) {
     const parts = s.split('|')
     s = parts[parts.length - 1] || s
   }
-  return s.replace(/[^A-Z0-9]/g, '')
+  return normalizeCode(s)
+}
+
+/** Uppercase alphanumeric only — works for short badges and long RFID UIDs. */
+export function normalizeCode(raw: string): string {
+  return raw
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 40)
+}
+
+/** Heuristic: long hex-ish strings look like RFID/NFC UIDs. */
+export function looksLikeRfidUid(code: string): boolean {
+  const c = normalizeCode(code)
+  if (c.length < 8) return false
+  // Mostly hex digits
+  const hex = (c.match(/[0-9A-F]/g) || []).length
+  return hex / c.length >= 0.85
 }
 
 export function badgePayload(schoolSlug: string, code: string): string {

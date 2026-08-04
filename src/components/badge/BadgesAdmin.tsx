@@ -7,7 +7,10 @@ import {
   billAftercareAction,
   ensureBadgesAction,
   getKioskLinkAction,
+  rotateDeviceTokenAction,
   saveRoomAction,
+  setAftercareNotifyAction,
+  setStudentRfidAction,
 } from '@/app/actions/badge'
 import { BadgePrintSheet } from '@/components/badge/BadgePrintSheet'
 import type { AftercareSession, BadgeScan, SchoolRoom, StudentBadge } from '@/lib/badge/types'
@@ -25,6 +28,10 @@ export function BadgesAdmin({
   initialScans,
   initialOpenAftercare,
   initialKioskPath,
+  initialDeviceToken = '',
+  initialNotifyParents = true,
+  emailLive = false,
+  smsConfigured = false,
 }: {
   schoolName: string
   schoolSlug: string
@@ -33,15 +40,23 @@ export function BadgesAdmin({
   initialScans: (BadgeScan & { studentName?: string; roomName?: string })[]
   initialOpenAftercare: (AftercareSession & { studentName?: string; roomName?: string })[]
   initialKioskPath: string
+  initialDeviceToken?: string
+  initialNotifyParents?: boolean
+  emailLive?: boolean
+  smsConfigured?: boolean
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [kioskPath, setKioskPath] = useState(initialKioskPath)
+  const [deviceToken, setDeviceToken] = useState(initialDeviceToken)
+  const [notifyParents, setNotifyParents] = useState(initialNotifyParents)
   const [roomName, setRoomName] = useState('')
   const [roomKind, setRoomKind] = useState<RoomKind>('classroom')
   const [rate, setRate] = useState('8')
+  const [rfidStudentId, setRfidStudentId] = useState(initialBadges[0]?.id || '')
+  const [rfidUid, setRfidUid] = useState('')
 
   const origin =
     typeof window !== 'undefined' ? window.location.origin : 'https://beacon.commoncentsip.com'
@@ -67,10 +82,13 @@ export function BadgesAdmin({
           <li>
             Teachers can also use nav <strong>Scan</strong> from a laptop
           </li>
+          <li>
+            Aftercare IN/OUT emails parents (optional SMS via Twilio); RFID/USB readers work too
+          </li>
         </ol>
         <p className="mt-2 text-[11px] opacity-80">
-          First time: run SQL script <code>pending-011-badge-kiosk.sql</code> in Supabase if tables
-          are missing.
+          First time: run <code>pending-011-badge-kiosk.sql</code> and{' '}
+          <code>pending-012-rfid-notify.sql</code> in Supabase if tables/columns are missing.
         </p>
       </div>
 
@@ -239,6 +257,165 @@ export function BadgesAdmin({
         >
           Add room
         </Button>
+      </section>
+
+      <section className="rounded-2xl border bg-card p-5 space-y-3">
+        <h2 className="font-bold text-navy dark:text-sky-50">Parent notify (aftercare)</h2>
+        <p className="text-xs text-muted-foreground">
+          When a student checks in or out of an aftercare room, linked parents get an email. SMS is
+          sent too if Twilio is configured and the parent profile has a phone number.
+        </p>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <Badge variant={emailLive ? 'success' : 'warning'}>
+            Email {emailLive ? 'live' : 'not live'}
+          </Badge>
+          <Badge variant={smsConfigured ? 'success' : 'warning'}>
+            SMS {smsConfigured ? 'Twilio ready' : 'optional (set TWILIO_*)'}
+          </Badge>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={notifyParents}
+            disabled={pending}
+            onChange={(e) => {
+              const next = e.target.checked
+              setNotifyParents(next)
+              setMsg(null)
+              setErr(null)
+              start(async () => {
+                const r = await setAftercareNotifyAction(next)
+                if (!r.ok) {
+                  setNotifyParents(!next)
+                  setErr(r.error)
+                  return
+                }
+                setMsg(next ? 'Parent aftercare alerts ON.' : 'Parent aftercare alerts OFF.')
+              })
+            }}
+          />
+          Email / SMS parents on aftercare IN and OUT
+        </label>
+        <p className="text-[11px] text-muted-foreground">
+          Link parents on Roster first. SMS needs{' '}
+          <code className="rounded bg-muted px-1">TWILIO_ACCOUNT_SID</code>,{' '}
+          <code className="rounded bg-muted px-1">TWILIO_AUTH_TOKEN</code>,{' '}
+          <code className="rounded bg-muted px-1">TWILIO_FROM</code> on Vercel.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border bg-card p-5 space-y-3">
+        <h2 className="font-bold text-navy dark:text-sky-50">RFID / hardware readers</h2>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          <strong>USB scanners</strong> (QR or RFID keyboard-wedge) already work on the kiosk —
+          they type the code and press Enter. For <strong>ESP32 / wall readers</strong>, POST to
+          the device API with the school device token.
+        </p>
+        <div>
+          <Label className="text-xs">Device token (keep secret)</Label>
+          <code className="mt-1 block break-all rounded-lg bg-muted px-3 py-2 text-xs">
+            {deviceToken || '— generate by refreshing —'}
+          </code>
+        </div>
+        <div>
+          <Label className="text-xs">API endpoint</Label>
+          <code className="mt-1 block break-all rounded-lg bg-muted px-3 py-2 text-[11px]">
+            POST {origin}/api/kiosk/device-scan
+          </code>
+        </div>
+        <pre className="overflow-x-auto rounded-lg bg-slate-950 p-3 text-[11px] text-slate-100">
+{`{
+  "deviceToken": "${deviceToken || 'dev_…'}",
+  "code": "A1B2C3D4",
+  "roomId": "${initialRooms[0]?.id || 'ROOM_UUID'}",
+  "direction": "auto",
+  "deviceLabel": "Hall RFID"
+}`}
+        </pre>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => {
+              setMsg(null)
+              setErr(null)
+              start(async () => {
+                const r = await rotateDeviceTokenAction()
+                if (!r.ok) {
+                  setErr(r.error)
+                  return
+                }
+                setDeviceToken(r.deviceToken)
+                setMsg('Device token rotated. Update ESP32 firmware/config.')
+              })
+            }}
+          >
+            Rotate device token
+          </Button>
+        </div>
+
+        <div className="border-t pt-3 space-y-2">
+          <h3 className="text-sm font-semibold">Assign RFID / NFC UID to student</h3>
+          <p className="text-[11px] text-muted-foreground">
+            Tap a blank card on a reader that types the UID, paste it here. Same code works on
+            kiosk USB scanners. Requires SQL{' '}
+            <code className="rounded bg-muted px-1">pending-012-rfid-notify.sql</code>.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="sm:col-span-1">
+              <Label className="text-xs">Student</Label>
+              <select
+                className="mt-1 w-full rounded-lg border px-2 py-2 text-sm"
+                value={rfidStudentId}
+                onChange={(e) => setRfidStudentId(e.target.value)}
+              >
+                {initialBadges.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.lastName}, {b.firstName}
+                    {b.rfidUid ? ` · RFID ${b.rfidUid}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-1">
+              <Label className="text-xs">RFID / NFC UID</Label>
+              <Input
+                className="mt-1 font-mono text-sm"
+                value={rfidUid}
+                onChange={(e) => setRfidUid(e.target.value)}
+                placeholder="A1:B2:C3:D4 or DEADBEEF"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                type="button"
+                size="sm"
+                disabled={pending || !rfidStudentId || !rfidUid.trim()}
+                onClick={() => {
+                  setMsg(null)
+                  setErr(null)
+                  start(async () => {
+                    const r = await setStudentRfidAction({
+                      studentId: rfidStudentId,
+                      rfidUid,
+                    })
+                    if (!r.ok) {
+                      setErr(r.error)
+                      return
+                    }
+                    setRfidUid('')
+                    setMsg('RFID UID saved for student.')
+                    router.refresh()
+                  })
+                }}
+              >
+                Save RFID UID
+              </Button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="rounded-2xl border bg-card p-5 space-y-3">
