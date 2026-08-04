@@ -32,6 +32,7 @@ export function PilotSuggestionButton({
   const [done, setDone] = useState(false)
   const [doneNote, setDoneNote] = useState<string | null>(null)
   const [emailed, setEmailed] = useState(false)
+  const [pushed, setPushed] = useState(false)
   const [pending, startTransition] = useTransition()
 
   // Close on escape
@@ -49,6 +50,7 @@ export function PilotSuggestionButton({
     setDone(false)
     setDoneNote(null)
     setEmailed(false)
+    setPushed(false)
     setOpen(true)
   }
 
@@ -71,6 +73,7 @@ export function PilotSuggestionButton({
         }
         setDone(true)
         setEmailed(Boolean(result.emailed))
+        setPushed(Boolean(result.pushed))
         setDoneNote(result.note)
         setMessage('')
         setCategory('idea')
@@ -153,7 +156,7 @@ export function PilotSuggestionButton({
             {done ? (
               <div
                 className={
-                  emailed
+                  emailed || pushed
                     ? 'mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
                     : 'mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100'
                 }
@@ -161,20 +164,20 @@ export function PilotSuggestionButton({
                 <div className="flex items-start gap-2">
                   <CheckCircle2
                     className={
-                      emailed
+                      emailed || pushed
                         ? 'mt-0.5 h-5 w-5 shrink-0 text-emerald-600'
                         : 'mt-0.5 h-5 w-5 shrink-0 text-amber-600'
                     }
                   />
                   <div>
                     <p className="font-semibold">
-                      {emailed ? 'Got it — thank you!' : 'Saved — email may not have arrived'}
+                      {emailed || pushed
+                        ? 'Got it — thank you!'
+                        : 'Saved — owner may not have been notified yet'}
                     </p>
                     <p className="mt-1 text-xs opacity-90">
                       {doneNote ||
-                        (emailed
-                          ? 'Sent to the Beacon product owner.'
-                          : 'Suggestion is stored in Beacon; check Resend / owner email setup.')}
+                        'Suggestion is stored in Beacon for the product owner.'}
                     </p>
                     <Button
                       type="button"

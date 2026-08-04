@@ -40,8 +40,14 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
   },
   {
     id: 'email_mode',
-    label: 'Email mode understood',
-    help: 'Resend live on Vercel + domain verified, or staff explicitly accept log-only until then. Send a delivery test from Comms.',
+    label: 'Email delivery path ready',
+    help: 'Resend and/or SMTP configured (cascade). Domain verified or school SMTP. Test from Comms.',
+    group: 'trust',
+  },
+  {
+    id: 'pilot_owner_alerts',
+    label: 'Pilot owner alerts wired',
+    help: 'BEACON_FEEDBACK_TO for email + optional BEACON_NTFY_URL for phone push. Suggestion button tested.',
     group: 'trust',
   },
   {

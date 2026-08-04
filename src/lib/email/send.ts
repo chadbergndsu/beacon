@@ -3,6 +3,11 @@ import {
   fromDisplayName,
   resolveReplyTo,
 } from '@/lib/email/templates'
+import {
+  deliverWithCascade,
+  describeEmailStack,
+  isEmailLive as transportIsEmailLive,
+} from '@/lib/email/transport'
 import type {
   EmailDeliveryStats,
   EmailOutboxRow,
@@ -29,47 +34,26 @@ function buildFromHeader(brand?: Pick<SchoolBrand, 'name' | 'shortName'> | null)
 }
 
 /**
- * Queue + attempt send. Always records a row (email_outbox or audit_logs fallback).
- * Uses Resend when RESEND_API_KEY is set; otherwise marks as skipped (logged only).
+ * Queue + attempt send via transport cascade (Resend → SMTP → log).
+ * Always records a row (email_outbox or audit_logs fallback).
  */
 export async function queueAndSendEmail(
   email: OutboundEmail,
   opts?: { brand?: Pick<SchoolBrand, 'name' | 'shortName' | 'email'> | null }
-): Promise<{ id: string; status: EmailStatus; error?: string; providerId?: string }> {
+): Promise<{ id: string; status: EmailStatus; error?: string; providerId?: string; provider?: string }> {
   const admin = createAdminClient()
-  const provider = process.env.RESEND_API_KEY ? 'resend' : 'log'
   const brand = opts?.brand
   const replyTo = email.reply_to || (brand ? resolveReplyTo(brand) : undefined) || undefined
   const from = buildFromHeader(brand)
 
-  let sendResult: {
-    status: EmailStatus
-    error?: string
-    provider: string
-    providerId?: string
-  }
-
-  if (process.env.RESEND_API_KEY) {
-    sendResult = await sendWithResend(email, from, replyTo)
-  } else {
-    console.info('[beacon-email:queued-log-only]', {
-      to: email.to_email,
-      subject: email.subject,
-      kind: email.kind,
-      replyTo,
-    })
-    sendResult = {
-      status: 'skipped',
-      provider: 'log',
-      error: 'RESEND_API_KEY not set — email logged only (not delivered).',
-    }
-  }
+  const sendResult = await deliverWithCascade(email, from, replyTo)
 
   const meta = {
     ...(email.meta ?? {}),
     ...(sendResult.providerId ? { provider_id: sendResult.providerId } : {}),
     ...(replyTo ? { reply_to: replyTo } : {}),
     from,
+    transport_attempts: sendResult.attempts,
   }
 
   const row = {
@@ -81,7 +65,7 @@ export async function queueAndSendEmail(
     body_text: email.body_text,
     body_html: email.body_html ?? null,
     status: sendResult.status,
-    provider: sendResult.provider || provider,
+    provider: sendResult.provider,
     error: sendResult.error ?? null,
     related_table: email.related_table ?? null,
     related_id: email.related_id ?? null,
@@ -115,6 +99,7 @@ export async function queueAndSendEmail(
       status: sendResult.status,
       error: sendResult.error || error.message,
       providerId: sendResult.providerId,
+      provider: sendResult.provider,
     }
   }
 
@@ -123,6 +108,7 @@ export async function queueAndSendEmail(
     status: (data?.status as EmailStatus) ?? sendResult.status,
     error: sendResult.error,
     providerId: sendResult.providerId,
+    provider: sendResult.provider,
   }
 }
 
@@ -146,7 +132,10 @@ export async function queueAndSendBatch(
     else if (r.status === 'failed') failed++
     else if (r.status === 'skipped') {
       skipped++
-      if (!note) note = 'Emails logged only — set RESEND_API_KEY on Vercel for live delivery.'
+      if (!note) {
+        note =
+          'Emails logged only — configure RESEND_API_KEY and/or SMTP_* for live delivery.'
+      }
     }
     if (delay > 0 && i < emails.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, delay))
@@ -154,55 +143,6 @@ export async function queueAndSendBatch(
   }
 
   return { sent, failed, skipped, total: emails.length, note }
-}
-
-async function sendWithResend(
-  email: OutboundEmail,
-  from: string,
-  replyTo?: string
-): Promise<{
-  status: 'sent' | 'failed'
-  error?: string
-  provider: string
-  providerId?: string
-}> {
-  try {
-    const payload: Record<string, unknown> = {
-      from,
-      to: [email.to_email],
-      subject: email.subject,
-      text: email.body_text,
-      html: email.body_html || undefined,
-    }
-    if (replyTo) payload.reply_to = replyTo
-
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    })
-    const body = (await res.json().catch(() => ({}))) as {
-      message?: string
-      id?: string
-    }
-    if (!res.ok) {
-      return {
-        status: 'failed',
-        provider: 'resend',
-        error: body?.message || `Resend HTTP ${res.status}`,
-      }
-    }
-    return { status: 'sent', provider: 'resend', providerId: body.id }
-  } catch (e) {
-    return {
-      status: 'failed',
-      provider: 'resend',
-      error: e instanceof Error ? e.message : 'Resend send failed',
-    }
-  }
 }
 
 export async function listEmailOutbox(
@@ -272,7 +212,7 @@ export async function getEmailDeliveryStats(
     skipped: 0,
     queued: 0,
     last24h: 0,
-    emailLive: Boolean(process.env.RESEND_API_KEY),
+    emailLive: transportIsEmailLive(),
     fromAddress: process.env.EMAIL_FROM || DEFAULT_FROM,
   }
   for (const e of emails) {
@@ -286,8 +226,10 @@ export async function getEmailDeliveryStats(
 }
 
 export function isEmailLive(): boolean {
-  return Boolean(process.env.RESEND_API_KEY?.trim())
+  return transportIsEmailLive()
 }
+
+export { describeEmailStack }
 
 /**
  * Re-attempt a previously failed/skipped outbox row (fresh send + new row).

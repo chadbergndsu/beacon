@@ -19,7 +19,7 @@ export async function submitPilotFeedbackAction(input: {
   pageTitle?: string | null
   userAgent?: string | null
 }): Promise<
-  | { ok: true; emailed: boolean; note: string }
+  | { ok: true; emailed: boolean; pushed: boolean; note: string }
   | { ok: false; error: string }
 > {
   const supabase = await createClient()
@@ -68,23 +68,12 @@ export async function submitPilotFeedbackAction(input: {
     role: profile?.role ?? null,
   })
 
-  if (notify.sent) {
-    return {
-      ok: true,
-      emailed: true,
-      note: 'Saved and emailed to the Beacon product owner.',
-    }
+  return {
+    ok: true,
+    emailed: notify.emailed,
+    pushed: notify.pushed,
+    note: notify.note,
   }
-
-  // Still success for the submitter — do not hide that email failed for the builder
-  const why =
-    notify.error === 'BEACON_FEEDBACK_TO not configured'
-      ? 'Saved in Beacon, but owner email is not configured (BEACON_FEEDBACK_TO).'
-      : notify.error
-        ? `Saved in Beacon. Email delivery failed: ${notify.error}`
-        : 'Saved in Beacon. Email was logged but not delivered (check Resend / domain).'
-
-  return { ok: true, emailed: false, note: why }
 }
 
 export async function listPilotFeedbackAction(): Promise<

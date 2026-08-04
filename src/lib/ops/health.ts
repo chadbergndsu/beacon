@@ -185,15 +185,39 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     }
   }
 
-  // Integrations
-  const emailLive = envSet('RESEND_API_KEY')
+  // Integrations — multi-transport cascade
+  const { describeEmailStack } = await import('@/lib/email/transport')
+  const emailStack = describeEmailStack()
   checks.push({
     id: 'email',
-    label: 'Email delivery (Resend)',
-    status: emailLive ? 'ok' : 'warn',
-    detail: emailLive
-      ? `Live via Resend · from ${process.env.EMAIL_FROM || 'default'}`
-      : 'RESEND_API_KEY not set — emails log as skipped (safe for dry-run)',
+    label: 'Email delivery',
+    status: emailStack.live ? 'ok' : 'warn',
+    detail: emailStack.live
+      ? `${emailStack.detail} · from ${process.env.EMAIL_FROM || 'default'}`
+      : 'No live transport — set RESEND_API_KEY and/or SMTP_HOST (cascade: resend → smtp → log)',
+    category: 'integrations',
+  })
+
+  const { isNtfyConfigured } = await import('@/lib/notify/ntfy')
+  const ntfyOn = isNtfyConfigured()
+  checks.push({
+    id: 'ntfy_owner',
+    label: 'Pilot owner push (ntfy)',
+    status: ntfyOn ? 'ok' : 'info',
+    detail: ntfyOn
+      ? 'Suggestions push to product owner phone via ntfy'
+      : 'Optional: BEACON_NTFY_URL or BEACON_NTFY_TOPIC for instant pilot alerts',
+    category: 'integrations',
+  })
+
+  const feedbackTo = envSet('BEACON_FEEDBACK_TO') || envSet('BEACON_OWNER_EMAIL')
+  checks.push({
+    id: 'feedback_owner',
+    label: 'Pilot owner email',
+    status: feedbackTo ? 'ok' : 'warn',
+    detail: feedbackTo
+      ? 'BEACON_FEEDBACK_TO configured'
+      : 'Set BEACON_FEEDBACK_TO so suggestions email you (not the principal)',
     category: 'integrations',
   })
 
@@ -248,7 +272,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     generatedAt: new Date().toISOString(),
     readyScore,
     checks,
-    emailLive,
+    emailLive: emailStack.live,
     qbLiveConfigured,
   }
 }

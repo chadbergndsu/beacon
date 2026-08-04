@@ -1,4 +1,6 @@
 import { queueAndSendEmail } from '@/lib/email/send'
+import { isEmailLive } from '@/lib/email/transport'
+import { isNtfyConfigured, publishNtfy } from '@/lib/notify/ntfy'
 import { FEEDBACK_CATEGORY_LABEL, type FeedbackCategory } from './types'
 import { resolveFeedbackOwnerEmail } from './owner'
 
@@ -14,36 +16,94 @@ export type OwnerNotifyInput = {
   role: string | null
 }
 
+export type OwnerNotifyResult = {
+  emailed: boolean
+  pushed: boolean
+  emailTo: string | null
+  emailError?: string
+  pushError?: string
+  /** Human-readable multi-channel status */
+  note: string
+}
+
 /**
- * Primary routing: email the product owner. Principal is not the destination.
+ * Primary routing: product owner (email cascade + ntfy push).
+ * Principal is not emailed; they can still read in-app.
  */
 export async function notifyOwnerOfPilotFeedback(
   input: OwnerNotifyInput
-): Promise<{ sent: boolean; to: string | null; error?: string }> {
-  const to = resolveFeedbackOwnerEmail()
-  if (!to) {
-    console.warn(
-      '[beacon-pilot-feedback] BEACON_FEEDBACK_TO / BEACON_OWNER_EMAIL not set — suggestion saved but not emailed to owner'
-    )
-    return {
-      sent: false,
-      to: null,
-      error: 'BEACON_FEEDBACK_TO not configured',
-    }
-  }
-
+): Promise<OwnerNotifyResult> {
   const cat = FEEDBACK_CATEGORY_LABEL[input.category] || input.category
   const who =
     [input.submitterName, input.submitterEmail, input.role]
       .filter(Boolean)
       .join(' · ') || 'Signed-in pilot user'
   const page = input.pagePath || '(unknown page)'
+
+  const [emailResult, pushResult] = await Promise.all([
+    deliverOwnerEmail(input, cat, who, page),
+    deliverOwnerPush(input, cat, who, page),
+  ])
+
+  const parts: string[] = []
+  if (emailResult.emailed) parts.push('emailed owner')
+  else if (emailResult.emailError) parts.push(`email: ${emailResult.emailError}`)
+  if (pushResult.pushed) parts.push('pushed to phone (ntfy)')
+  else if (pushResult.pushError && !pushResult.pushError.includes('not configured')) {
+    parts.push(`push: ${pushResult.pushError}`)
+  }
+
+  let note: string
+  if (emailResult.emailed && pushResult.pushed) {
+    note = 'Saved, emailed to product owner, and pushed to your phone.'
+  } else if (emailResult.emailed) {
+    note = pushResult.pushed
+      ? 'Saved and emailed to product owner.'
+      : 'Saved and emailed to product owner.' +
+        (isNtfyConfigured() ? '' : ' (Tip: set BEACON_NTFY_URL for instant phone push.)')
+  } else if (pushResult.pushed) {
+    note = `Saved and pushed to phone. Email not delivered: ${emailResult.emailError || 'unknown'}`
+  } else {
+    note =
+      parts.length > 0
+        ? `Saved in Beacon. Delivery: ${parts.join(' · ')}`
+        : 'Saved in Beacon. Configure BEACON_FEEDBACK_TO and/or BEACON_NTFY_URL for owner alerts.'
+  }
+
+  return {
+    emailed: emailResult.emailed,
+    pushed: pushResult.pushed,
+    emailTo: emailResult.emailTo,
+    emailError: emailResult.emailError,
+    pushError: pushResult.pushError,
+    note,
+  }
+}
+
+async function deliverOwnerEmail(
+  input: OwnerNotifyInput,
+  cat: string,
+  who: string,
+  page: string
+): Promise<Pick<OwnerNotifyResult, 'emailed' | 'emailTo' | 'emailError'>> {
+  const to = resolveFeedbackOwnerEmail()
+  if (!to) {
+    return {
+      emailed: false,
+      emailTo: null,
+      emailError: 'BEACON_FEEDBACK_TO not configured',
+    }
+  }
+  if (!isEmailLive()) {
+    // Still attempt cascade (log-only) so outbox has a row
+  }
+
   const subject = `[Beacon pilot] ${cat}: ${input.message.slice(0, 60)}${
     input.message.length > 60 ? '…' : ''
   }`
 
   const body_text = [
-    'New pilot suggestion (routed to product owner — not the principal).',
+    'New pilot suggestion (product owner — not the principal).',
     '',
     `Category: ${cat}`,
     `From: ${who}`,
@@ -55,7 +115,7 @@ export async function notifyOwnerOfPilotFeedback(
     '——— Message ———',
     input.message,
     '',
-    'Principal can also read this in Beacon → Principal office → Pilot feedback.',
+    'View in Beacon: Principal → Pilot feedback (read-only for school).',
   ]
     .filter((line) => line !== null)
     .join('\n')
@@ -74,12 +134,11 @@ export async function notifyOwnerOfPilotFeedback(
 ${escapeHtml(input.message)}
       </div>
       <p style="margin:16px 0 0;font-size:12px;color:#64748b">
-        Id: ${escapeHtml(input.feedbackId)}. Principal can view in-app; this email is the primary inbox.
+        Id: ${escapeHtml(input.feedbackId)}. Transport cascade: Resend → SMTP → log.
       </p>
     </div>
   `
 
-  // Never set Reply-To to .test / invalid addresses — Resend rejects the whole send.
   const replyTo = safeReplyTo(input.submitterEmail)
 
   try {
@@ -102,23 +161,47 @@ ${escapeHtml(input.message)}
       },
     })
 
-    if (result.status !== 'sent') {
-      console.error('[beacon-pilot-feedback] owner email not sent', {
-        to,
-        status: result.status,
-        error: result.error,
-      })
-    }
-
     return {
-      sent: result.status === 'sent',
-      to,
-      error: result.error,
+      emailed: result.status === 'sent',
+      emailTo: to,
+      emailError: result.status === 'sent' ? undefined : result.error,
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Owner notify failed'
-    console.error('[beacon-pilot-feedback] notify failed', msg)
-    return { sent: false, to, error: msg }
+    return {
+      emailed: false,
+      emailTo: to,
+      emailError: e instanceof Error ? e.message : 'Owner email failed',
+    }
+  }
+}
+
+async function deliverOwnerPush(
+  input: OwnerNotifyInput,
+  cat: string,
+  who: string,
+  page: string
+): Promise<Pick<OwnerNotifyResult, 'pushed' | 'pushError'>> {
+  if (!isNtfyConfigured()) {
+    return { pushed: false, pushError: 'ntfy not configured' }
+  }
+
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : 'https://beacon.commoncentsip.com')
+
+  const result = await publishNtfy({
+    title: `Beacon pilot · ${cat}`,
+    message: `${who}\n${page}\n\n${input.message.slice(0, 500)}`,
+    tags: ['school', 'beacon', input.category === 'issue' ? 'warning' : 'bulb'],
+    priority: input.category === 'issue' ? 'urgent' : 'high',
+    click: `${appUrl.replace(/\/$/, '')}/principal/feedback`,
+  })
+
+  return {
+    pushed: result.ok,
+    pushError: result.ok ? undefined : result.error,
   }
 }
 
@@ -127,7 +210,12 @@ export function safeReplyTo(email: string | null | undefined): string | undefine
   if (!email) return undefined
   const e = email.trim().toLowerCase()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return undefined
-  if (e.endsWith('.test') || e.endsWith('.example') || e.endsWith('.invalid') || e.endsWith('.local')) {
+  if (
+    e.endsWith('.test') ||
+    e.endsWith('.example') ||
+    e.endsWith('.invalid') ||
+    e.endsWith('.local')
+  ) {
     return undefined
   }
   return e
