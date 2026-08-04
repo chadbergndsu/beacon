@@ -79,6 +79,9 @@ ${escapeHtml(input.message)}
     </div>
   `
 
+  // Never set Reply-To to .test / invalid addresses — Resend rejects the whole send.
+  const replyTo = safeReplyTo(input.submitterEmail)
+
   try {
     const result = await queueAndSendEmail({
       school_id: input.schoolId,
@@ -88,16 +91,24 @@ ${escapeHtml(input.message)}
       subject,
       body_text,
       body_html,
-      // Reply goes to the submitter when we have their email
-      reply_to: input.submitterEmail || undefined,
+      reply_to: replyTo,
       related_table: 'pilot_feedback',
       related_id: input.feedbackId,
       meta: {
         route: 'product_owner',
         category: input.category,
         page_path: input.pagePath,
+        submitter_email: input.submitterEmail,
       },
     })
+
+    if (result.status !== 'sent') {
+      console.error('[beacon-pilot-feedback] owner email not sent', {
+        to,
+        status: result.status,
+        error: result.error,
+      })
+    }
 
     return {
       sent: result.status === 'sent',
@@ -109,6 +120,17 @@ ${escapeHtml(input.message)}
     console.error('[beacon-pilot-feedback] notify failed', msg)
     return { sent: false, to, error: msg }
   }
+}
+
+/** Resend rejects fake domains like .test — omit Reply-To rather than fail delivery. */
+export function safeReplyTo(email: string | null | undefined): string | undefined {
+  if (!email) return undefined
+  const e = email.trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return undefined
+  if (e.endsWith('.test') || e.endsWith('.example') || e.endsWith('.invalid') || e.endsWith('.local')) {
+    return undefined
+  }
+  return e
 }
 
 function escapeHtml(s: string): string {

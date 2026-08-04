@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { resolveFeedbackOwnerEmail } from './owner'
+import { safeReplyTo } from './notify-owner'
 
 describe('resolveFeedbackOwnerEmail', () => {
   afterEach(() => {
@@ -20,5 +21,12 @@ describe('resolveFeedbackOwnerEmail', () => {
 
   it('returns null when unset', () => {
     expect(resolveFeedbackOwnerEmail()).toBeNull()
+  })
+})
+
+describe('safeReplyTo', () => {
+  it('drops .test demo addresses that break Resend', () => {
+    expect(safeReplyTo('teacher@lighthouse.test')).toBeUndefined()
+    expect(safeReplyTo('real.person@gmail.com')).toBe('real.person@gmail.com')
   })
 })

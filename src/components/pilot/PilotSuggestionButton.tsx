@@ -30,6 +30,8 @@ export function PilotSuggestionButton({
   const [message, setMessage] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [doneNote, setDoneNote] = useState<string | null>(null)
+  const [emailed, setEmailed] = useState(false)
   const [pending, startTransition] = useTransition()
 
   // Close on escape
@@ -45,26 +47,40 @@ export function PilotSuggestionButton({
   function openPanel() {
     setError(null)
     setDone(false)
+    setDoneNote(null)
+    setEmailed(false)
     setOpen(true)
   }
 
   function submit() {
     setError(null)
     startTransition(async () => {
-      const result = await submitPilotFeedbackAction({
-        category,
-        message,
-        pagePath: pathname || (typeof window !== 'undefined' ? window.location.pathname : null),
-        pageTitle: typeof document !== 'undefined' ? document.title : null,
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-      })
-      if (!result.ok) {
-        setError(result.error)
-        return
+      try {
+        const result = await submitPilotFeedbackAction({
+          category,
+          message,
+          pagePath:
+            pathname ||
+            (typeof window !== 'undefined' ? window.location.pathname : null),
+          pageTitle: typeof document !== 'undefined' ? document.title : null,
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+        })
+        if (!result.ok) {
+          setError(result.error)
+          return
+        }
+        setDone(true)
+        setEmailed(Boolean(result.emailed))
+        setDoneNote(result.note)
+        setMessage('')
+        setCategory('idea')
+      } catch (e) {
+        setError(
+          e instanceof Error
+            ? e.message
+            : 'Could not send suggestion — try again or refresh the page.'
+        )
       }
-      setDone(true)
-      setMessage('')
-      setCategory('idea')
     })
   }
 
@@ -135,13 +151,30 @@ export function PilotSuggestionButton({
             </div>
 
             {done ? (
-              <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
+              <div
+                className={
+                  emailed
+                    ? 'mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+                    : 'mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100'
+                }
+              >
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                  <CheckCircle2
+                    className={
+                      emailed
+                        ? 'mt-0.5 h-5 w-5 shrink-0 text-emerald-600'
+                        : 'mt-0.5 h-5 w-5 shrink-0 text-amber-600'
+                    }
+                  />
                   <div>
-                    <p className="font-semibold">Got it — thank you!</p>
+                    <p className="font-semibold">
+                      {emailed ? 'Got it — thank you!' : 'Saved — email may not have arrived'}
+                    </p>
                     <p className="mt-1 text-xs opacity-90">
-                      Sent to the Beacon product owner. Keep the ideas coming.
+                      {doneNote ||
+                        (emailed
+                          ? 'Sent to the Beacon product owner.'
+                          : 'Suggestion is stored in Beacon; check Resend / owner email setup.')}
                     </p>
                     <Button
                       type="button"
