@@ -338,19 +338,11 @@ export async function setAftercareNotifyPreference(
   schoolId: string,
   enabled: boolean
 ): Promise<void> {
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('schools')
-    .select('settings')
-    .eq('id', schoolId)
-    .maybeSingle()
-  const settings = { ...((data?.settings || {}) as Record<string, unknown>) }
-  const badge = {
-    ...((settings.badge as Record<string, unknown>) || {}),
+  const { mergeSchoolSettingsNested } = await import('@/lib/school-settings')
+  const r = await mergeSchoolSettingsNested(schoolId, 'badge', {
     notifyParentsOnAftercare: enabled,
-  }
-  settings.badge = badge
-  await admin.from('schools').update({ settings }).eq('id', schoolId)
+  })
+  if (!r.ok) throw new Error(r.error)
 }
 
 export async function getAftercareNotifyPreference(schoolId: string): Promise<boolean> {
@@ -376,8 +368,39 @@ export async function listRooms(schoolId: string): Promise<SchoolRoom[]> {
     .order('sort_order')
     .order('name')
 
-  if (error) return []
+  if (error) {
+    console.error('listRooms', error.message)
+    // Surface missing-table via empty + caller setup banner; other errors also []
+    return []
+  }
   return (data ?? []).map((r) => mapRoom(r as Record<string, unknown>))
+}
+
+export async function listRoomsResult(
+  schoolId: string
+): Promise<{ ok: true; rooms: SchoolRoom[] } | { ok: false; error: string }> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('school_rooms')
+    .select('*')
+    .eq('school_id', schoolId)
+    .eq('active', true)
+    .order('sort_order')
+    .order('name')
+  if (error) {
+    const msg = error.message || 'Could not load rooms'
+    if (/does not exist|schema cache|relation/i.test(msg)) {
+      return {
+        ok: false,
+        error: 'Badge rooms table missing. Run pending-011-badge-kiosk.sql.',
+      }
+    }
+    return { ok: false, error: msg }
+  }
+  return {
+    ok: true,
+    rooms: (data ?? []).map((r) => mapRoom(r as Record<string, unknown>)),
+  }
 }
 
 export async function upsertRoom(
@@ -804,6 +827,9 @@ export async function processBadgeScan(input: {
   let attendanceMarked = false
   let message = ''
 
+  /** Only notify parents when aftercare session state actually changed */
+  let aftercareStateChanged = false
+
   if (purpose === 'aftercare') {
     if (input.direction === 'in') {
       const { data: open } = await admin
@@ -817,6 +843,7 @@ export async function processBadgeScan(input: {
       if (open) {
         sessionId = open.id as string
         message = `${studentName} already checked into aftercare.`
+        // no notify — not a new check-in
       } else {
         const { data: sess, error } = await admin
           .from('aftercare_sessions')
@@ -848,6 +875,7 @@ export async function processBadgeScan(input: {
         } else if (sess) {
           sessionId = sess.id as string
           message = `${studentName} checked IN to ${room.name} (aftercare tracking started).`
+          aftercareStateChanged = true
         }
       }
     } else {
@@ -863,6 +891,7 @@ export async function processBadgeScan(input: {
 
       if (!open) {
         message = `${studentName} checked OUT of ${room.name} (no open aftercare session).`
+        // phantom OUT — do not notify parents
       } else {
         const checkIn = new Date(open.check_in_at as string)
         const checkOut = new Date()
@@ -890,10 +919,12 @@ export async function processBadgeScan(input: {
           message = `${studentName} checked OUT of ${room.name} (session already closed).`
           aftercareMinutes = null
           amountCents = null
+          // no notify — no new close
         } else {
           message =
             `${studentName} checked OUT of ${room.name} · ${minutes} min` +
             (amount > 0 ? ` · $${(amount / 100).toFixed(2)} billable` : '')
+          aftercareStateChanged = true
         }
       }
     }
@@ -936,7 +967,7 @@ export async function processBadgeScan(input: {
   }
 
   let parentNotify: { emailsSent: number; smsSent: number; note?: string } | undefined
-  if (purpose === 'aftercare') {
+  if (purpose === 'aftercare' && aftercareStateChanged) {
     parentNotify = await notifyParentsOfAftercareScan({
       schoolId: input.schoolId,
       studentId: student.id,
@@ -952,6 +983,8 @@ export async function processBadgeScan(input: {
       if (parentNotify.emailsSent) bits.push(`${parentNotify.emailsSent} email`)
       if (parentNotify.smsSent) bits.push(`${parentNotify.smsSent} SMS`)
       message = `${message} · parents notified (${bits.join(', ')})`
+    } else if (parentNotify.note) {
+      message = `${message} · ${parentNotify.note}`
     }
   }
 
@@ -1034,9 +1067,16 @@ async function markPresentForStudent(
   // Only mark the room-linked class — never all enrollments
   if (!classId) return false
   const admin = createAdminClient()
-  const today = new Date().toISOString().slice(0, 10)
+  const { data: enroll } = await admin
+    .from('enrollments')
+    .select('student_id')
+    .eq('class_id', classId)
+    .eq('student_id', studentId)
+    .maybeSingle()
+  if (!enroll) return false
+  const { schoolToday } = await import('@/lib/dates/school-day')
+  const today = schoolToday()
   try {
-    // marked_by must be UUID or null (FK to profiles) — never a free string
     const result = await upsertAttendanceBatch(
       schoolId,
       classId,
@@ -1044,7 +1084,6 @@ async function markPresentForStudent(
       [{ studentId, status: 'present', note: 'Badge scan-in' }],
       null
     )
-    // Prefer first-class table; JSON-only is not "marked" for UIs that read tables
     return result.usedTable === true
   } catch (e) {
     console.error('badge attendance mark failed', e)
@@ -1117,16 +1156,32 @@ export async function billClosedAftercareSessions(
       .select('parent_id')
       .eq('student_id', sess.studentId)
       .limit(1)
-    let parentEmail = 'office@school.local'
+    let parentEmail: string | null = null
     let familyName = `${student.last_name} family`
     if (links?.[0]) {
       const { data: parent } = await admin
         .from('profiles')
-        .select('email, full_name')
+        .select('email, full_name, school_id')
         .eq('id', links[0].parent_id)
+        .eq('school_id', schoolId)
         .maybeSingle()
       if (parent?.email) parentEmail = parent.email as string
       if (parent?.full_name) familyName = parent.full_name as string
+    }
+    if (!parentEmail?.includes('@')) {
+      try {
+        const { loadSchoolBrand } = await import('@/lib/school-brand')
+        const brand = await loadSchoolBrand(schoolId)
+        if (brand.email?.includes('@')) parentEmail = brand.email.trim()
+      } catch {
+        /* ignore */
+      }
+    }
+    if (!parentEmail?.includes('@')) {
+      errors.push(
+        `No parent/office email for ${student.first_name} ${student.last_name} — left unbilled`
+      )
+      continue
     }
 
     const amount = sess.amountCents || 0

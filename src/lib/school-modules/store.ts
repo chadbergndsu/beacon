@@ -74,16 +74,9 @@ async function loadModulesJson(schoolId: string): Promise<SchoolModulesState> {
 }
 
 async function saveModulesJson(schoolId: string, modules: SchoolModulesState) {
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('schools')
-    .select('settings')
-    .eq('id', schoolId)
-    .maybeSingle()
-
-  const settings = { ...((data?.settings || {}) as SchoolSettings), modules }
-  const { error } = await admin.from('schools').update({ settings }).eq('id', schoolId)
-  if (error) throw new Error(error.message)
+  const { mergeSchoolSettings } = await import('@/lib/school-settings')
+  const r = await mergeSchoolSettings(schoolId, { modules })
+  if (!r.ok) throw new Error(r.error)
 }
 
 async function saveLessonPlanJson(schoolId: string, plan: LessonPlan) {

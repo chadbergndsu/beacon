@@ -142,10 +142,14 @@ export async function createAnnouncement(input: {
       }))
 
       const result = await queueAndSendBatch(batch, { brand })
-      emailed = result.sent + result.skipped
+      emailed = result.sent
       if (result.note) emailNote = result.note
-      else if (result.failed) {
+      else if (result.skipped && !result.sent) {
+        emailNote = `${result.skipped} logged only (no live email transport). Check outbox.`
+      } else if (result.failed) {
         emailNote = `${result.failed} of ${result.total} failed — check Email outbox to resend.`
+      } else if (result.skipped) {
+        emailNote = `${result.sent} delivered · ${result.skipped} logged only`
       }
     }
   }

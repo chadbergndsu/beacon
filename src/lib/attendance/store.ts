@@ -26,8 +26,17 @@ export async function loadAttendanceForClassDate(
     .eq('date', date)
 
   if (error) {
-    // Table may not exist yet — fall back to settings JSON
-    return loadAttendanceFallback(classId, date)
+    const msg = (error.message || '').toLowerCase()
+    const missingTable =
+      msg.includes('does not exist') ||
+      msg.includes('could not find the table') ||
+      msg.includes('schema cache') ||
+      (error as { code?: string }).code === 'PGRST205' ||
+      (error as { code?: string }).code === '42P01'
+    if (missingTable) return loadAttendanceFallback(classId, date)
+    // Table exists but query failed — do not lie with empty JSON
+    console.error('loadAttendanceForClassDate', error.message)
+    return []
   }
   return (data ?? []).map((r) => mapRow(r as Record<string, unknown>))
 }

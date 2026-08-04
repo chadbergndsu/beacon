@@ -105,13 +105,7 @@ export async function saveReleaseChecklistState(
   schoolId: string,
   state: Record<string, boolean>
 ): Promise<void> {
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('schools')
-    .select('settings')
-    .eq('id', schoolId)
-    .maybeSingle()
-  const settings = { ...((data?.settings || {}) as object), releaseChecklist: state }
-  const { error } = await admin.from('schools').update({ settings }).eq('id', schoolId)
-  if (error) throw new Error(error.message)
+  const { mergeSchoolSettings } = await import('@/lib/school-settings')
+  const r = await mergeSchoolSettings(schoolId, { releaseChecklist: state })
+  if (!r.ok) throw new Error(r.error)
 }

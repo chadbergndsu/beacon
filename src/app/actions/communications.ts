@@ -191,7 +191,7 @@ export async function composeFamilyMessage(input: {
   revalidatePath('/admin/emails')
   return {
     ok: true,
-    emailed: result.sent + result.skipped,
+    emailed: result.sent,
     failed: result.failed,
     skipped: result.skipped,
     emailNote:
@@ -349,13 +349,13 @@ export async function emailStudentDinnerDigest(
   revalidatePath('/admin/emails')
   revalidatePath(`/students/${studentId}`)
 
-  if (result.sent + result.skipped === 0) {
+  if (result.sent === 0 && result.skipped === 0) {
     return { ok: false, error: result.note || 'No emails sent.' }
   }
 
   return {
     ok: true,
-    emailed: result.sent + result.skipped,
+    emailed: result.sent,
     failed: result.failed,
     skipped: result.skipped,
     emailNote: result.note,

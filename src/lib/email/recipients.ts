@@ -82,8 +82,9 @@ export async function resolveAnnouncementRecipients(opts: {
       if (parentIds.length) {
         const { data: parents } = await admin
           .from('profiles')
-          .select('id, email, full_name, role')
+          .select('id, email, full_name, role, school_id')
           .in('id', parentIds)
+          .eq('school_id', opts.schoolId)
 
         const studentsByParent = new Map<string, string[]>()
         for (const l of links ?? []) {
@@ -156,7 +157,8 @@ export async function previewRecipients(opts: {
 
 /** Parents linked to one student (for digests / attendance / grades). */
 export async function resolveParentsForStudents(
-  studentIds: string[]
+  studentIds: string[],
+  schoolId?: string
 ): Promise<
   Map<
     string,
@@ -175,10 +177,9 @@ export async function resolveParentsForStudents(
   if (!links?.length) return map
 
   const parentIds = [...new Set(links.map((l) => l.parent_id))]
-  const { data: parents } = await admin
-    .from('profiles')
-    .select('id, email, full_name')
-    .in('id', parentIds)
+  let pq = admin.from('profiles').select('id, email, full_name, school_id').in('id', parentIds)
+  if (schoolId) pq = pq.eq('school_id', schoolId)
+  const { data: parents } = await pq
 
   const parentById = new Map((parents ?? []).map((p) => [p.id, p]))
 

@@ -143,8 +143,8 @@ function kioskRateOk(token: string, action: string) {
 }
 
 async function resolveKioskToken(clientToken?: string | null): Promise<string | null> {
-  const fromClient = (clientToken || '').trim()
-  if (fromClient.length >= 12) return fromClient
+  // Prefer HttpOnly cookie (capability secret not required on every request body).
+  // Accept client token only when cookie missing (first paint / legacy).
   try {
     const jar = await cookies()
     const fromCookie = jar.get(KIOSK_COOKIE)?.value?.trim() || ''
@@ -152,6 +152,8 @@ async function resolveKioskToken(clientToken?: string | null): Promise<string | 
   } catch {
     // cookies() unavailable in some contexts
   }
+  const fromClient = (clientToken || '').trim()
+  if (fromClient.length >= 12) return fromClient
   return null
 }
 
@@ -175,6 +177,13 @@ export async function kioskScanAction(input: {
   const school = await resolveSchoolByKioskToken(token)
   if (!school) {
     return { ok: false, error: 'Invalid kiosk link. Open kiosk from Principal → Badges.' }
+  }
+  const { uuidSchema, scanDirectionSchema } = await import('@/lib/validation/schemas')
+  if (!uuidSchema.safeParse(input.roomId).success) {
+    return { ok: false, error: 'Invalid room.' }
+  }
+  if (!scanDirectionSchema.safeParse(input.direction).success) {
+    return { ok: false, error: 'Direction must be in or out.' }
   }
   // Public kiosk: physical badge/RFID/QR only — no name-tap by studentId
   const { publicKioskScanCode } = await import('@/lib/badge/scan-guards')

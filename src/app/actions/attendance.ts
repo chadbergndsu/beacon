@@ -135,9 +135,11 @@ export async function saveAttendance(
       } else {
         const result = await queueAndSendBatch(batch, { brand })
         notifyNote =
-          result.sent + result.skipped > 0
-            ? `Notified parents on ${result.sent + result.skipped} message(s) for absent/tardy.${result.note ? ` ${result.note}` : ''}`
-            : 'No parent emails sent (delivery failed or no matches).'
+          result.sent > 0
+            ? `Delivered ${result.sent} parent email(s) for absent/tardy.${result.skipped ? ` ${result.skipped} logged only.` : ''}${result.note ? ` ${result.note}` : ''}`
+            : result.skipped > 0
+              ? `${result.skipped} parent email(s) logged only (no live transport).${result.note ? ` ${result.note}` : ''}`
+              : 'No parent emails sent (delivery failed or no matches).'
       }
     }
   }

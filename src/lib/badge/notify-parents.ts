@@ -21,7 +21,10 @@ export type AftercareNotifyResult = {
   note?: string
 }
 
-async function parentsForStudent(studentId: string): Promise<
+async function parentsForStudent(
+  studentId: string,
+  schoolId?: string
+): Promise<
   { parentId: string; email: string | null; phone: string | null; name: string | null }[]
 > {
   const admin = createAdminClient()
@@ -32,10 +35,9 @@ async function parentsForStudent(studentId: string): Promise<
   if (!links?.length) return []
 
   const ids = [...new Set(links.map((l) => l.parent_id))]
-  const { data: parents } = await admin
-    .from('profiles')
-    .select('id, email, full_name, phone')
-    .in('id', ids)
+  let q = admin.from('profiles').select('id, email, full_name, phone, school_id').in('id', ids)
+  if (schoolId) q = q.eq('school_id', schoolId)
+  const { data: parents } = await q
 
   return (parents ?? []).map((p) => ({
     parentId: p.id as string,
@@ -78,7 +80,7 @@ export async function notifyParentsOfAftercareScan(opts: {
     const wants = await schoolWantsAftercareNotify(opts.schoolId)
     if (!wants) return { emailsSent: 0, smsSent: 0, note: 'Parent aftercare notify disabled.' }
 
-    const parents = await parentsForStudent(opts.studentId)
+    const parents = await parentsForStudent(opts.studentId, opts.schoolId)
     if (!parents.length) {
       return { emailsSent: 0, smsSent: 0, note: 'No linked parents for student.' }
     }

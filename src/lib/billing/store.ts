@@ -71,20 +71,9 @@ export async function saveBillingState(
   schoolId: string,
   billing: SchoolBillingState
 ): Promise<void> {
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('schools')
-    .select('settings')
-    .eq('id', schoolId)
-    .maybeSingle()
-
-  const settings = { ...((data?.settings || {}) as SchoolSettings), billing }
-  const { error } = await admin
-    .from('schools')
-    .update({ settings })
-    .eq('id', schoolId)
-
-  if (error) throw new Error(error.message)
+  const { mergeSchoolSettings } = await import('@/lib/school-settings')
+  const r = await mergeSchoolSettings(schoolId, { billing })
+  if (!r.ok) throw new Error(r.error)
 }
 
 export async function updateQuickBooks(
