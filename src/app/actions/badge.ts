@@ -13,10 +13,12 @@ import {
   getOrCreateKioskToken,
   listOpenAftercare,
   listRecentScans,
+  listRoomPresence,
   listRooms,
   listStudentBadges,
   processBadgeScan,
   resolveSchoolByKioskToken,
+  searchKioskStudents,
   upsertRoom,
 } from '@/lib/badge/store'
 
@@ -110,7 +112,8 @@ export async function billAftercareAction(): Promise<
 /** Kiosk scan — authorized by kiosk token (no staff login on tablet). */
 export async function kioskScanAction(input: {
   token: string
-  rawCode: string
+  rawCode?: string
+  studentId?: string
   roomId: string
   direction: ScanDirection
   kioskLabel?: string
@@ -122,6 +125,7 @@ export async function kioskScanAction(input: {
   return processBadgeScan({
     schoolId: school.schoolId,
     rawCode: input.rawCode,
+    studentId: input.studentId,
     roomId: input.roomId,
     direction: input.direction,
     kioskLabel: input.kioskLabel || 'Room kiosk',
@@ -129,9 +133,36 @@ export async function kioskScanAction(input: {
   })
 }
 
+export async function kioskSearchAction(input: {
+  token: string
+  query: string
+}): Promise<
+  | { ok: true; students: Awaited<ReturnType<typeof searchKioskStudents>> }
+  | { ok: false; error: string }
+> {
+  const school = await resolveSchoolByKioskToken(input.token)
+  if (!school) return { ok: false, error: 'Invalid kiosk.' }
+  const students = await searchKioskStudents(school.schoolId, input.query)
+  return { ok: true, students }
+}
+
+export async function kioskPresenceAction(input: {
+  token: string
+  roomId: string
+}): Promise<
+  | { ok: true; present: Awaited<ReturnType<typeof listRoomPresence>> }
+  | { ok: false; error: string }
+> {
+  const school = await resolveSchoolByKioskToken(input.token)
+  if (!school) return { ok: false, error: 'Invalid kiosk.' }
+  const present = await listRoomPresence(school.schoolId, input.roomId)
+  return { ok: true, present }
+}
+
 /** Staff can scan while logged in (office laptop). */
 export async function staffScanAction(input: {
-  rawCode: string
+  rawCode?: string
+  studentId?: string
   roomId: string
   direction: ScanDirection
 }): Promise<Awaited<ReturnType<typeof processBadgeScan>>> {
@@ -157,11 +188,40 @@ export async function staffScanAction(input: {
   return processBadgeScan({
     schoolId: profile.school_id,
     rawCode: input.rawCode,
+    studentId: input.studentId,
     roomId: input.roomId,
     direction: input.direction,
     kioskLabel: 'Staff desk',
     source: 'staff',
   })
+}
+
+export async function staffRoomsAction(): Promise<
+  | { ok: true; rooms: Awaited<ReturnType<typeof listRooms>>; schoolId: string }
+  | { ok: false; error: string }
+> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('school_id, role, email')
+    .eq('id', user.id)
+    .maybeSingle()
+  const role = effectiveRole(
+    profile
+      ? { role: profile.role as Role, email: profile.email as string | null }
+      : null
+  )
+  if (!profile?.school_id || !isSchoolStaff(role)) {
+    return { ok: false, error: 'Staff only.' }
+  }
+  await ensureDefaultRooms(profile.school_id)
+  const rooms = await listRooms(profile.school_id)
+  return { ok: true, rooms, schoolId: profile.school_id }
 }
 
 export async function loadBadgeDashboardAction() {

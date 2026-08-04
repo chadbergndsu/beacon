@@ -276,6 +276,94 @@ export async function listRecentScans(
   }))
 }
 
+/** Students whose last scan in this room is IN (still present). */
+export async function listRoomPresence(
+  schoolId: string,
+  roomId: string
+): Promise<{ studentId: string; studentName: string; since: string; direction: ScanDirection }[]> {
+  const admin = createAdminClient()
+  const { data: scans, error } = await admin
+    .from('badge_scans')
+    .select('student_id, direction, scanned_at')
+    .eq('school_id', schoolId)
+    .eq('room_id', roomId)
+    .order('scanned_at', { ascending: false })
+    .limit(400)
+
+  if (error || !scans?.length) return []
+
+  const lastByStudent = new Map<
+    string,
+    { direction: ScanDirection; scanned_at: string }
+  >()
+  for (const s of scans) {
+    const sid = s.student_id as string
+    if (lastByStudent.has(sid)) continue
+    lastByStudent.set(sid, {
+      direction: s.direction as ScanDirection,
+      scanned_at: s.scanned_at as string,
+    })
+  }
+
+  const presentIds = [...lastByStudent.entries()]
+    .filter(([, v]) => v.direction === 'in')
+    .map(([id]) => id)
+  if (!presentIds.length) return []
+
+  const { data: students } = await admin
+    .from('students')
+    .select('id, first_name, last_name')
+    .in('id', presentIds)
+
+  const names = new Map(
+    (students ?? []).map((s) => [
+      s.id as string,
+      `${s.first_name} ${s.last_name}`,
+    ])
+  )
+
+  return presentIds
+    .map((id) => {
+      const last = lastByStudent.get(id)!
+      return {
+        studentId: id,
+        studentName: names.get(id) || 'Student',
+        since: last.scanned_at,
+        direction: last.direction,
+      }
+    })
+    .sort((a, b) => a.studentName.localeCompare(b.studentName))
+}
+
+export async function searchKioskStudents(
+  schoolId: string,
+  query: string
+): Promise<{ id: string; name: string; badgeCode: string | null; gradeLevel: string | null }[]> {
+  const safe = query
+    .trim()
+    .replace(/[^a-zA-Z0-9 \-']/g, '')
+    .slice(0, 40)
+  if (safe.length < 1) return []
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('students')
+    .select('id, first_name, last_name, badge_code, grade_level')
+    .eq('school_id', schoolId)
+    .eq('active', true)
+    .or(
+      `first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,badge_code.ilike.%${safe}%`
+    )
+    .order('last_name')
+    .limit(20)
+
+  return (data ?? []).map((s) => ({
+    id: s.id as string,
+    name: `${s.last_name}, ${s.first_name}`,
+    badgeCode: (s.badge_code as string) || null,
+    gradeLevel: (s.grade_level as string) || null,
+  }))
+}
+
 export async function listOpenAftercare(
   schoolId: string
 ): Promise<(AftercareSession & { studentName?: string; roomName?: string })[]> {
@@ -310,30 +398,79 @@ export async function listOpenAftercare(
 
 /**
  * Core kiosk action: scan badge in or out of a room.
+ * Pass rawCode (badge) and/or studentId (name-tap fallback).
  */
 export async function processBadgeScan(input: {
   schoolId: string
-  rawCode: string
+  rawCode?: string
+  studentId?: string
   roomId: string
   direction: ScanDirection
   kioskLabel?: string
   source?: string
 }): Promise<ScanResult> {
   const admin = createAdminClient()
-  const code = parseScannerInput(input.rawCode)
-  if (!code || code.length < 4) {
-    return { ok: false, error: 'Scan a valid badge code.' }
+
+  type StudentRow = {
+    id: string
+    first_name: string
+    last_name: string
+    school_id: string
+    active: boolean | null
+    badge_code: string | null
   }
 
-  const { data: student } = await admin
-    .from('students')
-    .select('id, first_name, last_name, school_id, active')
-    .eq('school_id', input.schoolId)
-    .eq('badge_code', code)
-    .maybeSingle()
+  let student: StudentRow | null = null
+  let resolvedCode = ''
+
+  if (input.studentId) {
+    const { data } = await admin
+      .from('students')
+      .select('id, first_name, last_name, school_id, active, badge_code')
+      .eq('id', input.studentId)
+      .eq('school_id', input.schoolId)
+      .maybeSingle()
+    student = (data as StudentRow | null) ?? null
+    resolvedCode = student?.badge_code || input.studentId.slice(0, 8)
+  } else {
+    const code = parseScannerInput(input.rawCode || '')
+    resolvedCode = code
+    if (!code || code.length < 4) {
+      return { ok: false, error: 'Scan a valid badge code.' }
+    }
+    const { data } = await admin
+      .from('students')
+      .select('id, first_name, last_name, school_id, active, badge_code')
+      .eq('school_id', input.schoolId)
+      .eq('badge_code', code)
+      .maybeSingle()
+    student = (data as StudentRow | null) ?? null
+    if (!student || student.active === false) {
+      return { ok: false, error: `No student found for code ${code}.` }
+    }
+  }
 
   if (!student || student.active === false) {
-    return { ok: false, error: `No student found for code ${code}.` }
+    return { ok: false, error: 'Student not found or inactive.' }
+  }
+
+  // Debounce: ignore same student+room+direction within 20s
+  const since = new Date(Date.now() - 20_000).toISOString()
+  const { data: recentDup } = await admin
+    .from('badge_scans')
+    .select('id, scanned_at')
+    .eq('school_id', input.schoolId)
+    .eq('student_id', student.id)
+    .eq('room_id', input.roomId)
+    .eq('direction', input.direction)
+    .gte('scanned_at', since)
+    .limit(1)
+    .maybeSingle()
+  if (recentDup) {
+    return {
+      ok: false,
+      error: 'Already scanned — wait a moment before scanning again.',
+    }
   }
 
   const { data: roomRow } = await admin
@@ -451,7 +588,7 @@ export async function processBadgeScan(input: {
     source: input.source || 'kiosk',
     kiosk_label: input.kioskLabel || null,
     session_id: sessionId,
-    meta: { code },
+    meta: { code: resolvedCode },
   })
 
   if (scanErr) {

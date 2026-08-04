@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
-import { kioskScanAction } from '@/app/actions/badge'
-import type { ScanDirection } from '@/lib/badge/types'
-import type { SchoolRoom } from '@/lib/badge/types'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import {
+  kioskPresenceAction,
+  kioskScanAction,
+  kioskSearchAction,
+} from '@/app/actions/badge'
+import type { ScanDirection, SchoolRoom } from '@/lib/badge/types'
+import { CameraQrScanner } from '@/components/badge/CameraQrScanner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -19,27 +23,46 @@ export function KioskScanner({
   const [roomId, setRoomId] = useState(rooms[0]?.id ?? '')
   const [direction, setDirection] = useState<ScanDirection>('in')
   const [code, setCode] = useState('')
-  const [flash, setFlash] = useState<{
-    ok: boolean
-    text: string
-  } | null>(null)
+  const [search, setSearch] = useState('')
+  const [hits, setHits] = useState<
+    { id: string; name: string; badgeCode: string | null; gradeLevel: string | null }[]
+  >([])
+  const [present, setPresent] = useState<
+    { studentId: string; studentName: string; since: string }[]
+  >([])
+  const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null)
   const [pending, start] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
+  const focusLock = useRef(true)
+
+  const refreshPresence = useCallback(() => {
+    if (!roomId) return
+    void kioskPresenceAction({ token, roomId }).then((r) => {
+      if (r.ok) setPresent(r.present)
+    })
+  }, [token, roomId])
 
   useEffect(() => {
-    inputRef.current?.focus()
-    const t = setInterval(() => inputRef.current?.focus(), 2000)
+    refreshPresence()
+    const t = setInterval(refreshPresence, 15_000)
+    return () => clearInterval(t)
+  }, [refreshPresence])
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (focusLock.current) inputRef.current?.focus()
+    }, 2500)
     return () => clearInterval(t)
   }, [])
 
-  function submit(raw?: string) {
-    const value = (raw ?? code).trim()
-    if (!value || !roomId) return
+  function doScan(opts: { rawCode?: string; studentId?: string }) {
+    if (!roomId) return
     setFlash(null)
     start(async () => {
       const r = await kioskScanAction({
         token,
-        rawCode: value,
+        rawCode: opts.rawCode,
+        studentId: opts.studentId,
         roomId,
         direction,
         kioskLabel: rooms.find((x) => x.id === roomId)?.name,
@@ -48,13 +71,35 @@ export function KioskScanner({
         setFlash({ ok: false, text: r.error })
       } else {
         setFlash({ ok: true, text: r.message })
+        // Smart flip: after IN, ready for next student still on IN; keep direction
+        refreshPresence()
       }
       setCode('')
+      setSearch('')
+      setHits([])
+      focusLock.current = true
       inputRef.current?.focus()
-      // Auto-clear banner
-      setTimeout(() => setFlash(null), 5000)
+      setTimeout(() => setFlash(null), 6000)
     })
   }
+
+  function submitCode(raw?: string) {
+    const value = (raw ?? code).trim()
+    if (!value) return
+    doScan({ rawCode: value })
+  }
+
+  useEffect(() => {
+    if (search.trim().length < 2) return
+    const handle = setTimeout(() => {
+      void kioskSearchAction({ token, query: search }).then((r) => {
+        if (r.ok) setHits(r.students)
+      })
+    }, 200)
+    return () => clearTimeout(handle)
+  }, [search, token])
+
+  const searchHits = search.trim().length < 2 ? [] : hits
 
   return (
     <div className="min-h-[100dvh] bg-slate-950 text-white flex flex-col">
@@ -65,10 +110,12 @@ export function KioskScanner({
           </p>
           <h1 className="text-lg font-bold">{schoolName}</h1>
         </div>
-        <p className="text-xs text-slate-400">Scan badge or type code → Enter</p>
+        <p className="text-xs text-slate-400">
+          USB scan · camera · or search name
+        </p>
       </header>
 
-      <main className="flex-1 mx-auto w-full max-w-xl px-4 py-6 space-y-5">
+      <main className="flex-1 mx-auto w-full max-w-xl px-4 py-5 space-y-4 pb-safe">
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400 mb-2">Room</p>
           <div className="flex flex-wrap gap-2">
@@ -85,15 +132,10 @@ export function KioskScanner({
                 )}
               >
                 {r.name}
-                {r.kind === 'aftercare' ? ' · aftercare' : ''}
+                {r.kind === 'aftercare' ? ' · $' : ''}
               </button>
             ))}
           </div>
-          {rooms.length === 0 && (
-            <p className="text-sm text-amber-300">
-              No rooms yet. Principal → Badges → add rooms, then refresh kiosk.
-            </p>
-          )}
         </div>
 
         <div>
@@ -122,12 +164,20 @@ export function KioskScanner({
           </div>
         </div>
 
+        <CameraQrScanner
+          enabled={Boolean(roomId)}
+          onCode={(c) => {
+            focusLock.current = false
+            submitCode(c)
+          }}
+        />
+
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            submit()
+            submitCode()
           }}
-          className="space-y-3"
+          className="space-y-2"
         >
           <label className="block">
             <span className="text-xs font-semibold uppercase text-slate-400">Badge code</span>
@@ -135,23 +185,69 @@ export function KioskScanner({
               ref={inputRef}
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
+              onFocus={() => {
+                focusLock.current = true
+              }}
               autoComplete="off"
               autoCapitalize="characters"
-              inputMode="text"
-              className="mt-1 w-full rounded-2xl border-2 border-sky-500/50 bg-slate-900 px-4 py-5 text-center text-3xl font-mono font-bold tracking-widest text-white outline-none focus:border-sky-400"
-              placeholder="SCAN…"
+              className="mt-1 w-full rounded-2xl border-2 border-sky-500/50 bg-slate-900 px-4 py-4 text-center text-2xl font-mono font-bold tracking-widest text-white outline-none focus:border-sky-400"
+              placeholder="SCAN OR TYPE…"
               disabled={pending || !roomId}
             />
           </label>
           <Button
             type="submit"
             size="lg"
-            className="w-full h-14 text-base"
+            className="w-full h-12"
             disabled={pending || !code.trim() || !roomId}
           >
             {pending ? 'Saving…' : `Record ${direction.toUpperCase()}`}
           </Button>
         </form>
+
+        <div>
+          <label className="block">
+            <span className="text-xs font-semibold uppercase text-slate-400">
+              No badge? Search name
+            </span>
+            <input
+              value={search}
+              onChange={(e) => {
+                focusLock.current = false
+                setSearch(e.target.value)
+              }}
+              onBlur={() => {
+                focusLock.current = true
+              }}
+              className="mt-1 w-full rounded-xl border border-white/15 bg-slate-900 px-3 py-3 text-sm text-white outline-none focus:border-sky-400"
+              placeholder="Start typing last name…"
+              disabled={pending || !roomId}
+            />
+          </label>
+          {searchHits.length > 0 && (
+            <ul className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-white/10 divide-y divide-white/10">
+              {searchHits.map((h) => (
+                <li key={h.id}>
+                  <button
+                    type="button"
+                    className="w-full px-3 py-2.5 text-left text-sm hover:bg-white/10"
+                    onClick={() => doScan({ studentId: h.id })}
+                  >
+                    <span className="font-semibold">{h.name}</span>
+                    {h.gradeLevel && (
+                      <span className="text-slate-400"> · {h.gradeLevel}</span>
+                    )}
+                    {h.badgeCode && (
+                      <span className="ml-2 font-mono text-xs text-sky-300">
+                        {h.badgeCode}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         {flash && (
           <div
@@ -166,10 +262,44 @@ export function KioskScanner({
           </div>
         )}
 
-        <p className="text-center text-[11px] text-slate-500 leading-relaxed">
-          USB barcode/QR scanners work like a keyboard — scan into the box and press Enter.
-          Classroom IN marks attendance present. Aftercare tracks time for payments.
-        </p>
+        <section className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+              In this room now
+            </p>
+            <button
+              type="button"
+              className="text-[11px] text-sky-400"
+              onClick={() => refreshPresence()}
+            >
+              Refresh
+            </button>
+          </div>
+          {present.length === 0 ? (
+            <p className="mt-2 text-sm text-slate-500">Nobody checked in yet.</p>
+          ) : (
+            <ul className="mt-2 max-h-36 space-y-1 overflow-y-auto text-sm">
+              {present.map((p) => (
+                <li
+                  key={p.studentId}
+                  className="flex items-center justify-between gap-2 rounded-lg bg-black/30 px-2 py-1.5"
+                >
+                  <span>{p.studentName}</span>
+                  <button
+                    type="button"
+                    className="text-[11px] font-semibold text-amber-300"
+                    onClick={() => {
+                      setDirection('out')
+                      doScan({ studentId: p.studentId })
+                    }}
+                  >
+                    Check out
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </main>
     </div>
   )

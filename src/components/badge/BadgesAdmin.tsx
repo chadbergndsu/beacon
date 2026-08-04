@@ -58,11 +58,14 @@ export function BadgesAdmin({
             Add <strong>rooms</strong> (classroom vs aftercare with hourly rate)
           </li>
           <li>
-            Open <strong>kiosk</strong> on a tablet → kids scan IN/OUT
+            Open <strong>kiosk</strong> on a tablet → USB scan, camera QR, or name search
           </li>
           <li>
             Classroom IN marks <strong>attendance present</strong>; aftercare tracks time →{' '}
             <strong>bill for payments</strong>
+          </li>
+          <li>
+            Teachers can also use nav <strong>Scan</strong> from a laptop
           </li>
         </ol>
         <p className="mt-2 text-[11px] opacity-80">

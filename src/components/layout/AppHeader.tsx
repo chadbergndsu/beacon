@@ -27,6 +27,7 @@ export function AppHeader({
     ...(showQuick ? [{ href: '/teacher/lessons', label: 'Lesson plans' }] : []),
     ...(showQuick ? [{ href: '/teacher/calendar', label: 'Calendar' }] : []),
     ...(showQuick ? [{ href: '/teacher/printables', label: 'Printables' }] : []),
+    ...(showQuick ? [{ href: '/teacher/scan', label: 'Scan' }] : []),
     ...(isPrincipal ? [{ href: '/principal', label: 'Principal office' }] : []),
     ...(isPrincipal ? [{ href: '/principal/release', label: 'Go-live' }] : []),
     { href: '/announcements', label: 'Announcements' },
