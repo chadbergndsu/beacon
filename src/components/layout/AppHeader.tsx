@@ -1,5 +1,9 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { logout } from '@/app/actions/auth'
+import { resolveActiveNavHref } from '@/lib/nav-active'
 import { canAccessEmailOutbox, isSchoolStaff, roleLabel } from '@/lib/roles'
 import type { Profile } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -11,6 +15,7 @@ export function AppHeader({
   profile: Profile | null
   schoolShortName?: string
 }) {
+  const pathname = usePathname() || '/'
   const role = profile?.role ?? null
   const staff = canAccessEmailOutbox(role)
   const isPrincipal = role === 'principal' || role === 'admin'
@@ -18,7 +23,7 @@ export function AppHeader({
 
   const nav = [
     { href: '/dashboard', label: 'Home' },
-    ...(showQuick ? [{ href: '/teacher/quick', label: 'Quick mode', highlight: true }] : []),
+    ...(showQuick ? [{ href: '/teacher/quick', label: 'Quick mode' }] : []),
     ...(showQuick ? [{ href: '/teacher/lessons', label: 'Lesson plans' }] : []),
     ...(showQuick ? [{ href: '/teacher/calendar', label: 'Calendar' }] : []),
     ...(showQuick ? [{ href: '/teacher/printables', label: 'Printables' }] : []),
@@ -29,6 +34,11 @@ export function AppHeader({
     { href: '/school', label: 'School site' },
     { href: '/about', label: 'About' },
   ]
+
+  const activeHref = resolveActiveNavHref(
+    pathname,
+    nav.map((item) => item.href)
+  )
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#06101f]/95 text-white backdrop-blur-xl pt-safe">
@@ -47,22 +57,24 @@ export function AppHeader({
           </Link>
 
           <nav className="hidden items-center gap-0.5 md:flex" aria-label="Main">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'rounded-lg px-3 py-2 text-sm font-medium text-slate-200/90 transition',
-                  'hover:bg-white/10 hover:text-white',
-                  item.href === '/principal' && 'text-sky-200',
-                  'highlight' in item &&
-                    item.highlight &&
-                    'bg-sky-500/20 text-sky-100 hover:bg-sky-500/30'
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {nav.map((item) => {
+              const active = item.href === activeHref
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'rounded-lg px-3 py-2 text-sm font-medium transition',
+                    active
+                      ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/25'
+                      : 'text-slate-200/90 hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
           </nav>
         </div>
 
@@ -80,7 +92,12 @@ export function AppHeader({
           {showQuick && (
             <Link
               href="/teacher/quick"
-              className="rounded-xl bg-sky-500 px-2.5 py-2 text-xs font-bold text-white shadow-md shadow-sky-500/25 hover:bg-sky-400 sm:hidden"
+              className={cn(
+                'rounded-xl px-2.5 py-2 text-xs font-bold text-white shadow-md sm:hidden',
+                activeHref === '/teacher/quick'
+                  ? 'bg-emerald-500 shadow-emerald-500/25'
+                  : 'bg-sky-500 shadow-sky-500/25 hover:bg-sky-400'
+              )}
             >
               Quick
             </Link>
@@ -100,22 +117,24 @@ export function AppHeader({
         className="mobile-scroll-x gap-1.5 px-3 pb-2.5 text-sm md:hidden sm:px-4"
         aria-label="Mobile"
       >
-        {nav.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              'shrink-0 whitespace-nowrap rounded-lg px-3 py-2 font-medium',
-              item.href === '/principal'
-                ? 'bg-sky-500/90 text-white'
-                : 'highlight' in item && item.highlight
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-white/10 text-slate-100'
-            )}
-          >
-            {item.label}
-          </Link>
-        ))}
+        {nav.map((item) => {
+          const active = item.href === activeHref
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'shrink-0 whitespace-nowrap rounded-lg px-3 py-2 font-medium transition',
+                active
+                  ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/25'
+                  : 'bg-white/10 text-slate-100 hover:bg-white/15'
+              )}
+            >
+              {item.label}
+            </Link>
+          )
+        })}
       </nav>
     </header>
   )
