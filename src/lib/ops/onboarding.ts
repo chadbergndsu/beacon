@@ -109,21 +109,21 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
       id: 'students',
       label: 'Add students',
       done: (students ?? 0) > 0,
-      href: '/dashboard',
+      href: '/principal/roster',
       detail: `${students ?? 0} active students`,
     },
     {
       id: 'teachers',
       label: 'Teacher accounts',
       done: (teachers ?? 0) > 0,
-      href: '/dashboard',
+      href: '/principal/roster',
       detail: `${teachers ?? 0} teacher profiles`,
     },
     {
       id: 'classes',
       label: 'Create classes',
       done: (classes ?? 0) > 0,
-      href: '/dashboard',
+      href: '/principal/roster',
       detail: `${classes ?? 0} active classes`,
     },
     {
@@ -137,7 +137,7 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
       id: 'parents',
       label: 'Parent links',
       done: schoolParentLinks > 0,
-      href: '/dashboard',
+      href: '/principal/roster',
       detail:
         schoolParentLinks > 0
           ? `${schoolParentLinks} parent–student links`

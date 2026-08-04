@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 
 const links = [
   { href: '/principal', label: 'Overview' },
+  { href: '/principal/roster', label: 'Roster' },
   { href: '/principal/release', label: 'Go-live' },
   { href: '/principal/feedback', label: 'Pilot feedback' },
   { href: '/principal/payments', label: 'Payments & QuickBooks' },
