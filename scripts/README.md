@@ -1,6 +1,6 @@
 # Database / ops scripts
 
-**Canonical schema:** `../supabase/migrations/` (`001` … `018`).
+**Canonical schema:** `../supabase/migrations/` (`001` … `019`).
 
 ## Preferred
 
@@ -28,6 +28,7 @@ These are convenience copies for the Supabase SQL Editor. **If a pending file di
 | `pending-016-policy-smoke.sql` | **Not a migration** — human assertions after 016 |
 | `pending-017-billing-first-class.sql` | Billing first-class (code, source_key, parent RLS, JSON migrate) |
 | `pending-018-access-token-expiry.sql` | Kiosk/device token expiry columns + backfill |
+| `pending-019-family-billing-portal.sql` | Family portal tokens, payment plans, schedules |
 
 ## Legacy (do not use for full upgrades)
 

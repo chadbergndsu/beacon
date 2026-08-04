@@ -134,6 +134,8 @@ function makeBillingDb(seed?: {
       }
       return { data: null, error: null }
     },
+    billing_payment_plans: () => ({ data: [], error: null }),
+    billing_schedules: () => ({ data: [], error: null }),
   })
 }
 

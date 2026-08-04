@@ -10,8 +10,8 @@ export type ChecklistItem = {
 export const RELEASE_CHECKLIST: ChecklistItem[] = [
   {
     id: 'migrations',
-    label: 'Database migrations 001–018 applied',
-    help: 'Prefer: npm run db:migrate (supabase/migrations). Includes badge/kiosk (011–012), roster (013), token vault (015), RLS (016), billing (017), token expiry (018). Check Go-live health tables.',
+    label: 'Database migrations 001–019 applied',
+    help: 'Prefer: npm run db:migrate. Includes billing first-class (017), token expiry (018), family portal/plans/schedules (019).',
     group: 'ops',
   },
   {

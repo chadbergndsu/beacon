@@ -104,6 +104,8 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     ['billing_invoices', 'Billing invoices (006/017)'],
     ['billing_payments', 'Billing payments (006/017)'],
     ['quickbooks_connections', 'QuickBooks connections (006/017)'],
+    ['billing_payment_plans', 'Payment plans (019)'],
+    ['billing_schedules', 'Recurring schedules (019)'],
   ] as const
 
   for (const [table, label] of tables) {

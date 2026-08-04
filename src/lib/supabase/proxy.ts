@@ -45,6 +45,8 @@ export async function updateSession(request: NextRequest) {
       path === '/kiosk' ||
       path.startsWith('/kiosk/') ||
       path.startsWith('/api/kiosk/') ||
+      path.startsWith('/pay/') ||
+      path.startsWith('/api/stripe/') ||
       path === '/api/health'
     if (prodLike && !isPublicPath) {
       return new NextResponse(
@@ -80,8 +82,16 @@ export async function updateSession(request: NextRequest) {
   const isDeviceApi = path.startsWith('/api/kiosk/')
   // Public liveness probe (detailed checks still require BEACON_HEALTH_SECRET)
   const isHealth = path === '/api/health'
+  const isFamilyPay = path.startsWith('/pay/')
+  const isStripeWebhook = path.startsWith('/api/stripe/')
   const isPublic =
-    PUBLIC_EXACT.has(path) || isKiosk || isDeviceApi || isHealth || path === '/privacy'
+    PUBLIC_EXACT.has(path) ||
+    isKiosk ||
+    isDeviceApi ||
+    isHealth ||
+    isFamilyPay ||
+    isStripeWebhook ||
+    path === '/privacy'
 
   if (!user && !isPublic) {
     const redirectUrl = request.nextUrl.clone()

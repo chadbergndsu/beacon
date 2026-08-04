@@ -3,7 +3,20 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createTuitionInvoice, recordPayment } from '@/app/actions/billing'
-import type { BillingInvoice, BillingPayment, BillingProduct } from '@/lib/billing/types'
+import {
+  createFamilyPaymentPlan,
+  createRecurringSchedule,
+  emailInvoiceToFamily,
+  remindOpenInvoices,
+  runRecurringBillingNow,
+} from '@/app/actions/family-billing'
+import type {
+  BillingInvoice,
+  BillingPayment,
+  BillingPaymentPlan,
+  BillingProduct,
+  BillingSchedule,
+} from '@/lib/billing/types'
 import { formatMoney } from '@/lib/billing/store'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -13,12 +26,18 @@ export function InvoicesPanel({
   products,
   invoices,
   payments,
+  plans = [],
+  schedules = [],
   qbConnected,
+  stripeConfigured,
 }: {
   products: BillingProduct[]
   invoices: BillingInvoice[]
   payments: BillingPayment[]
+  plans?: BillingPaymentPlan[]
+  schedules?: BillingSchedule[]
   qbConnected: boolean
+  stripeConfigured?: boolean
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -27,11 +46,73 @@ export function InvoicesPanel({
 
   return (
     <div className="space-y-6">
-      {qbConnected && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          QuickBooks connected — new invoices/payments push when sync prefs allow; use Payments → Push to QuickBooks for backlog.
+      <div className="rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-sm text-sky-950">
+        <p className="font-semibold">Family billing (school-owned)</p>
+        <p className="mt-1 text-xs leading-relaxed">
+          Portal pay links, reminders, payment plans, and recurring tuition — built into Beacon.
+          Not BillerGenie or any third-party biller lock-in.
+          {stripeConfigured
+            ? ' Stripe Checkout is on for online card pay.'
+            : ' Set STRIPE_SECRET_KEY for online card pay; office can still record cash/check.'}
+          {qbConnected ? ' QuickBooks push available for accounting.' : ''}
+        </p>
+      </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+          {error}
         </div>
       )}
+      {ok && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          {ok}
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              setError(null)
+              setOk(null)
+              const r = await remindOpenInvoices()
+              if (!r.ok) setError(r.error)
+              else
+                setOk(
+                  `Reminders: ${r.sent} sent` +
+                    (r.errors.length ? ` · ${r.errors.length} issues` : '')
+                )
+              router.refresh()
+            })
+          }
+        >
+          Email reminders (open invoices)
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              setError(null)
+              setOk(null)
+              const r = await runRecurringBillingNow()
+              if (!r.ok) setError(r.error)
+              else
+                setOk(
+                  `Recurring run: ${r.created} invoice(s)` +
+                    (r.errors.length ? ` · ${r.errors.join('; ')}` : '')
+                )
+              router.refresh()
+            })
+          }
+        >
+          Run due recurring bills
+        </Button>
+      </div>
 
       <Card>
         <CardContent className="pt-5 space-y-3">
@@ -52,7 +133,7 @@ export function InvoicesPanel({
                 })
                 if (!res.ok) setError(res.error)
                 else {
-                  setOk('Invoice created.')
+                  setOk('Invoice created with family pay link.')
                   e.currentTarget.reset()
                   router.refresh()
                 }
@@ -79,27 +160,217 @@ export function InvoicesPanel({
             </label>
             <label className="text-xs font-medium text-muted-foreground">
               Product
-              <select name="productId" required className="mt-1 w-full rounded-xl border px-3 py-2 text-sm">
+              <select
+                name="productId"
+                required
+                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              >
                 <option value="">Select…</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} — {formatMoney(p.amountCents)}
+                    {p.name} · {formatMoney(p.amountCents)}
                   </option>
                 ))}
               </select>
             </label>
             <label className="text-xs font-medium text-muted-foreground">
               Due date
-              <input name="dueDate" type="date" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" />
+              <input
+                name="dueDate"
+                type="date"
+                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              />
             </label>
-            {error && <p className="text-sm text-red-600 sm:col-span-2">{error}</p>}
-            {ok && <p className="text-sm text-emerald-700 sm:col-span-2">{ok}</p>}
             <div className="sm:col-span-2">
-              <Button type="submit" disabled={pending || !products.length}>
+              <Button type="submit" disabled={pending}>
                 Create invoice
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-5 space-y-3">
+          <h3 className="font-semibold">Payment plan (split balance)</h3>
+          <p className="text-xs text-muted-foreground">
+            Creates 2–24 open installment invoices with monthly due dates — family portal links on
+            each.
+          </p>
+          <form
+            className="grid gap-3 sm:grid-cols-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const fd = new FormData(e.currentTarget)
+              setError(null)
+              setOk(null)
+              start(async () => {
+                const res = await createFamilyPaymentPlan({
+                  familyName: String(fd.get('familyName') || ''),
+                  parentEmail: String(fd.get('parentEmail') || ''),
+                  description: String(fd.get('description') || ''),
+                  totalDollars: Number(fd.get('totalDollars') || 0),
+                  installmentCount: Number(fd.get('installmentCount') || 0),
+                  firstDueDate: String(fd.get('firstDueDate') || ''),
+                })
+                if (!res.ok) setError(res.error)
+                else {
+                  setOk('Payment plan created.')
+                  e.currentTarget.reset()
+                  router.refresh()
+                }
+              })
+            }}
+          >
+            <label className="text-xs font-medium text-muted-foreground">
+              Family name
+              <input name="familyName" required className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Parent email
+              <input
+                name="parentEmail"
+                type="email"
+                required
+                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-xs font-medium text-muted-foreground sm:col-span-2">
+              Description
+              <input
+                name="description"
+                placeholder="Annual tuition plan"
+                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Total ($)
+              <input
+                name="totalDollars"
+                type="number"
+                step="0.01"
+                min="1"
+                required
+                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-xs font-medium text-muted-foreground">
+              # installments
+              <input
+                name="installmentCount"
+                type="number"
+                min={2}
+                max={24}
+                defaultValue={4}
+                required
+                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-xs font-medium text-muted-foreground">
+              First due date
+              <input
+                name="firstDueDate"
+                type="date"
+                required
+                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              />
+            </label>
+            <div className="sm:col-span-2">
+              <Button type="submit" disabled={pending} variant="outline">
+                Create payment plan
+              </Button>
+            </div>
+          </form>
+          {plans.length > 0 && (
+            <ul className="text-xs text-muted-foreground space-y-1 border-t pt-2">
+              {plans.slice(0, 5).map((p) => (
+                <li key={p.id}>
+                  {p.familyName} · {p.installmentCount}× · {formatMoney(p.totalCents)} · {p.status}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-5 space-y-3">
+          <h3 className="font-semibold">Recurring schedule (auto-invoice)</h3>
+          <p className="text-xs text-muted-foreground">
+            Monthly / term / annual product billing. Run due bills above or from Go-live ops.
+          </p>
+          <form
+            className="grid gap-3 sm:grid-cols-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const fd = new FormData(e.currentTarget)
+              setError(null)
+              setOk(null)
+              start(async () => {
+                const res = await createRecurringSchedule({
+                  familyName: String(fd.get('familyName') || ''),
+                  parentEmail: String(fd.get('parentEmail') || ''),
+                  productId: String(fd.get('productId') || ''),
+                  nextRunOn: String(fd.get('nextRunOn') || ''),
+                })
+                if (!res.ok) setError(res.error)
+                else {
+                  setOk('Recurring schedule saved.')
+                  e.currentTarget.reset()
+                  router.refresh()
+                }
+              })
+            }}
+          >
+            <label className="text-xs font-medium text-muted-foreground">
+              Family name
+              <input name="familyName" required className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Parent email
+              <input
+                name="parentEmail"
+                type="email"
+                required
+                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Product
+              <select name="productId" required className="mt-1 w-full rounded-xl border px-3 py-2 text-sm">
+                <option value="">Select…</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.frequency})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Next bill date
+              <input
+                name="nextRunOn"
+                type="date"
+                required
+                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              />
+            </label>
+            <div className="sm:col-span-2">
+              <Button type="submit" disabled={pending} variant="outline">
+                Add schedule
+              </Button>
+            </div>
+          </form>
+          {schedules.length > 0 && (
+            <ul className="text-xs text-muted-foreground space-y-1 border-t pt-2">
+              {schedules.slice(0, 8).map((s) => (
+                <li key={s.id}>
+                  {s.familyName} · {s.description} · next {s.nextRunOn}
+                  {!s.active ? ' (paused)' : ''}
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 
@@ -121,9 +392,10 @@ export function InvoicesPanel({
                       {inv.description}
                       {inv.parentEmail ? ` · ${inv.parentEmail}` : ''}
                       {inv.dueDate ? ` · due ${inv.dueDate}` : ''}
+                      {inv.installmentIndex ? ` · #${inv.installmentIndex}` : ''}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold tabular-nums">{formatMoney(inv.amountCents)}</span>
                     <Badge
                       variant={
@@ -136,20 +408,39 @@ export function InvoicesPanel({
                     >
                       {inv.status}
                     </Badge>
-                    {inv.status === 'open' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={pending}
-                        onClick={() =>
-                          start(async () => {
-                            await recordPayment({ invoiceId: inv.id, method: 'card' })
-                            router.refresh()
-                          })
-                        }
-                      >
-                        Record payment
-                      </Button>
+                    {(inv.status === 'open' || inv.status === 'overdue') && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={pending}
+                          onClick={() =>
+                            start(async () => {
+                              setError(null)
+                              setOk(null)
+                              const r = await emailInvoiceToFamily(inv.id)
+                              if (!r.ok) setError(r.error)
+                              else setOk(`Emailed portal link.`)
+                              router.refresh()
+                            })
+                          }
+                        >
+                          Email pay link
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={pending}
+                          onClick={() =>
+                            start(async () => {
+                              await recordPayment({ invoiceId: inv.id, method: 'cash' })
+                              router.refresh()
+                            })
+                          }
+                        >
+                          Record office pay
+                        </Button>
+                      </>
                     )}
                   </div>
                 </li>
@@ -176,7 +467,7 @@ export function InvoicesPanel({
                     <p className="text-xs text-muted-foreground">
                       {p.method}
                       {p.paidAt ? ` · ${new Date(p.paidAt).toLocaleString()}` : ''}
-                      {p.qbPaymentId ? ` · QB ${p.qbPaymentId}` : ''}
+                      {p.notes ? ` · ${p.notes.slice(0, 40)}` : ''}
                     </p>
                   </div>
                   <Badge variant={p.status === 'succeeded' ? 'success' : 'muted'}>{p.status}</Badge>

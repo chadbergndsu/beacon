@@ -1,5 +1,6 @@
 import { requirePrincipal } from '@/lib/principal'
 import { loadBillingState } from '@/lib/billing/store'
+import { isStripeConfigured } from '@/lib/billing/stripe'
 import { InvoicesPanel } from '@/components/principal/InvoicesPanel'
 
 export default async function PrincipalInvoicesPage() {
@@ -9,16 +10,20 @@ export default async function PrincipalInvoicesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-navy dark:text-sky-50">Invoices & payments</h2>
+        <h2 className="text-xl font-bold text-navy dark:text-sky-50">Family billing</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Create family invoices and record payments. Stored in Beacon (QuickBooks live post not enabled yet).
+          Invoices, pay portals, payment plans, recurring tuition, reminders — owned by your school
+          in Beacon (not a third-party biller).
         </p>
       </div>
       <InvoicesPanel
         products={state.products}
         invoices={state.invoices}
         payments={state.payments}
+        plans={state.plans}
+        schedules={state.schedules}
         qbConnected={state.quickbooks.status === 'connected'}
+        stripeConfigured={isStripeConfigured()}
       />
     </div>
   )

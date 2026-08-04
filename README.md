@@ -32,7 +32,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 
 ### Public (unauthenticated) routes
 
-Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/privacy`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/api/health`.
+Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/privacy`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/pay/*` (family invoice portal), `/api/stripe/*` (webhook), `/api/health`.
 
 **Not public:** `/api/quickbooks/callback` requires an existing principal/admin session (Intuit redirect after Connect).
 
@@ -47,7 +47,8 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 | **Conference Brief** | One-page PTC sheet from grades + pulse + attendance (unique) |
 | **Beacon Signal** | Principal school climate heart-rate + pastoral watch list (unique) |
 | **Communications** | Compose to families, announcements, Dinner Table Digest email, grade/attendance notices, outbox + resend |
-| **Principal office** | Tuition, QuickBooks, videos, **cameras** (go2rtc + hls.js), pulse, **Go-live** |
+| **Principal office** | Tuition, family billing portal, QuickBooks, videos, **cameras**, pulse, **Go-live** |
+| **Family billing** | Pay portal `/pay/[token]`, email reminders, payment plans, recurring schedules, optional Stripe + QBO push — **school-owned** (not BillerGenie/third-party biller) |
 | **Campus cameras** | Principal live wall — EasyCamera LiveGrid pattern + go2rtc/MediaMTX HLS + hls.js simulator fallback |
 | **Missing Work Radar** | Calm past-due vs upcoming list (parent + teacher Today) |
 | **Teacher Today** | Per-class missing-work focus without district dashboards |
@@ -97,7 +98,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth + client |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server actions / admin client (never expose to browser) |
 
-Then apply **migrations 001–018** (see below) and:
+Then apply **migrations 001–019** (see below) and:
 
 ```bash
 npm run dev
@@ -131,7 +132,7 @@ Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, securit
 
 ### Database migrations
 
-**Source of truth:** `supabase/migrations/` files **001–018** in filename order.
+**Source of truth:** `supabase/migrations/` files **001–019** in filename order.
 
 ```bash
 # Preferred
@@ -156,6 +157,7 @@ POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate -- 017
 | **016** | RLS lockdown (profile role/school_id, staff write scopes) |
 | **017** | billing first-class: product `code`, invoice `source_key`, demo QB status, parent read RLS, one-time migrate legacy JSON → tables |
 | **018** | kiosk/device token expiry (`kiosk_token_expires_at` / `device_token_expires_at`; default 90 days) |
+| **019** | family billing: portal tokens, payment plans, recurring schedules |
 
 **Billing money path** uses tables only. Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`.
 
@@ -211,6 +213,7 @@ Full list of names lives in **`.env.example`**. Summary:
 | Pilot owner email | `BEACON_FEEDBACK_TO` / `BEACON_OWNER_EMAIL` | Suggestion button inbox (**not** the principal) |
 | ntfy push | `BEACON_NTFY_*` | Owner phone alerts |
 | Twilio SMS | `TWILIO_*` | Aftercare parent SMS |
+| Stripe (family pay) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Optional card checkout on `/pay/[token]`; webhook `/api/stripe/webhook` |
 | Upstash Redis | `UPSTASH_REDIS_REST_*` | **Required on production/preview** for multi-instance rate limits (or `RATE_LIMIT_ALLOW_MEMORY=1` break-glass). Go-live fails without either. |
 | Access token TTL | `BEACON_ACCESS_TOKEN_TTL_DAYS` | Kiosk/device secret lifetime (default 90) |
 | School day TZ | `BEACON_SCHOOL_TZ` | Badge attendance calendar day (default `America/Chicago`) |

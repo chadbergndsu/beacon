@@ -4,7 +4,9 @@ import {
   type BillingFrequency,
   type BillingInvoice,
   type BillingPayment,
+  type BillingPaymentPlan,
   type BillingProduct,
+  type BillingSchedule,
   type InvoiceStatus,
   type PaymentMethod,
   type PaymentStatus,
@@ -13,6 +15,7 @@ import {
   type QuickBooksConnection,
   type SchoolBillingState,
 } from '@/lib/billing/types'
+import { newPortalToken } from '@/lib/billing/portal-token'
 
 const FREQ: BillingFrequency[] = ['one_time', 'monthly', 'term', 'annual']
 const INV_STATUS: InvoiceStatus[] = ['draft', 'open', 'paid', 'void', 'overdue', 'syncing']
@@ -67,6 +70,49 @@ function mapInvoice(row: Record<string, unknown>): BillingInvoice {
     dueDate: row.due_date != null ? String(row.due_date).slice(0, 10) : null,
     qbInvoiceId: row.qb_invoice_id != null ? String(row.qb_invoice_id) : null,
     sourceKey: row.source_key != null ? String(row.source_key) : null,
+    portalToken: row.portal_token != null ? String(row.portal_token) : null,
+    lastRemindedAt: row.last_reminded_at != null ? String(row.last_reminded_at) : null,
+    reminderCount: Number(row.reminder_count) || 0,
+    planId: row.plan_id != null ? String(row.plan_id) : null,
+    installmentIndex:
+      row.installment_index != null ? Number(row.installment_index) : null,
+    createdAt: row.created_at ? String(row.created_at) : new Date().toISOString(),
+  }
+}
+
+function mapPlan(row: Record<string, unknown>): BillingPaymentPlan {
+  const status = String(row.status || 'active')
+  return {
+    id: String(row.id),
+    familyName: String(row.family_name || ''),
+    parentEmail: String(row.parent_email || ''),
+    description: String(row.description || ''),
+    totalCents: Number(row.total_cents) || 0,
+    currency: String(row.currency || 'USD'),
+    installmentCount: Number(row.installment_count) || 2,
+    status:
+      status === 'completed' || status === 'cancelled'
+        ? status
+        : 'active',
+    createdAt: row.created_at ? String(row.created_at) : new Date().toISOString(),
+  }
+}
+
+function mapSchedule(row: Record<string, unknown>): BillingSchedule {
+  const freq = String(row.frequency || 'monthly')
+  return {
+    id: String(row.id),
+    productId: row.product_id != null ? String(row.product_id) : null,
+    familyName: String(row.family_name || ''),
+    parentEmail: String(row.parent_email || ''),
+    description: String(row.description || ''),
+    amountCents: Number(row.amount_cents) || 0,
+    currency: String(row.currency || 'USD'),
+    frequency:
+      freq === 'term' || freq === 'annual' ? freq : 'monthly',
+    nextRunOn: String(row.next_run_on || '').slice(0, 10),
+    active: row.active !== false,
+    lastRunAt: row.last_run_at != null ? String(row.last_run_at) : null,
     createdAt: row.created_at ? String(row.created_at) : new Date().toISOString(),
   }
 }
@@ -152,7 +198,7 @@ function seedProductRows(schoolId: string): Array<Record<string, unknown>> {
 export async function loadBillingState(schoolId: string): Promise<SchoolBillingState> {
   const admin = createAdminClient()
 
-  const [qbRes, prodRes, invRes, payRes] = await Promise.all([
+  const [qbRes, prodRes, invRes, payRes, planRes, schedRes] = await Promise.all([
     admin.from('quickbooks_connections').select('*').eq('school_id', schoolId).maybeSingle(),
     admin
       .from('billing_products')
@@ -171,6 +217,18 @@ export async function loadBillingState(schoolId: string): Promise<SchoolBillingS
       .eq('school_id', schoolId)
       .order('created_at', { ascending: false })
       .limit(200),
+    admin
+      .from('billing_payment_plans')
+      .select('*')
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false })
+      .limit(100),
+    admin
+      .from('billing_schedules')
+      .select('*')
+      .eq('school_id', schoolId)
+      .order('next_run_on', { ascending: true })
+      .limit(100),
   ])
 
   if (
@@ -202,11 +260,20 @@ export async function loadBillingState(schoolId: string): Promise<SchoolBillingS
     }
   }
 
+  const plans = isMissingRelation(planRes.error)
+    ? []
+    : ((planRes.data || []) as Record<string, unknown>[]).map(mapPlan)
+  const schedules = isMissingRelation(schedRes.error)
+    ? []
+    : ((schedRes.data || []) as Record<string, unknown>[]).map(mapSchedule)
+
   return {
     quickbooks: mapQb(qbRes.data as Record<string, unknown> | null),
     products,
     invoices: ((invRes.data || []) as Record<string, unknown>[]).map(mapInvoice),
     payments: ((payRes.data || []) as Record<string, unknown>[]).map(mapPayment),
+    plans,
+    schedules,
   }
 }
 
@@ -383,6 +450,9 @@ export async function addInvoice(
     due_date: invoice.dueDate || null,
     qb_invoice_id: invoice.qbInvoiceId || null,
     source_key: invoice.sourceKey || null,
+    portal_token: invoice.portalToken || newPortalToken(),
+    plan_id: invoice.planId || null,
+    installment_index: invoice.installmentIndex ?? null,
     created_at: invoice.createdAt || new Date().toISOString(),
   }
 
@@ -550,4 +620,232 @@ export async function markPaymentQbSynced(
     .eq('id', paymentId)
     .eq('school_id', schoolId)
   if (error) throw new Error(error.message)
+}
+
+export async function loadInvoiceByPortalToken(
+  token: string
+): Promise<{ schoolId: string; invoice: BillingInvoice } | null> {
+  if (!token || token.length < 16) return null
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('billing_invoices')
+    .select('*')
+    .eq('portal_token', token)
+    .maybeSingle()
+  if (error || !data) return null
+  return {
+    schoolId: String(data.school_id),
+    invoice: mapInvoice(data as Record<string, unknown>),
+  }
+}
+
+export async function ensureInvoicePortalToken(
+  schoolId: string,
+  invoiceId: string
+): Promise<string> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('billing_invoices')
+    .select('portal_token')
+    .eq('id', invoiceId)
+    .eq('school_id', schoolId)
+    .maybeSingle()
+  if (data?.portal_token) return String(data.portal_token)
+  const token = newPortalToken()
+  const { error } = await admin
+    .from('billing_invoices')
+    .update({ portal_token: token })
+    .eq('id', invoiceId)
+    .eq('school_id', schoolId)
+  if (error) throw new Error(error.message)
+  return token
+}
+
+export async function markInvoiceReminded(
+  schoolId: string,
+  invoiceId: string
+): Promise<void> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('billing_invoices')
+    .select('reminder_count')
+    .eq('id', invoiceId)
+    .eq('school_id', schoolId)
+    .maybeSingle()
+  const count = Number(data?.reminder_count) || 0
+  await admin
+    .from('billing_invoices')
+    .update({
+      last_reminded_at: new Date().toISOString(),
+      reminder_count: count + 1,
+    })
+    .eq('id', invoiceId)
+    .eq('school_id', schoolId)
+}
+
+/** Split a balance into N open installment invoices. */
+export async function createPaymentPlan(input: {
+  schoolId: string
+  familyName: string
+  parentEmail: string
+  description: string
+  totalCents: number
+  installmentCount: number
+  firstDueDate: string
+  createdBy?: string | null
+}): Promise<{ planId: string; invoiceIds: string[] }> {
+  const n = Math.min(24, Math.max(2, Math.floor(input.installmentCount)))
+  const total = Math.max(0, Math.round(input.totalCents))
+  const base = Math.floor(total / n)
+  const remainder = total - base * n
+  const admin = createAdminClient()
+  const planId = crypto.randomUUID()
+
+  const { error: planErr } = await admin.from('billing_payment_plans').insert({
+    id: planId,
+    school_id: input.schoolId,
+    family_name: input.familyName.trim(),
+    parent_email: input.parentEmail.trim(),
+    description: input.description.trim(),
+    total_cents: total,
+    currency: 'USD',
+    installment_count: n,
+    status: 'active',
+    created_by: input.createdBy || null,
+  })
+  if (planErr) {
+    throw new Error(
+      planErr.message.includes('does not exist')
+        ? 'Apply migration 019 (family billing) — npm run db:migrate'
+        : planErr.message
+    )
+  }
+
+  const invoiceIds: string[] = []
+  const start = new Date(input.firstDueDate + 'T12:00:00')
+  for (let i = 0; i < n; i++) {
+    const due = new Date(start)
+    due.setMonth(due.getMonth() + i)
+    const amount = base + (i === n - 1 ? remainder : 0)
+    const invId = crypto.randomUUID()
+    await addInvoice(input.schoolId, {
+      id: invId,
+      familyName: input.familyName.trim(),
+      parentEmail: input.parentEmail.trim(),
+      description: `${input.description.trim()} · installment ${i + 1}/${n}`,
+      amountCents: amount,
+      currency: 'USD',
+      status: 'open',
+      dueDate: due.toISOString().slice(0, 10),
+      planId,
+      installmentIndex: i + 1,
+      portalToken: newPortalToken(),
+      createdAt: new Date().toISOString(),
+    })
+    invoiceIds.push(invId)
+  }
+  return { planId, invoiceIds }
+}
+
+export async function createBillingSchedule(input: {
+  schoolId: string
+  productId?: string | null
+  familyName: string
+  parentEmail: string
+  description: string
+  amountCents: number
+  frequency: 'monthly' | 'term' | 'annual'
+  nextRunOn: string
+  createdBy?: string | null
+}): Promise<BillingSchedule> {
+  const admin = createAdminClient()
+  const id = crypto.randomUUID()
+  const row = {
+    id,
+    school_id: input.schoolId,
+    product_id: input.productId || null,
+    family_name: input.familyName.trim(),
+    parent_email: input.parentEmail.trim(),
+    description: input.description.trim(),
+    amount_cents: Math.max(0, Math.round(input.amountCents)),
+    currency: 'USD',
+    frequency: input.frequency,
+    next_run_on: input.nextRunOn,
+    active: true,
+    created_by: input.createdBy || null,
+  }
+  const { error } = await admin.from('billing_schedules').insert(row)
+  if (error) {
+    throw new Error(
+      error.message.includes('does not exist')
+        ? 'Apply migration 019 (family billing) — npm run db:migrate'
+        : error.message
+    )
+  }
+  return mapSchedule(row)
+}
+
+function advanceScheduleDate(isoDate: string, frequency: 'monthly' | 'term' | 'annual'): string {
+  const d = new Date(isoDate + 'T12:00:00')
+  if (frequency === 'annual') d.setFullYear(d.getFullYear() + 1)
+  else if (frequency === 'term') d.setMonth(d.getMonth() + 4)
+  else d.setMonth(d.getMonth() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
+/** Create open invoices for schedules due on or before today. */
+export async function runDueBillingSchedules(
+  schoolId: string
+): Promise<{ created: number; errors: string[] }> {
+  const admin = createAdminClient()
+  const today = new Date().toISOString().slice(0, 10)
+  const { data, error } = await admin
+    .from('billing_schedules')
+    .select('*')
+    .eq('school_id', schoolId)
+    .eq('active', true)
+    .lte('next_run_on', today)
+    .limit(50)
+
+  if (error) {
+    if (isMissingRelation(error)) {
+      return { created: 0, errors: ['Apply migration 019 for billing schedules.'] }
+    }
+    return { created: 0, errors: [error.message] }
+  }
+
+  let created = 0
+  const errors: string[] = []
+  for (const raw of data || []) {
+    const sched = mapSchedule(raw as Record<string, unknown>)
+    try {
+      await addInvoice(schoolId, {
+        id: crypto.randomUUID(),
+        familyName: sched.familyName,
+        parentEmail: sched.parentEmail,
+        productId: sched.productId,
+        description: sched.description,
+        amountCents: sched.amountCents,
+        currency: sched.currency,
+        status: 'open',
+        dueDate: advanceScheduleDate(sched.nextRunOn, sched.frequency),
+        sourceKey: `schedule:${sched.id}:${sched.nextRunOn}`,
+        portalToken: newPortalToken(),
+        createdAt: new Date().toISOString(),
+      })
+      const next = advanceScheduleDate(sched.nextRunOn, sched.frequency)
+      await admin
+        .from('billing_schedules')
+        .update({
+          next_run_on: next,
+          last_run_at: new Date().toISOString(),
+        })
+        .eq('id', sched.id)
+        .eq('school_id', schoolId)
+      created++
+    } catch (e) {
+      errors.push(e instanceof Error ? e.message : 'schedule run failed')
+    }
+  }
+  return { created, errors }
 }

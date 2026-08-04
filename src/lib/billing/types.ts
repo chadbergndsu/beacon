@@ -52,6 +52,39 @@ export type BillingInvoice = {
   qbInvoiceId?: string | null
   /** Idempotency key, e.g. aftercare_session:<uuid> */
   sourceKey?: string | null
+  /** Family pay portal secret (CSPRNG) */
+  portalToken?: string | null
+  lastRemindedAt?: string | null
+  reminderCount?: number
+  planId?: string | null
+  installmentIndex?: number | null
+  createdAt: string
+}
+
+export type BillingPaymentPlan = {
+  id: string
+  familyName: string
+  parentEmail: string
+  description: string
+  totalCents: number
+  currency: string
+  installmentCount: number
+  status: 'active' | 'completed' | 'cancelled'
+  createdAt: string
+}
+
+export type BillingSchedule = {
+  id: string
+  productId?: string | null
+  familyName: string
+  parentEmail: string
+  description: string
+  amountCents: number
+  currency: string
+  frequency: 'monthly' | 'term' | 'annual'
+  nextRunOn: string
+  active: boolean
+  lastRunAt?: string | null
   createdAt: string
 }
 
@@ -73,6 +106,8 @@ export type SchoolBillingState = {
   products: BillingProduct[]
   invoices: BillingInvoice[]
   payments: BillingPayment[]
+  plans: BillingPaymentPlan[]
+  schedules: BillingSchedule[]
 }
 
 export const defaultBillingState = (): SchoolBillingState => ({
@@ -91,4 +126,6 @@ export const defaultBillingState = (): SchoolBillingState => ({
   products: [],
   invoices: [],
   payments: [],
+  plans: [],
+  schedules: [],
 })

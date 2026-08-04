@@ -10,6 +10,7 @@ export type EmailKind =
   | 'welcome'
   | 'test'
   | 'pilot_feedback'
+  | 'invoice'
 
 export type EmailStatus = 'queued' | 'sent' | 'failed' | 'skipped'
 
