@@ -9,17 +9,23 @@ export default async function AnnouncementsPage() {
   const canPost =
     profile && ['admin', 'staff', 'teacher', 'principal'].includes(profile.role)
 
-  let query = admin
+  // Fail closed: no school_id → empty list (never unscoped multi-tenant query)
+  if (!profile?.school_id) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-950">
+        <h1 className="text-xl font-bold">No school on your profile</h1>
+        <p className="mt-2">Ask an administrator to assign your account to a school.</p>
+      </div>
+    )
+  }
+
+  const { data: rows } = await admin
     .from('announcements')
     .select('id, title, body, audience, class_id, author_id, published_at, school_id')
+    .eq('school_id', profile.school_id)
     .order('published_at', { ascending: false })
     .limit(50)
 
-  if (profile?.school_id) {
-    query = query.eq('school_id', profile.school_id)
-  }
-
-  const { data: rows } = await query
   const announcements = rows ?? []
 
   // Parents: only parents/all audiences (and optionally their classes later)

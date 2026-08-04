@@ -49,8 +49,16 @@ export async function startFamilyPortalCheckout(
   const found = await loadInvoiceByPortalToken(token)
   if (!found) return { ok: false, error: 'Invoice not found.' }
   const { invoice, schoolId } = found
-  if (invoice.status === 'paid') return { ok: false, error: 'This invoice is already paid.' }
-  if (invoice.status === 'void') return { ok: false, error: 'This invoice was voided.' }
+  const { isCollectibleInvoiceStatus } = await import('@/lib/billing/store')
+  if (!isCollectibleInvoiceStatus(invoice.status)) {
+    return {
+      ok: false,
+      error:
+        invoice.status === 'paid'
+          ? 'This invoice is already paid.'
+          : `This invoice is not open for payment (${invoice.status}).`,
+    }
+  }
 
   const brand = await loadSchoolBrand(schoolId)
   const base = familyPayUrl(token)

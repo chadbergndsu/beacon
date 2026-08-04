@@ -22,11 +22,16 @@ export default async function CommunicationsPage() {
   if (!profile || !['admin', 'staff', 'teacher', 'principal'].includes(profile.role)) {
     redirect('/dashboard')
   }
+  // Fail closed: never list outbox/classes without tenant
+  if (!profile.school_id) {
+    redirect('/dashboard')
+  }
+  const schoolId = profile.school_id
 
   const [emails, stats, brand] = await Promise.all([
-    listEmailOutbox(profile.school_id, 100),
-    getEmailDeliveryStats(profile.school_id),
-    loadSchoolBrand(profile.school_id),
+    listEmailOutbox(schoolId, 100),
+    getEmailDeliveryStats(schoolId),
+    loadSchoolBrand(schoolId),
   ])
 
   const admin = createAdminClient()
@@ -36,13 +41,14 @@ export default async function CommunicationsPage() {
       .from('classes')
       .select('id, name')
       .eq('teacher_id', profile.id)
+      .eq('school_id', schoolId)
       .order('name')
     classes = data ?? []
   } else {
     const { data } = await admin
       .from('classes')
       .select('id, name')
-      .eq('school_id', profile.school_id!)
+      .eq('school_id', schoolId)
       .order('name')
     classes = data ?? []
   }

@@ -192,15 +192,18 @@ export async function listEmailOutbox(
   limit = 50,
   filter?: { status?: string; kind?: string }
 ): Promise<EmailOutboxRow[]> {
+  // Fail closed: never unscoped service-role read across tenants
+  if (!schoolId) return []
+
   const admin = createAdminClient()
 
   let q = admin
     .from('email_outbox')
     .select('*')
+    .eq('school_id', schoolId)
     .order('created_at', { ascending: false })
     .limit(limit)
 
-  if (schoolId) q = q.eq('school_id', schoolId)
   if (filter?.status) q = q.eq('status', filter.status)
   if (filter?.kind) q = q.eq('kind', filter.kind)
 
@@ -210,13 +213,13 @@ export async function listEmailOutbox(
   }
 
   // Fallback: audit_logs
-  let aq = admin
+  const aq = admin
     .from('audit_logs')
     .select('*')
+    .eq('school_id', schoolId)
     .like('action', 'email.%')
     .order('created_at', { ascending: false })
     .limit(limit)
-  if (schoolId) aq = aq.eq('school_id', schoolId)
 
   const { data: audits } = await aq
   return (audits ?? []).map((a) => {

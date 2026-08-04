@@ -1,6 +1,6 @@
 # Database / ops scripts
 
-**Canonical schema:** `../supabase/migrations/` (`001` … `020`).
+**Canonical schema:** `../supabase/migrations/` (`001` … `021`).
 
 ## Preferred
 
@@ -30,6 +30,7 @@ These are convenience copies for the Supabase SQL Editor. **If a pending file di
 | `pending-018-access-token-expiry.sql` | Kiosk/device token expiry columns + backfill |
 | `pending-019-family-billing-portal.sql` | Family portal tokens, payment plans, schedules |
 | `pending-020-stripe-payments.sql` | Stripe checkout session / payment intent columns |
+| `pending-021-p0-money-settle.sql` | One succeeded payment per invoice |
 
 ## Legacy (do not use for full upgrades)
 

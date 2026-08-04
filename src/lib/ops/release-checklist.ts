@@ -10,8 +10,8 @@ export type ChecklistItem = {
 export const RELEASE_CHECKLIST: ChecklistItem[] = [
   {
     id: 'migrations',
-    label: 'Database migrations 001–020 applied',
-    help: 'Prefer: npm run db:migrate. Includes family portal (019) and Stripe payment columns (020).',
+    label: 'Database migrations 001–021 applied',
+    help: 'Prefer: npm run db:migrate. Includes family portal (019), Stripe cols (020), money settle unique (021).',
     group: 'ops',
   },
   {

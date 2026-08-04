@@ -110,6 +110,10 @@ function makeBillingDb(seed?: {
           if (filters.id != null && r.id !== filters.id) return false
           if (filters.school_id != null && r.school_id !== filters.school_id) return false
           if (filters['neq:status'] != null && r.status === filters['neq:status']) return false
+          if (filters['in:status'] != null) {
+            const allowed = filters['in:status'] as unknown[]
+            if (!allowed.includes(r.status)) return false
+          }
           return true
         })
         if (idx < 0) return { data: null, error: null }

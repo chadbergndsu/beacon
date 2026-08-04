@@ -98,7 +98,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth + client |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server actions / admin client (never expose to browser) |
 
-Then apply **migrations 001–020** (see below) and:
+Then apply **migrations 001–021** (see below) and:
 
 ```bash
 npm run dev
@@ -132,7 +132,7 @@ Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, securit
 
 ### Database migrations
 
-**Source of truth:** `supabase/migrations/` files **001–020** in filename order.
+**Source of truth:** `supabase/migrations/` files **001–021** in filename order.
 
 ```bash
 # Preferred
@@ -159,6 +159,7 @@ POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate -- 017
 | **018** | kiosk/device token expiry (`kiosk_token_expires_at` / `device_token_expires_at`; default 90 days) |
 | **019** | family billing: portal tokens, payment plans, recurring schedules |
 | **020** | Stripe payment columns (`stripe_checkout_session_id`, payment intent) |
+| **021** | P0 money settle: one succeeded payment per invoice |
 
 **Billing money path** uses tables only. Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`.
 
@@ -225,6 +226,8 @@ stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
 Success URL also reconcilies via `session_id` if the webhook is delayed.
+
+**Single-school treasury:** one `STRIPE_SECRET_KEY` is for **one** school’s money. If more than one `schools` row exists, Checkout is blocked unless you set `BEACON_STRIPE_MULTI_SCHOOL=1` (explicit break-glass — prefer Stripe Connect later). Apply migration **021** for one-succeeded-payment-per-invoice.
 
 ### Recurring billing cron
 

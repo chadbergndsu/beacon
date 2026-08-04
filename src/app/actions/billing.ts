@@ -253,10 +253,19 @@ export async function recordPayment(input: {
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const { schoolId, user } = await requirePrincipal()
   const state = await loadBillingState(schoolId)
-  const invoice = state.invoices.find((i) => i.id === input.invoiceId)
+  const { loadInvoiceById, isCollectibleInvoiceStatus } = await import('@/lib/billing/store')
+  const invoice =
+    (await loadInvoiceById(schoolId, input.invoiceId)) ||
+    state.invoices.find((i) => i.id === input.invoiceId)
   if (!invoice) return { ok: false, error: 'Invoice not found.' }
-  if (invoice.status === 'paid') {
-    return { ok: false, error: 'Invoice is already paid.' }
+  if (!isCollectibleInvoiceStatus(invoice.status)) {
+    return {
+      ok: false,
+      error:
+        invoice.status === 'paid'
+          ? 'Invoice is already paid.'
+          : `Invoice cannot be collected (status: ${invoice.status}).`,
+    }
   }
 
   const payment: BillingPayment = {

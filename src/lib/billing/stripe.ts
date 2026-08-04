@@ -17,6 +17,14 @@ export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY?.trim())
 }
 
+/**
+ * Multi-school card money on one Stripe account is unsafe.
+ * Allow only when BEACON_STRIPE_MULTI_SCHOOL=1 (explicit ops break-glass).
+ */
+export function isStripeMultiSchoolAllowed(): boolean {
+  return process.env.BEACON_STRIPE_MULTI_SCHOOL === '1'
+}
+
 export function isStripeWebhookConfigured(): boolean {
   return Boolean(
     process.env.STRIPE_SECRET_KEY?.trim() && process.env.STRIPE_WEBHOOK_SECRET?.trim()
@@ -74,6 +82,21 @@ export async function createInvoiceCheckoutSession(input: {
   }
 
   try {
+    // P0: refuse Checkout when multiple schools share one platform Stripe account
+    if (!isStripeMultiSchoolAllowed()) {
+      const { createAdminClient } = await import('@/lib/supabase/admin')
+      const admin = createAdminClient()
+      const { count } = await admin
+        .from('schools')
+        .select('id', { count: 'exact', head: true })
+      if ((count ?? 0) > 1) {
+        return {
+          error:
+            'Stripe is configured for a single-school treasury. Multiple schools exist — set BEACON_STRIPE_MULTI_SCHOOL=1 only with an explicit fund-routing policy, or use Stripe Connect later.',
+        }
+      }
+    }
+
     const stripe = getStripe()
     const currency = (input.currency || 'usd').toLowerCase()
     // Idempotent per invoice attempt window — same invoice can reopen if unpaid

@@ -1,8 +1,13 @@
 /**
  * Apply a paid Stripe Checkout session to Beacon billing (idempotent).
+ * Loads invoice by id (never the 200-row list). Collectible statuses only.
  */
 import { createAdminClient } from '@/lib/supabase/admin'
-import { addPayment, loadBillingState } from '@/lib/billing/store'
+import {
+  addPayment,
+  isCollectibleInvoiceStatus,
+  loadInvoiceById,
+} from '@/lib/billing/store'
 import type { StripeSessionPaid } from '@/lib/billing/stripe'
 import { reportError } from '@/lib/ops/report-error'
 
@@ -28,17 +33,13 @@ export async function applyStripePaidSession(
     .maybeSingle()
   if (byNotes?.id) return { ok: true, already: true }
 
-  const state = await loadBillingState(paid.schoolId)
-  const invoice = state.invoices.find((i) => i.id === paid.invoiceId)
+  // P0: load by primary key — never loadBillingState 200-cap
+  const invoice = await loadInvoiceById(paid.schoolId, paid.invoiceId)
   if (!invoice) {
     return { ok: false, error: 'Invoice not found for this school' }
   }
-  if (invoice.status === 'paid') {
-    // Still record stripe ids if possible for audit trail skip
-    return { ok: true, already: true }
-  }
 
-  // Amount guard: allow ±1 cent float, reject large mismatches
+  // Amount guard
   if (Math.abs(invoice.amountCents - paid.amountCents) > 1) {
     reportError(new Error('Stripe amount mismatch'), {
       surface: 'stripe-apply',
@@ -52,58 +53,75 @@ export async function applyStripePaidSession(
     }
   }
 
-  const paymentId = crypto.randomUUID()
-  try {
-    // Insert with stripe columns when available
-    const row: Record<string, unknown> = {
-      id: paymentId,
+  if (!isCollectibleInvoiceStatus(invoice.status)) {
+    // Already paid / void — do not second-book; audit for ops if card charged after office pay
+    reportError(new Error('Stripe session for non-collectible invoice'), {
+      surface: 'stripe-overpay',
+      invoiceId: paid.invoiceId,
+      status: invoice.status,
+      sessionId: paid.sessionId,
+      amount: paid.amountCents,
+    })
+    await admin.from('audit_logs').insert({
       school_id: paid.schoolId,
-      invoice_id: paid.invoiceId,
-      amount_cents: paid.amountCents,
+      user_id: null,
+      action: 'billing.stripe_non_collectible',
+      table_name: 'billing_invoices',
+      record_id: paid.invoiceId,
+      details: {
+        sessionId: paid.sessionId,
+        paymentIntentId: paid.paymentIntentId,
+        amount: paid.amountCents,
+        invoiceStatus: invoice.status,
+        note: 'Card settled while invoice not open/overdue — manual refund/recon may be needed',
+      },
+    })
+    return { ok: true, already: true }
+  }
+
+  const paymentId = crypto.randomUUID()
+  const notes = `Stripe Checkout ${paid.sessionId}`
+
+  try {
+    // Prefer insert with stripe columns + shared settle path via addPayment claim
+    // addPayment claims collectible + inserts; attach stripe ids after if columns exist
+    await addPayment(paid.schoolId, {
+      id: paymentId,
+      invoiceId: paid.invoiceId,
+      amountCents: paid.amountCents,
       currency: paid.currency || invoice.currency || 'USD',
       method: 'card',
       status: 'succeeded',
-      paid_at: new Date().toISOString(),
-      notes: `Stripe Checkout ${paid.sessionId}`,
-      created_at: new Date().toISOString(),
-      stripe_checkout_session_id: paid.sessionId,
-      stripe_payment_intent_id: paid.paymentIntentId,
-    }
-    const { error: insErr } = await admin.from('billing_payments').insert(row)
-    if (insErr) {
-      // Column missing — fall back to addPayment without stripe cols
-      if (
-        insErr.message?.includes('stripe_checkout') ||
-        insErr.message?.includes('column') ||
-        insErr.code === 'PGRST204'
-      ) {
-        await addPayment(paid.schoolId, {
-          id: paymentId,
-          invoiceId: paid.invoiceId,
-          amountCents: paid.amountCents,
-          currency: paid.currency || invoice.currency,
-          method: 'card',
-          status: 'succeeded',
-          paidAt: new Date().toISOString(),
-          notes: `Stripe Checkout ${paid.sessionId}`,
-          createdAt: new Date().toISOString(),
-        })
-      } else if (
-        insErr.code === '23505' ||
-        (insErr.message || '').toLowerCase().includes('duplicate')
-      ) {
-        return { ok: true, already: true }
-      } else {
-        throw new Error(insErr.message)
-      }
-    } else {
-      // CAS mark invoice paid
-      await admin
-        .from('billing_invoices')
-        .update({ status: 'paid' })
-        .eq('id', paid.invoiceId)
+      paidAt: new Date().toISOString(),
+      notes,
+      createdAt: new Date().toISOString(),
+    })
+
+    // Best-effort attach Stripe ids (migration 020)
+    await admin
+      .from('billing_payments')
+      .update({
+        stripe_checkout_session_id: paid.sessionId,
+        stripe_payment_intent_id: paid.paymentIntentId,
+      })
+      .eq('id', paymentId)
+      .eq('school_id', paid.schoolId)
+
+    // If addPayment lost the claim race (already paid), ensure we didn't leave a dangling need
+    const after = await loadInvoiceById(paid.schoolId, paid.invoiceId)
+    if (after && isCollectibleInvoiceStatus(after.status)) {
+      // Payment insert may have failed unique one-succeeded-per-invoice
+      const { data: anyPay } = await admin
+        .from('billing_payments')
+        .select('id')
         .eq('school_id', paid.schoolId)
-        .neq('status', 'paid')
+        .eq('invoice_id', paid.invoiceId)
+        .eq('status', 'succeeded')
+        .limit(1)
+        .maybeSingle()
+      if (!anyPay?.id) {
+        return { ok: false, error: 'Could not settle invoice after Stripe payment' }
+      }
     }
   } catch (e) {
     reportError(e, { surface: 'stripe-apply', sessionId: paid.sessionId })

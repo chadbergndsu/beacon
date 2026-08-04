@@ -263,18 +263,42 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     category: 'integrations',
   })
 
-  const { isStripeConfigured, isStripeWebhookConfigured } = await import('@/lib/billing/stripe')
+  const {
+    isStripeConfigured,
+    isStripeWebhookConfigured,
+    isStripeMultiSchoolAllowed,
+  } = await import('@/lib/billing/stripe')
   const stripeOn = isStripeConfigured()
   const stripeWh = isStripeWebhookConfigured()
+  let schoolCount = 0
+  if (stripeOn && envSet('SUPABASE_SERVICE_ROLE_KEY')) {
+    try {
+      const admin = createAdminClient()
+      const { count } = await admin.from('schools').select('id', { count: 'exact', head: true })
+      schoolCount = count ?? 0
+    } catch {
+      schoolCount = 0
+    }
+  }
+  const multiSchoolStripeRisk =
+    stripeOn && schoolCount > 1 && !isStripeMultiSchoolAllowed()
   checks.push({
     id: 'stripe',
     label: 'Stripe card payments',
-    status: stripeOn ? (stripeWh ? 'ok' : 'warn') : 'info',
+    status: !stripeOn
+      ? 'info'
+      : multiSchoolStripeRisk
+        ? 'fail'
+        : stripeWh
+          ? 'ok'
+          : 'warn',
     detail: !stripeOn
       ? 'Optional: set STRIPE_SECRET_KEY for family portal card checkout'
-      : stripeWh
-        ? 'STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET set — Checkout + webhook ready'
-        : 'STRIPE_SECRET_KEY set but STRIPE_WEBHOOK_SECRET missing — success page can still confirm; set webhook for reliability',
+      : multiSchoolStripeRisk
+        ? `Stripe key set but ${schoolCount} schools exist — one merchant account mixes funds. Single-school only, or BEACON_STRIPE_MULTI_SCHOOL=1 with explicit policy / Connect later.`
+        : stripeWh
+          ? `STRIPE_SECRET_KEY + webhook ready${schoolCount === 1 ? ' · single-school treasury' : ''}`
+          : 'STRIPE_SECRET_KEY set but STRIPE_WEBHOOK_SECRET missing — success page can still confirm',
     category: 'integrations',
   })
 

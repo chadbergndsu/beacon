@@ -472,9 +472,35 @@ export async function addInvoice(
   return loadBillingState(schoolId)
 }
 
+/** Collectible statuses that may receive a succeeded payment (not void/draft/paid). */
+export const COLLECTIBLE_INVOICE_STATUSES = ['open', 'overdue'] as const
+
+export function isCollectibleInvoiceStatus(status: string): boolean {
+  return (COLLECTIBLE_INVOICE_STATUSES as readonly string[]).includes(status)
+}
+
+/** Load one invoice by id + school (never use the 200-row list for settlement). */
+export async function loadInvoiceById(
+  schoolId: string,
+  invoiceId: string
+): Promise<BillingInvoice | null> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('billing_invoices')
+    .select('*')
+    .eq('school_id', schoolId)
+    .eq('id', invoiceId)
+    .maybeSingle()
+  if (error || !data) return null
+  return mapInvoice(data as Record<string, unknown>)
+}
+
 /**
- * Record payment and CAS-mark invoice paid.
- * Concurrent double-pay: second caller loses the status CAS and returns without duplicate charge.
+ * Record payment. For succeeded + invoiceId:
+ * 1) CAS-claim only open/overdue → paid
+ * 2) Insert payment
+ * 3) On insert failure after claim, reopen invoice (best-effort) so we never leave paid-with-no-row
+ * Concurrent double-pay: second claim loses; unique index (021) blocks two succeeded rows.
  */
 export async function addPayment(
   schoolId: string,
@@ -492,25 +518,43 @@ export async function addPayment(
     .maybeSingle()
   if (byId?.id) return loadBillingState(schoolId)
 
-  if (payment.invoiceId && payment.status === 'succeeded') {
-    const { data: claimed, error: claimErr } = await admin
+  const invoiceId =
+    payment.invoiceId && /^[0-9a-f-]{36}$/i.test(payment.invoiceId) ? payment.invoiceId : null
+
+  let claimed = false
+  if (invoiceId && payment.status === 'succeeded') {
+    if (payment.amountCents <= 0) {
+      throw new Error('Succeeded payment amount must be greater than zero.')
+    }
+    const inv = await loadInvoiceById(schoolId, invoiceId)
+    if (!inv) throw new Error('Invoice not found.')
+    if (!isCollectibleInvoiceStatus(inv.status)) {
+      // Already paid / void / draft — do not insert second succeeded payment
+      return loadBillingState(schoolId)
+    }
+    // Amount must match full invoice (v1: no partials on this path)
+    if (Math.abs(inv.amountCents - Math.round(payment.amountCents)) > 1) {
+      throw new Error(
+        `Payment amount ${payment.amountCents} does not match invoice ${inv.amountCents}.`
+      )
+    }
+
+    const { data: claimRow, error: claimErr } = await admin
       .from('billing_invoices')
       .update({ status: 'paid' })
-      .eq('id', payment.invoiceId)
+      .eq('id', invoiceId)
       .eq('school_id', schoolId)
-      .neq('status', 'paid')
+      .in('status', [...COLLECTIBLE_INVOICE_STATUSES])
       .select('id')
       .maybeSingle()
 
     if (claimErr) throw new Error(claimErr.message)
-    if (!claimed) {
-      // Already paid — do not insert a second successful payment
+    if (!claimRow) {
+      // Lost race — already settled by another payment
       return loadBillingState(schoolId)
     }
+    claimed = true
   }
-
-  const invoiceId =
-    payment.invoiceId && /^[0-9a-f-]{36}$/i.test(payment.invoiceId) ? payment.invoiceId : null
 
   const row = {
     id,
@@ -528,6 +572,15 @@ export async function addPayment(
 
   const { error } = await admin.from('billing_payments').insert(row)
   if (error) {
+    if (claimed && invoiceId) {
+      // Reopen so we never leave paid with no payment row
+      await admin
+        .from('billing_invoices')
+        .update({ status: 'open' })
+        .eq('id', invoiceId)
+        .eq('school_id', schoolId)
+        .eq('status', 'paid')
+    }
     if (
       error.code === '23505' ||
       (error.message || '').toLowerCase().includes('duplicate') ||
