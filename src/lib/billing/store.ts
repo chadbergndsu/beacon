@@ -109,34 +109,60 @@ export async function upsertProduct(
   return state
 }
 
+/** Per-school single-flight to reduce concurrent settings RMW loss */
+const schoolLocks = new Map<string, Promise<unknown>>()
+
+async function withSchoolLock<T>(schoolId: string, fn: () => Promise<T>): Promise<T> {
+  const prev = schoolLocks.get(schoolId) || Promise.resolve()
+  let release!: () => void
+  const gate = new Promise<void>((r) => {
+    release = r
+  })
+  const chain = prev.then(() => gate)
+  schoolLocks.set(schoolId, chain)
+  await prev.catch(() => {})
+  try {
+    return await fn()
+  } finally {
+    release()
+    if (schoolLocks.get(schoolId) === chain) schoolLocks.delete(schoolId)
+  }
+}
+
 export async function addInvoice(
   schoolId: string,
   invoice: BillingInvoice
 ): Promise<SchoolBillingState> {
-  const state = await loadBillingState(schoolId)
-  // Idempotent: same invoice id does not double-charge
-  if (state.invoices.some((i) => i.id === invoice.id)) {
+  return withSchoolLock(schoolId, async () => {
+    const state = await loadBillingState(schoolId)
+    // Idempotent: same invoice id does not double-charge
+    if (state.invoices.some((i) => i.id === invoice.id)) {
+      return state
+    }
+    state.invoices = [invoice, ...state.invoices]
+    await saveBillingState(schoolId, state)
     return state
-  }
-  state.invoices = [invoice, ...state.invoices]
-  await saveBillingState(schoolId, state)
-  return state
+  })
 }
 
 export async function addPayment(
   schoolId: string,
   payment: BillingPayment
 ): Promise<SchoolBillingState> {
-  const state = await loadBillingState(schoolId)
-  state.payments = [payment, ...state.payments]
-  // mark linked invoice paid
-  if (payment.invoiceId && payment.status === 'succeeded') {
-    state.invoices = state.invoices.map((inv) =>
-      inv.id === payment.invoiceId ? { ...inv, status: 'paid' } : inv
-    )
-  }
-  await saveBillingState(schoolId, state)
-  return state
+  return withSchoolLock(schoolId, async () => {
+    const state = await loadBillingState(schoolId)
+    if (state.payments.some((p) => p.id === payment.id)) {
+      return state
+    }
+    state.payments = [payment, ...state.payments]
+    if (payment.invoiceId && payment.status === 'succeeded') {
+      state.invoices = state.invoices.map((inv) =>
+        inv.id === payment.invoiceId ? { ...inv, status: 'paid' } : inv
+      )
+    }
+    await saveBillingState(schoolId, state)
+    return state
+  })
 }
 
 export function formatMoney(cents: number, currency = 'USD') {

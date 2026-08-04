@@ -26,8 +26,17 @@ export async function submitPulse(
   const access = await requireClassManager(classId)
   if (!access.ok) return access
 
-  if (!input.studentId) return { ok: false, error: 'Select a student.' }
-  if (!input.overall) return { ok: false, error: 'Choose an overall pulse.' }
+  const { pulseInputSchema } = await import('@/lib/validation/schemas')
+  const parsed = pulseInputSchema.safeParse({
+    studentId: input.studentId,
+    overall: input.overall,
+    dimensions: input.dimensions || {},
+    note: input.note ?? '',
+    celebrate: input.celebrate,
+  })
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message || 'Invalid pulse data.' }
+  }
 
   // Bind student to this class roster + school (integrity / parent-feed safety)
   const adminCheck = createAdminClient()
@@ -35,7 +44,7 @@ export async function submitPulse(
     .from('enrollments')
     .select('student_id')
     .eq('class_id', classId)
-    .eq('student_id', input.studentId)
+    .eq('student_id', parsed.data.studentId)
     .maybeSingle()
   if (!enrolled) {
     return { ok: false, error: 'Student is not on this class roster.' }
@@ -43,7 +52,7 @@ export async function submitPulse(
   const { data: studentRow } = await adminCheck
     .from('students')
     .select('id')
-    .eq('id', input.studentId)
+    .eq('id', parsed.data.studentId)
     .eq('school_id', access.classRow.school_id)
     .maybeSingle()
   if (!studentRow) {
@@ -51,16 +60,16 @@ export async function submitPulse(
   }
 
   const entry: PulseEntry = {
-    id: `pulse_${Date.now().toString(36)}`,
+    id: `pulse_${crypto.randomUUID()}`,
     classId,
-    studentId: input.studentId,
+    studentId: parsed.data.studentId,
     teacherId: access.user.id,
     teacherName: access.profile?.full_name || 'Teacher',
     date: new Date().toISOString().slice(0, 10),
-    overall: input.overall,
-    dimensions: input.dimensions || {},
-    note: input.note.trim(),
-    celebrate: input.celebrate?.trim() || '',
+    overall: parsed.data.overall,
+    dimensions: (parsed.data.dimensions || {}) as PulseEntry['dimensions'],
+    note: parsed.data.note.trim(),
+    celebrate: parsed.data.celebrate?.trim() || '',
     createdAt: new Date().toISOString(),
   }
 
@@ -80,7 +89,7 @@ export async function submitPulse(
   })
 
   revalidatePath(`/classes/${classId}`)
-  revalidatePath(`/students/${input.studentId}`)
+  revalidatePath(`/students/${parsed.data.studentId}`)
   revalidatePath('/principal/pulse')
   return { ok: true }
 }

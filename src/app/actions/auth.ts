@@ -27,6 +27,16 @@ export async function login(
     return { error: 'Invalid credentials.' }
   }
 
+  const { rateLimitAsync } = await import('@/lib/security/rate-limit')
+  const rl = await rateLimitAsync({
+    key: `login:${email}`,
+    limit: 20,
+    windowMs: 15 * 60 * 1000,
+  })
+  if (!rl.ok) {
+    return { error: 'Too many sign-in attempts. Wait a few minutes and try again.' }
+  }
+
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 

@@ -44,20 +44,35 @@ export async function GET(request: Request) {
       return fail('Only the principal can complete QuickBooks connection.')
     }
 
-    let parsed: { schoolId?: string } = {}
-    try {
-      parsed = JSON.parse(Buffer.from(state, 'base64url').toString('utf8'))
-    } catch {
-      return fail('Invalid OAuth state.')
-    }
-    if (parsed.schoolId && parsed.schoolId !== profile.school_id) {
+    const { verifyOAuthState } = await import('@/lib/security/oauth-state')
+    const verified = verifyOAuthState(state)
+    if (!verified.ok) return fail(verified.error)
+    const parsed = verified.payload
+    if (parsed.schoolId !== profile.school_id) {
       return fail('School mismatch in OAuth state.')
+    }
+    if (parsed.userId !== user.id) {
+      return fail('User mismatch in OAuth state.')
     }
 
     const tokens = await exchangeQuickBooksCode(code, realmId)
 
-    // Tokens stored encrypted-at-rest would go to vault/DB columns in production.
-    // For now we record connection metadata; never expose tokens to the client.
+    // Server-only token vault under schools.settings.qbTokens (never returned to client)
+    const { data: schoolRow } = await admin
+      .from('schools')
+      .select('settings')
+      .eq('id', profile.school_id)
+      .maybeSingle()
+    const settings = { ...((schoolRow?.settings || {}) as Record<string, unknown>) }
+    settings.qbTokens = {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresAt: Date.now() + (tokens.expiresIn || 3600) * 1000,
+      realmId,
+      updatedAt: new Date().toISOString(),
+    }
+    await admin.from('schools').update({ settings }).eq('id', profile.school_id)
+
     await updateQuickBooks(profile.school_id, {
       status: 'connected',
       realmId,
@@ -76,7 +91,7 @@ export async function GET(request: Request) {
       details: {
         realmId,
         expiresIn: tokens.expiresIn,
-        // do not log access/refresh tokens
+        tokensVaulted: true,
       },
     })
 

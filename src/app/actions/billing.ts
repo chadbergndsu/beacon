@@ -28,7 +28,13 @@ function revalidatePrincipal() {
 export async function getBillingBundle() {
   const { schoolId, profile } = await requirePrincipal()
   const state = await loadBillingState(schoolId)
-  const qbConfig = getQuickBooksConfig()
+  const qb = getQuickBooksConfig()
+  // Never return clientSecret (server-action serialization risk)
+  const qbConfig = {
+    configured: qb.configured,
+    environment: qb.environment,
+    redirectUri: qb.redirectUri,
+  }
   return { state, qbConfig, schoolId, profile }
 }
 
@@ -45,20 +51,19 @@ export async function startQuickBooksConnect(): Promise<
     lastError: null,
   })
 
-  const state = Buffer.from(
-    JSON.stringify({ schoolId, userId: user.id, ts: Date.now() })
-  ).toString('base64url')
+  const { signOAuthState } = await import('@/lib/security/oauth-state')
+  const state = signOAuthState({ schoolId, userId: user.id })
 
   const url = buildQuickBooksAuthorizeUrl(state)
   if (!url) {
-    // Demo mode: simulate connected sandbox company so principal can tour the UI
+    // Demo mode — never claim live "connected" without vaulted tokens
     await updateQuickBooks(schoolId, {
-      status: 'connected',
+      status: 'demo',
       environment: 'sandbox',
       realmId: 'demo-realm-sandbox',
       companyName: 'Sandbox Demo Company (not live QuickBooks)',
       connectedAt: new Date().toISOString(),
-      lastSyncAt: new Date().toISOString(),
+      lastSyncAt: null,
       lastError: null,
       connectedByName: profile.full_name,
       syncCustomers: true,
@@ -74,7 +79,7 @@ export async function startQuickBooksConnect(): Promise<
       table_name: 'quickbooks_connections',
       details: {
         mode: 'demo',
-        note: 'INTUIT_CLIENT_ID not set — sandbox demo connection activated',
+        note: 'INTUIT_CLIENT_ID not set — demo connection (no live OAuth tokens)',
       },
     })
 
@@ -83,7 +88,7 @@ export async function startQuickBooksConnect(): Promise<
       ok: false,
       demo: true,
       error:
-        'QuickBooks app credentials are not configured yet. Activated a sandbox demo connection so you can explore the full payment layer. Add INTUIT_CLIENT_ID + INTUIT_CLIENT_SECRET to enable live OAuth.',
+        'QuickBooks credentials not configured. Demo mode activated (not live). Add INTUIT_CLIENT_ID + INTUIT_CLIENT_SECRET for real OAuth.',
     }
   }
 
@@ -134,6 +139,12 @@ export async function simulateQuickBooksSync(): Promise<
 > {
   const { schoolId, user } = await requirePrincipal()
   const state = await loadBillingState(schoolId)
+  if (state.quickbooks.status === 'demo') {
+    return {
+      ok: false,
+      error: 'Demo QuickBooks cannot sync. Configure INTUIT credentials for live OAuth.',
+    }
+  }
   if (state.quickbooks.status !== 'connected') {
     return { ok: false, error: 'Connect QuickBooks before syncing.' }
   }
@@ -178,7 +189,7 @@ export async function createBillingProduct(input: {
   }
 
   const product: BillingProduct = {
-    id: `prod_${Date.now().toString(36)}`,
+    id: `prod_${crypto.randomUUID()}`,
     name,
     description: input.description.trim(),
     amountCents,
@@ -204,7 +215,7 @@ export async function createTuitionInvoice(input: {
   if (!input.familyName.trim()) return { ok: false, error: 'Family name required.' }
 
   const invoice: BillingInvoice = {
-    id: `inv_${Date.now().toString(36)}`,
+    id: `inv_${crypto.randomUUID()}`,
     familyName: input.familyName.trim(),
     parentEmail: input.parentEmail.trim(),
     productId: product.id,
@@ -241,7 +252,7 @@ export async function recordPayment(input: {
   if (!invoice) return { ok: false, error: 'Invoice not found.' }
 
   const payment: BillingPayment = {
-    id: `pay_${Date.now().toString(36)}`,
+    id: `pay_${crypto.randomUUID()}`,
     invoiceId: invoice.id,
     amountCents: invoice.amountCents,
     currency: invoice.currency,

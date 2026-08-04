@@ -105,9 +105,11 @@ export default async function PrincipalOverviewPage() {
               variant={
                 qb.status === 'connected'
                   ? 'success'
-                  : qb.status === 'error'
-                    ? 'danger'
-                    : 'warning'
+                  : qb.status === 'demo'
+                    ? 'warning'
+                    : qb.status === 'error'
+                      ? 'danger'
+                      : 'warning'
               }
             >
               {qb.status}
@@ -130,6 +132,11 @@ export default async function PrincipalOverviewPage() {
                   {qb.lastSyncAt ? new Date(qb.lastSyncAt).toLocaleString() : 'Not yet'}
                 </p>
               </>
+            ) : qb.status === 'demo' ? (
+              <p className="text-sm text-muted-foreground">
+                <strong className="text-foreground">Demo mode</strong> — not live QuickBooks. Add
+                INTUIT credentials for real OAuth.
+              </p>
             ) : (
               <p className="text-sm text-muted-foreground">
                 Connect QuickBooks Online so tuition invoices and payments sync to your books —
@@ -138,7 +145,9 @@ export default async function PrincipalOverviewPage() {
             )}
             <Link href="/principal/payments">
               <Button variant="primary" size="md">
-                {qb.status === 'connected' ? 'Manage connection' : 'Set up payments'}
+                {qb.status === 'connected' || qb.status === 'demo'
+                  ? 'Manage connection'
+                  : 'Set up payments'}
               </Button>
             </Link>
           </CardContent>

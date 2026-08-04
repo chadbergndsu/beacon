@@ -1,4 +1,9 @@
-export type QbConnectionStatus = 'disconnected' | 'pending' | 'connected' | 'error'
+export type QbConnectionStatus =
+  | 'disconnected'
+  | 'pending'
+  | 'connected'
+  | 'demo'
+  | 'error'
 export type QbEnvironment = 'sandbox' | 'production'
 
 export type BillingFrequency = 'one_time' | 'monthly' | 'term' | 'annual'

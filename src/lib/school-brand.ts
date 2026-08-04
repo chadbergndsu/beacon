@@ -92,18 +92,60 @@ export function brandFromSchoolRow(row: {
   }
 }
 
+/**
+ * Resolve public school by host (e.g. lca.beacon.example) or path slug.
+ * Settings.brand.publicSlug or shortName slug used for matching.
+ */
+export async function loadSchoolBrandByPublicKey(
+  key: string | null | undefined
+): Promise<SchoolBrand> {
+  const slug = (key || '').trim().toLowerCase()
+  if (!slug) return loadSchoolBrand(null)
+  try {
+    const admin = createAdminClient()
+    const { data: schools } = await admin
+      .from('schools')
+      .select('id, name, settings')
+      .limit(50)
+    for (const row of schools ?? []) {
+      const brand = brandFromSchoolRow(row)
+      const publicSlug = (
+        ((row.settings || {}) as { brand?: { publicSlug?: string } }).brand?.publicSlug ||
+        brand.shortName ||
+        ''
+      )
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+      if (publicSlug === slug || row.id === slug) return brand
+    }
+  } catch {
+    /* fall through */
+  }
+  return loadSchoolBrand(null)
+}
+
 export async function loadSchoolBrand(schoolId: string | null | undefined): Promise<SchoolBrand> {
   if (!schoolId) {
-    // First school in DB (single-tenant install) or default
+    // Single-tenant fallback: only if exactly one school exists
     try {
       const admin = createAdminClient()
-      const { data } = await admin
+      const { data: rows, count } = await admin
         .from('schools')
-        .select('id, name, settings')
+        .select('id, name, settings', { count: 'exact' })
         .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle()
-      if (data) return brandFromSchoolRow(data)
+        .limit(2)
+      if ((count ?? rows?.length ?? 0) === 1 && rows?.[0]) {
+        return brandFromSchoolRow(rows[0])
+      }
+      // Multi-school without explicit id: generic brand (avoid wrong tenant)
+      if ((count ?? 0) > 1) {
+        return {
+          ...DEFAULT_BRAND,
+          name: 'School site',
+          shortName: 'Beacon',
+          mission: 'Set brand.publicSlug and open /school?school=your-slug',
+        }
+      }
     } catch {
       /* env not ready */
     }

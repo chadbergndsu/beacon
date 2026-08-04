@@ -8,9 +8,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export async function GET(req: NextRequest) {
   const generatedAt = new Date().toISOString()
   const secret = process.env.BEACON_HEALTH_SECRET?.trim()
-  const provided =
-    req.headers.get('x-beacon-health-secret')?.trim() ||
-    req.nextUrl.searchParams.get('secret')?.trim()
+  // Header only — never query string (logs / Referer leakage)
+  const provided = req.headers.get('x-beacon-health-secret')?.trim()
   const detailed = Boolean(secret && provided && secret === provided)
 
   if (!detailed) {
@@ -26,7 +25,8 @@ export async function GET(req: NextRequest) {
   const hasUrl = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim())
   const hasAnon = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim())
   const hasService = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim())
-  const emailLive = Boolean(process.env.RESEND_API_KEY?.trim())
+  const { isEmailLive } = await import('@/lib/email/transport')
+  const emailLive = isEmailLive()
 
   let dbOk = false
   let dbDetail = 'not checked'

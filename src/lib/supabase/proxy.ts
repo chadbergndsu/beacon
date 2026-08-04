@@ -33,6 +33,24 @@ export async function updateSession(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!url || !key) {
+    // Fail closed in production/preview: never serve protected app without auth config
+    const prodLike =
+      process.env.NODE_ENV === 'production' ||
+      process.env.VERCEL_ENV === 'production' ||
+      process.env.VERCEL_ENV === 'preview'
+    const isPublicPath =
+      PUBLIC_EXACT.has(path) ||
+      path === '/privacy' ||
+      path === '/kiosk' ||
+      path.startsWith('/kiosk/') ||
+      path.startsWith('/api/kiosk/') ||
+      path === '/api/health'
+    if (prodLike && !isPublicPath) {
+      return new NextResponse(
+        'Beacon is misconfigured (missing Supabase URL or anon key).',
+        { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+      )
+    }
     return supabaseResponse
   }
 

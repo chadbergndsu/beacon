@@ -13,10 +13,23 @@ import { SchoolSiteHeader } from '@/components/school/SchoolSiteHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { loadSchoolBrand, locationLine } from '@/lib/school-brand'
+import { headers } from 'next/headers'
+import { loadSchoolBrand, loadSchoolBrandByPublicKey, locationLine } from '@/lib/school-brand'
 
-export default async function SchoolWebsitePage() {
-  const brand = await loadSchoolBrand(null)
+export default async function SchoolWebsitePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ school?: string; slug?: string }>
+}) {
+  const sp = await searchParams
+  const h = await headers()
+  const host = h.get('host') || ''
+  // subdomain.example.com → first label as slug (ignore www / app hosts)
+  const sub = host.split('.')[0]?.toLowerCase() || ''
+  const hostSlug =
+    sub && !['www', 'beacon', 'app', 'localhost', '127'].includes(sub) ? sub : null
+  const key = sp.school || sp.slug || hostSlug
+  const brand = key ? await loadSchoolBrandByPublicKey(key) : await loadSchoolBrand(null)
   const location = locationLine(brand)
 
   return (

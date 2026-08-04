@@ -60,8 +60,8 @@ export async function upsertAttendanceBatch(
   classId: string,
   date: string,
   rows: { studentId: string; status: AttendanceStatus; note?: string }[],
-  markedBy: string
-): Promise<{ usedTable: boolean }> {
+  markedBy: string | null
+): Promise<{ usedTable: boolean; error?: string }> {
   const admin = createAdminClient()
   const payload = rows.map((r) => ({
     school_id: schoolId,
@@ -80,7 +80,20 @@ export async function upsertAttendanceBatch(
 
   if (!error) return { usedTable: true }
 
-  // Fallback JSON
+  // Missing table → JSON fallback OK; other errors are real failures (don't pretend success)
+  const msg = (error.message || '').toLowerCase()
+  const missingTable =
+    msg.includes('does not exist') ||
+    msg.includes('could not find the table') ||
+    msg.includes('schema cache') ||
+    (error as { code?: string }).code === 'PGRST205' ||
+    (error as { code?: string }).code === '42P01'
+
+  if (!missingTable) {
+    return { usedTable: false, error: error.message }
+  }
+
+  // Fallback JSON (pre-migration 007)
   const { data: school } = await admin
     .from('schools')
     .select('settings')
@@ -99,11 +112,12 @@ export async function upsertAttendanceBatch(
       date,
       status: r.status,
       note: r.note,
-      markedBy,
+      markedBy: markedBy || undefined,
     })),
   ]
   settings.attendance = next.slice(-5000)
-  await admin.from('schools').update({ settings }).eq('id', schoolId)
+  const { error: writeErr } = await admin.from('schools').update({ settings }).eq('id', schoolId)
+  if (writeErr) return { usedTable: false, error: writeErr.message }
   return { usedTable: false }
 }
 

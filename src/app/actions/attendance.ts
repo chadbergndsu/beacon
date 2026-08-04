@@ -34,8 +34,11 @@ export async function saveAttendance(
   const access = await requireClassManager(classId)
   if (!access.ok) return access
 
-  if (!date) return { ok: false, error: 'Date is required.' }
-  if (!rows.length) return { ok: false, error: 'No attendance rows.' }
+  const { attendanceBatchSchema } = await import('@/lib/validation/schemas')
+  const parsed = attendanceBatchSchema.safeParse({ classId, date, rows })
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message || 'Invalid attendance data.' }
+  }
 
   // Only accept students enrolled in this class (and at this school)
   const adminGate = createAdminClient()
@@ -44,18 +47,22 @@ export async function saveAttendance(
     .select('student_id')
     .eq('class_id', classId)
   const enrolled = new Set((enrollRows ?? []).map((e) => e.student_id as string))
-  const filtered = rows.filter((r) => enrolled.has(r.studentId))
+  const filtered = parsed.data.rows.filter((r) => enrolled.has(r.studentId))
   if (!filtered.length) {
     return { ok: false, error: 'No valid roster students in attendance rows.' }
   }
 
-  await upsertAttendanceBatch(
+  const storeResult = await upsertAttendanceBatch(
     access.classRow.school_id,
     classId,
-    date,
+    parsed.data.date,
     filtered,
     access.user.id
   )
+  if (storeResult.error) {
+    const { toClientError } = await import('@/lib/errors/client-error')
+    return { ok: false, error: toClientError(storeResult.error) }
+  }
 
   const admin = createAdminClient()
   await admin.from('audit_logs').insert({

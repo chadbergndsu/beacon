@@ -20,11 +20,12 @@ describe('GET /api/health', () => {
     expect(body.checks).toBeUndefined()
   })
 
-  it('returns bare ok when secret misconfigured/mismatched', async () => {
+  it('returns bare ok when secret misconfigured/mismatched (query secret ignored)', async () => {
     process.env.BEACON_HEALTH_SECRET = 'correct'
-    const res = await GET(req('http://localhost/api/health?secret=wrong'))
+    const res = await GET(req('http://localhost/api/health?secret=correct'))
     expect(res.status).toBe(200)
     const body = await res.json()
+    // Query param must not unlock detailed checks
     expect(body.checks).toBeUndefined()
   })
 

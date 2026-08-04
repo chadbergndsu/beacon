@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { processDeviceScan } from '@/lib/badge/store'
 import type { ScanDirection } from '@/lib/badge/types'
-import { rateLimit } from '@/lib/security/rate-limit'
+import { rateLimitAsync } from '@/lib/security/rate-limit'
+import { deviceScanBodySchema } from '@/lib/validation/schemas'
 
 /**
  * Hardware path for ESP32 / RFID readers / custom kiosks.
@@ -17,44 +18,43 @@ import { rateLimit } from '@/lib/security/rate-limit'
  * }
  */
 export async function POST(request: Request) {
-  let body: {
-    deviceToken?: string
-    token?: string
-    code?: string
-    rawCode?: string
-    roomId?: string
-    direction?: string
-    deviceLabel?: string
-  }
+  let raw: Record<string, unknown>
   try {
-    body = await request.json()
+    raw = (await request.json()) as Record<string, unknown>
   } catch {
     return NextResponse.json({ ok: false, error: 'Invalid JSON body.' }, { status: 400 })
   }
 
-  const deviceToken = (body.deviceToken || body.token || '').trim()
-  const code = (body.code || body.rawCode || '').trim()
-  const roomId = (body.roomId || '').trim()
-  if (!deviceToken || !code || !roomId) {
+  const normalized = {
+    deviceToken: String(raw.deviceToken || raw.token || '').trim(),
+    code: String(raw.code || raw.rawCode || '').trim(),
+    roomId: String(raw.roomId || '').trim(),
+    direction: raw.direction ? String(raw.direction).toLowerCase() : undefined,
+    deviceLabel: raw.deviceLabel ? String(raw.deviceLabel) : undefined,
+  }
+
+  const parsed = deviceScanBodySchema.safeParse(normalized)
+  if (!parsed.success) {
     return NextResponse.json(
       {
         ok: false,
-        error: 'Required: deviceToken, code (or rawCode), roomId.',
+        error: parsed.error.issues[0]?.message || 'Required: deviceToken, code, roomId (UUID).',
       },
       { status: 400 }
     )
   }
 
+  const { deviceToken, code, roomId, deviceLabel } = parsed.data
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip')?.trim() ||
     'unknown'
-  const rlToken = rateLimit({
+  const rlToken = await rateLimitAsync({
     key: `device-scan:${deviceToken.slice(0, 16)}`,
     limit: 90,
     windowMs: 60_000,
   })
-  const rlIp = rateLimit({
+  const rlIp = await rateLimitAsync({
     key: `device-scan-ip:${ip}`,
     limit: 120,
     windowMs: 60_000,
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const dirRaw = (body.direction || 'auto').toLowerCase()
+  const dirRaw = (parsed.data.direction || 'auto').toLowerCase()
   const direction: ScanDirection | 'auto' =
     dirRaw === 'in' || dirRaw === 'out' ? dirRaw : 'auto'
 
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     rawCode: code,
     roomId,
     direction,
-    deviceLabel: body.deviceLabel,
+    deviceLabel,
   })
 
   if (!result.ok) {

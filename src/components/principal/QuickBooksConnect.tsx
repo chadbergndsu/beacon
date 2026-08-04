@@ -61,9 +61,13 @@ export function QuickBooksConnect({
             </div>
           </div>
           <Badge
-            variant={connection.status === 'connected' ? 'success' : 'outline'}
+            variant={
+              connection.status === 'connected' || connection.status === 'demo'
+                ? 'success'
+                : 'outline'
+            }
             className={
-              connection.status === 'connected'
+              connection.status === 'connected' || connection.status === 'demo'
                 ? 'bg-white text-emerald-800 border-0'
                 : 'bg-white/10 text-white border-white/30'
             }

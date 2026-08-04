@@ -1036,14 +1036,16 @@ async function markPresentForStudent(
   const admin = createAdminClient()
   const today = new Date().toISOString().slice(0, 10)
   try {
-    await upsertAttendanceBatch(
+    // marked_by must be UUID or null (FK to profiles) — never a free string
+    const result = await upsertAttendanceBatch(
       schoolId,
       classId,
       today,
       [{ studentId, status: 'present', note: 'Badge scan-in' }],
-      'badge-kiosk'
+      null
     )
-    return true
+    // Prefer first-class table; JSON-only is not "marked" for UIs that read tables
+    return result.usedTable === true
   } catch (e) {
     console.error('badge attendance mark failed', e)
     return false
@@ -1098,21 +1100,7 @@ export async function billClosedAftercareSessions(
 
   for (const raw of sessions ?? []) {
     const sess = mapSession(raw as Record<string, unknown>)
-    // CAS claim: only transition closed → billed if still unbilled
     const invoiceId = `inv_ac_${sess.id}`
-    const { data: claimed, error: claimErr } = await admin
-      .from('aftercare_sessions')
-      .update({ status: 'billed', invoice_id: invoiceId })
-      .eq('id', sess.id)
-      .eq('status', 'closed')
-      .is('invoice_id', null)
-      .select('id')
-      .maybeSingle()
-
-    if (claimErr || !claimed) {
-      // Already claimed by concurrent worker
-      continue
-    }
 
     const { data: student } = await admin
       .from('students')
@@ -1120,11 +1108,7 @@ export async function billClosedAftercareSessions(
       .eq('id', sess.studentId)
       .maybeSingle()
     if (!student) {
-      // rollback claim
-      await admin
-        .from('aftercare_sessions')
-        .update({ status: 'closed', invoice_id: null })
-        .eq('id', sess.id)
+      errors.push(`Student missing for session ${sess.id}`)
       continue
     }
 
@@ -1160,14 +1144,30 @@ export async function billClosedAftercareSessions(
       createdAt: new Date().toISOString(),
     }
 
+    // Durable invoice first — only then CAS claim closed → billed (rebillable if claim fails)
     try {
       await addInvoice(schoolId, invoice)
-      billed++
-      totalCents += amount
     } catch (e) {
-      // Leave billed status — invoice id reserved; re-run can addInvoice dedupe
       errors.push(e instanceof Error ? e.message : 'invoice failed')
+      continue
     }
+
+    const { data: claimed, error: claimErr } = await admin
+      .from('aftercare_sessions')
+      .update({ status: 'billed', invoice_id: invoiceId })
+      .eq('id', sess.id)
+      .eq('status', 'closed')
+      .is('invoice_id', null)
+      .select('id')
+      .maybeSingle()
+
+    if (claimErr || !claimed) {
+      // Concurrent worker or already claimed; invoice is idempotent by id
+      continue
+    }
+
+    billed++
+    totalCents += amount
   }
 
   return { billed, totalCents, errors }

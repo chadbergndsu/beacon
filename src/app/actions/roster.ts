@@ -1151,7 +1151,17 @@ export async function reviewApprovalAction(input: {
       (req.payload || {}) as Record<string, unknown>
     )
     if (!applied.ok) {
-      // Leave decision as approved with note; entity may already be inactive
+      // Roll back claim so principal can retry (do not leave false "approved")
+      await access.admin
+        .from('approval_requests')
+        .update({
+          status: 'pending',
+          reviewer_id: null,
+          review_note: `Apply failed: ${applied.error}`.slice(0, 500),
+          reviewed_at: null,
+        })
+        .eq('id', input.requestId)
+        .eq('status', 'approved')
       return { ok: false, error: applied.error }
     }
   }

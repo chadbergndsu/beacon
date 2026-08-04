@@ -38,9 +38,9 @@ describe('/api/kiosk/device-scan', () => {
       })
     )
     expect(res.status).toBe(400)
-    const body = await res.json()
-    expect(body.error).toMatch(/Required/i)
   })
+
+  const roomId = '11111111-1111-4111-8111-111111111111'
 
   it('POST maps invalid device token to 401 Unauthorized', async () => {
     processDeviceScan.mockResolvedValue({
@@ -53,7 +53,7 @@ describe('/api/kiosk/device-scan', () => {
         body: JSON.stringify({
           deviceToken: 'dev_ABCDEFGH12345678',
           code: 'ABCD12',
-          roomId: 'r1',
+          roomId,
         }),
         headers: { 'content-type': 'application/json' },
       })
@@ -75,7 +75,7 @@ describe('/api/kiosk/device-scan', () => {
         body: JSON.stringify({
           deviceToken: 'dev_ABCDEFGH12345678',
           code: 'ABCD12',
-          roomId: 'r1',
+          roomId,
           direction: 'in',
         }),
         headers: { 'content-type': 'application/json' },

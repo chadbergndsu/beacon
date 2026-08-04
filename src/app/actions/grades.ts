@@ -57,9 +57,27 @@ export async function saveGrades(
     return { ok: true }
   }
 
+  const { gradesBatchSchema } = await import('@/lib/validation/schemas')
+  const validated = gradesBatchSchema.safeParse(
+    grades.map((g) => ({
+      assignment_id: g.assignment_id,
+      student_id: g.student_id,
+      score: g.is_missing ? null : g.score,
+      is_missing: Boolean(g.is_missing),
+      is_late: g.is_late ?? false,
+      comments: g.comments ?? null,
+    }))
+  )
+  if (!validated.success) {
+    return {
+      ok: false,
+      error: validated.error.issues[0]?.message || 'Invalid grade data.',
+    }
+  }
+
   // Bind every grade row to this class's assignments + enrolled students
-  const assignmentIds = [...new Set(grades.map((g) => g.assignment_id))]
-  const studentIds = [...new Set(grades.map((g) => g.student_id))]
+  const assignmentIds = [...new Set(validated.data.map((g) => g.assignment_id))]
+  const studentIds = [...new Set(validated.data.map((g) => g.student_id))]
 
   const [{ data: validAssignments }, { data: enrollments }] = await Promise.all([
     admin.from('assignments').select('id').eq('class_id', classId).in('id', assignmentIds),
@@ -73,7 +91,7 @@ export async function saveGrades(
   const okAssignments = new Set((validAssignments ?? []).map((a) => a.id as string))
   const okStudents = new Set((enrollments ?? []).map((e) => e.student_id as string))
 
-  const rows = grades
+  const rows = validated.data
     .filter((g) => okAssignments.has(g.assignment_id) && okStudents.has(g.student_id))
     .map((g) => ({
       assignment_id: g.assignment_id,
@@ -98,7 +116,8 @@ export async function saveGrades(
   })
 
   if (error) {
-    return { ok: false, error: error.message }
+    const { toClientError } = await import('@/lib/errors/client-error')
+    return { ok: false, error: toClientError(error.message) }
   }
 
   await admin.from('audit_logs').insert({
