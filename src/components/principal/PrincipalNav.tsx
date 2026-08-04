@@ -24,7 +24,10 @@ export function PrincipalNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="flex flex-wrap gap-2">
+    <nav
+      className="mobile-scroll-x gap-2 pb-0.5 sm:flex sm:flex-wrap sm:overflow-visible"
+      aria-label="Principal office"
+    >
       {links.map((l) => {
         const active =
           l.href === '/principal' ? pathname === '/principal' : pathname.startsWith(l.href)
@@ -33,10 +36,10 @@ export function PrincipalNav() {
             key={l.href}
             href={l.href}
             className={cn(
-              'rounded-xl px-3.5 py-2 text-sm font-semibold transition border',
+              'shrink-0 whitespace-nowrap rounded-xl border px-3.5 py-2 text-sm font-semibold transition',
               active
-                ? 'bg-navy text-white border-navy shadow-sm'
-                : 'bg-card text-foreground border-border hover:border-sky-300 hover:bg-sky-50/60'
+                ? 'border-navy bg-navy text-white shadow-sm'
+                : 'border-border bg-card text-foreground hover:border-sky-300 hover:bg-sky-50/60'
             )}
           >
             {l.label}

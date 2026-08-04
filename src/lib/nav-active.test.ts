@@ -36,6 +36,13 @@ describe('resolveActiveNavHref', () => {
     // Overview is exact-only so deep principal pages do not stay green on Overview
     expect(resolveActiveNavHref('/principal/feedback', nav)).toBeNull()
     expect(resolveActiveNavHref('/principal', nav)).toBe('/principal')
+    // Longer prefix wins over /principal
+    expect(
+      resolveActiveNavHref('/principal/approvals', [
+        ...nav,
+        '/principal/approvals',
+      ])
+    ).toBe('/principal/approvals')
   })
 
   it('treats / as home', () => {

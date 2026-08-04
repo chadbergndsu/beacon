@@ -29,13 +29,16 @@ export function ClassTabs({ classId }: { classId: string }) {
       : 'grades'
 
   return (
-    <nav className="mobile-scroll-x gap-2 sm:flex-wrap" aria-label="Class modules">
+    <nav
+      className="mobile-scroll-x gap-2 pb-0.5"
+      aria-label="Class modules"
+    >
       {tabs.map((t) => (
         <Link
           key={t.id}
           href={t.href(classId)}
           className={cn(
-            'shrink-0 rounded-xl border px-3.5 py-2.5 text-sm font-semibold shadow-sm transition-all sm:px-4',
+            'shrink-0 whitespace-nowrap rounded-xl border px-3.5 py-2.5 text-sm font-semibold shadow-sm transition-all',
             tab === t.id
               ? t.id === 'pulse'
                 ? 'border-violet-600 bg-violet-600 text-white shadow-violet-500/20'
