@@ -59,8 +59,10 @@ export async function updateSession(request: NextRequest) {
   const isKiosk = path === '/kiosk' || path.startsWith('/kiosk/')
   // ESP32 / RFID hardware posts with a device token (not a user session)
   const isDeviceApi = path.startsWith('/api/kiosk/')
+  // Public liveness probe (detailed checks still require BEACON_HEALTH_SECRET)
+  const isHealth = path === '/api/health'
   const isPublic =
-    PUBLIC_EXACT.has(path) || isKiosk || isDeviceApi || path === '/privacy'
+    PUBLIC_EXACT.has(path) || isKiosk || isDeviceApi || isHealth || path === '/privacy'
 
   if (!user && !isPublic) {
     const redirectUrl = request.nextUrl.clone()
