@@ -22,6 +22,7 @@ import { canEnterGrades } from '@/lib/roles'
 import { listLessonPlans, listPulsesForClass } from '@/lib/school-modules/store'
 import { loadAttendanceForClassDate } from '@/lib/attendance/store'
 import { loadTeacherClassMissing } from '@/lib/insights/load-missing-work'
+import { EmailClassDigestButton } from '@/components/insights/EmailClassDigestButton'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
 import { Badge } from '@/components/ui/badge'
 
@@ -165,6 +166,23 @@ export default async function ClassGradebookPage({
                 .
               </div>
             )}
+          </div>
+        </ViewSection>
+      ) : null}
+
+      {canEnter ? (
+        <ViewSection id="class_family_email" title="Family email">
+          <div className="rounded-2xl border border-amber-200/80 bg-amber-50/40 px-4 py-3 dark:border-amber-900 dark:bg-amber-950/20">
+            <p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+              Dinner Table Digest
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground leading-relaxed max-w-xl">
+              Email each family a 60-second plain-English week story for every student in this
+              class. Teachers can only email their own classes.
+            </p>
+            <div className="mt-3">
+              <EmailClassDigestButton classId={classId} />
+            </div>
           </div>
         </ViewSection>
       ) : null}

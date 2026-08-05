@@ -17,6 +17,12 @@ import {
   subjectTag,
 } from '@/lib/email/templates'
 import { emailDinnerDigestForStudent } from '@/lib/email/digest-email'
+import {
+  canAccessClass,
+  teacherCanViewStudent,
+  type ClassRow,
+} from '@/lib/gradebook-data'
+import { mayEmailStudentDinnerDigest } from '@/lib/email/digest-access'
 import { loadSchoolBrand } from '@/lib/school-brand'
 import { canSendSystemEmail, isSchoolStaff } from '@/lib/roles'
 
@@ -328,21 +334,40 @@ export async function emailStudentDinnerDigest(
   const access = await requireStaff()
   if (!access.ok) return access
 
-  // Teachers: must be linked somehow — allow all staff for pilot simplicity
-  // but verify student is at same school
+  const schoolId = access.profile.school_id!
   const { data: student } = await access.admin
     .from('students')
     .select('id, school_id')
     .eq('id', studentId)
     .maybeSingle()
 
-  if (!student || student.school_id !== access.profile.school_id) {
+  if (!student || student.school_id !== schoolId) {
     return { ok: false, error: 'Student not found at your school.' }
+  }
+
+  const teacherOwns =
+    access.profile.role === 'teacher'
+      ? await teacherCanViewStudent(access.user.id, studentId, schoolId)
+      : false
+
+  if (
+    !mayEmailStudentDinnerDigest({
+      role: access.profile.role,
+      teacherOwnsStudent: teacherOwns,
+    })
+  ) {
+    return {
+      ok: false,
+      error:
+        access.profile.role === 'teacher'
+          ? 'You can only email Dinner Table Digests for students in your classes.'
+          : 'Not allowed to email dinner digests.',
+    }
   }
 
   const result = await emailDinnerDigestForStudent({
     studentId,
-    schoolId: access.profile.school_id!,
+    schoolId,
     actorUserId: access.user.id,
   })
 
@@ -359,5 +384,82 @@ export async function emailStudentDinnerDigest(
     failed: result.failed,
     skipped: result.skipped,
     emailNote: result.note,
+  }
+}
+
+/**
+ * Email Dinner Table Digest for every student enrolled in a class.
+ * Teachers: only their own classes. Leadership: any class at school.
+ */
+export async function emailClassDinnerDigests(
+  classId: string
+): Promise<CommsResult> {
+  const access = await requireStaff()
+  if (!access.ok) return access
+
+  const schoolId = access.profile.school_id!
+  const { data: klass } = await access.admin
+    .from('classes')
+    .select('id, name, subject, grade_level, term, teacher_id, school_id, active')
+    .eq('id', classId)
+    .eq('school_id', schoolId)
+    .maybeSingle()
+
+  if (!klass) {
+    return { ok: false, error: 'Class not found at your school.' }
+  }
+
+  if (
+    !canAccessClass(access.profile, access.user, klass as ClassRow) ||
+    access.profile.role === 'parent'
+  ) {
+    return { ok: false, error: 'You do not have access to this class.' }
+  }
+
+  const { data: enrollRows } = await access.admin
+    .from('enrollments')
+    .select('student_id')
+    .eq('class_id', classId)
+
+  const studentIds = [
+    ...new Set((enrollRows ?? []).map((r) => String(r.student_id)).filter(Boolean)),
+  ]
+  if (!studentIds.length) {
+    return { ok: false, error: 'No students enrolled in this class.' }
+  }
+
+  let emailed = 0
+  let failed = 0
+  let skipped = 0
+  const notes: string[] = []
+
+  for (const studentId of studentIds) {
+    const result = await emailDinnerDigestForStudent({
+      studentId,
+      schoolId,
+      actorUserId: access.user.id,
+    })
+    emailed += result.sent
+    failed += result.failed
+    skipped += result.skipped
+    if (result.note && result.sent === 0) notes.push(result.note)
+  }
+
+  revalidatePath('/admin/emails')
+  revalidatePath(`/classes/${classId}`)
+
+  if (emailed === 0 && failed === 0 && skipped === 0) {
+    return {
+      ok: false,
+      error: notes[0] || 'No digest emails sent (no parent emails linked?).',
+    }
+  }
+
+  return {
+    ok: true,
+    emailed,
+    failed,
+    skipped,
+    emailNote: `Class digests: ${emailed} sent, ${failed} failed, ${skipped} skipped across ${studentIds.length} student(s).`,
   }
 }
