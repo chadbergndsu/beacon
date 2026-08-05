@@ -1,9 +1,10 @@
-import Link from 'next/link'
 import { requirePrincipal } from '@/lib/principal'
 import { probeOpsHealth } from '@/lib/ops/health'
 import { RELEASE_CHECKLIST, loadReleaseChecklistState } from '@/lib/ops/release-checklist'
+import { buildLaunchSuggestions } from '@/lib/ops/next-env-steps'
 import { loadSchoolBrand } from '@/lib/school-brand'
 import { HealthChecksList } from '@/components/ops/HealthChecksList'
+import { LaunchSuggestions } from '@/components/ops/LaunchSuggestions'
 import { ReleaseChecklistForm } from '@/components/ops/ReleaseChecklistForm'
 import { SchoolBrandForm } from '@/components/ops/SchoolBrandForm'
 import { OnboardingProgress } from '@/components/ops/OnboardingProgress'
@@ -22,6 +23,12 @@ export default async function PrincipalReleasePage() {
 
   const done = RELEASE_CHECKLIST.filter((i) => checklist[i.id]).length
   const total = RELEASE_CHECKLIST.length
+  const suggestions = buildLaunchSuggestions({
+    health,
+    checklist,
+    brand,
+    checklistItems: RELEASE_CHECKLIST,
+  })
 
   return (
     <div className="space-y-8">
@@ -117,49 +124,7 @@ export default async function PrincipalReleasePage() {
         </CardContent>
       </Card>
 
-      <div className="rounded-2xl border border-sky-200 bg-sky-50/60 px-5 py-4 text-sm dark:border-sky-900 dark:bg-sky-950/30">
-        <p className="font-semibold text-sky-950 dark:text-sky-100">Next env steps (server)</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sky-900/90 dark:text-sky-200/90">
-          <li>
-            Apply migrations: <code className="text-xs">npm run db:migrate</code> with{' '}
-            <code className="text-xs">DATABASE_URL</code>, or{' '}
-            <code className="text-xs">POSTGRES_PASSWORD</code> +{' '}
-            <code className="text-xs">SUPABASE_PROJECT_REF</code>
-          </li>
-          <li>
-            Live email: verify domain at resend.com → set{' '}
-            <code className="text-xs">RESEND_API_KEY</code> +{' '}
-            <code className="text-xs">EMAIL_FROM</code> on Vercel → send test from{' '}
-            <Link href="/admin/emails" className="font-semibold underline">
-              Comms
-            </Link>
-          </li>
-          <li>
-            School contact email on branding above becomes Reply-To so parents can answer the office
-          </li>
-          <li>
-            Live QuickBooks: <code className="text-xs">INTUIT_CLIENT_ID</code> /{' '}
-            <code className="text-xs">SECRET</code> / redirect URI
-          </li>
-          <li>
-            Optional principal seed elevation:{' '}
-            <code className="text-xs">BEACON_PRINCIPAL_EMAIL=you@yourschool.org</code>
-          </li>
-        </ul>
-        <p className="mt-3">
-          <Link href="/admin/emails" className="font-semibold text-sky-800 hover:underline">
-            Communications →
-          </Link>
-          {' · '}
-          <Link href="/principal/payments" className="font-semibold text-sky-800 hover:underline">
-            QuickBooks →
-          </Link>
-          {' · '}
-          <Link href="/school" className="font-semibold text-sky-800 hover:underline">
-            Public school site →
-          </Link>
-        </p>
-      </div>
+      <LaunchSuggestions items={suggestions} />
     </div>
   )
 }
