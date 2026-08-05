@@ -270,6 +270,14 @@ const LOGIN_CRITICAL_CSS = `
   .login-craft a.login-craft-btn:hover {
     filter: brightness(1.05);
   }
+  .login-craft a.login-craft-secondary {
+    display: block;
+    margin-top: 0.55rem;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 650;
+    color: #047857;
+  }
   .login-footer {
     margin-top: 1.15rem;
     display: flex;
@@ -343,10 +351,10 @@ const LOGIN_CRITICAL_CSS = `
 const PILOT_PRINCIPAL_EMAIL = 'principal@lighthouse.test'
 
 /** Voxel campus twin (separate app). Override in Vercel / .env.local when deployed. */
-function beaconCraftUrl(): string {
+function beaconCraftUrl(tour = false): string {
   const raw = process.env.NEXT_PUBLIC_BEACONCRAFT_URL?.trim()
-  if (raw) return raw.replace(/\/$/, '')
-  return 'http://localhost:3001'
+  const base = (raw || 'http://localhost:3001').replace(/\/$/, '')
+  return tour ? `${base}/?tour=1` : base
 }
 
 export default async function LoginPage({
@@ -360,6 +368,7 @@ export default async function LoginPage({
   const brand = await loadSchoolBrand(null)
   const principalEmail = demoPrincipalEmail() || PILOT_PRINCIPAL_EMAIL
   const craftUrl = beaconCraftUrl()
+  const tourUrl = beaconCraftUrl(true)
 
   return (
     <>
@@ -449,20 +458,27 @@ export default async function LoginPage({
                   </div>
 
                   <div className="login-craft">
-                    <strong>BeaconCraft mode</strong>
+                    <strong>Virtual campus tour</strong>
                     <p>
-                      Explore the {brand.shortName} campus as a live voxel twin — badge
-                      presence, rooms, and fly mode. No school password required for the
-                      demo twin.
+                      Walk the {brand.shortName} property in 3D — guided stops for entrance,
+                      classrooms, chapel, gym, and yard. No password required.
                     </p>
                     <a
-                      href={craftUrl}
+                      href={tourUrl}
                       className="login-craft-btn"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Enter BeaconCraft
+                      Start virtual tour
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                    </a>
+                    <a
+                      href={craftUrl}
+                      className="login-craft-secondary"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Open full campus twin →
                     </a>
                   </div>
 

@@ -8,9 +8,19 @@ import { cn } from '@/lib/utils'
 const anchors = [
   { href: '#about', label: 'About' },
   { href: '#academics', label: 'Academics' },
+  { href: '#tour', label: 'Campus tour' },
   { href: '#families', label: 'Families' },
   { href: '#contact', label: 'Contact' },
 ]
+
+function craftTourUrl(): string {
+  const raw =
+    typeof process !== 'undefined'
+      ? process.env.NEXT_PUBLIC_BEACONCRAFT_URL?.trim()
+      : ''
+  const base = (raw || 'http://localhost:3001').replace(/\/$/, '')
+  return `${base}/?tour=1`
+}
 
 export function SchoolSiteHeader({
   schoolName,
@@ -20,6 +30,7 @@ export function SchoolSiteHeader({
   websiteUrl?: string | null
 }) {
   const [open, setOpen] = useState(false)
+  const tourUrl = craftTourUrl()
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-card/90 backdrop-blur-xl pt-safe">
@@ -51,6 +62,14 @@ export function SchoolSiteHeader({
               Official site
             </a>
           )}
+          <a
+            href={tourUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+          >
+            Virtual tour
+          </a>
           <Link
             href="/login"
             className="ml-1 rounded-xl bg-navy px-3.5 py-2 text-sm font-semibold text-white hover:bg-slate-800"
@@ -96,6 +115,15 @@ export function SchoolSiteHeader({
               Official website
             </a>
           )}
+          <a
+            href={tourUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg px-3 py-2.5 text-sm font-semibold text-emerald-700"
+            onClick={() => setOpen(false)}
+          >
+            Virtual campus tour
+          </a>
           <Link
             href="/login"
             className="mt-1 rounded-xl bg-navy px-3 py-2.5 text-center text-sm font-semibold text-white"

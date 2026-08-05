@@ -8,6 +8,7 @@ import {
   Phone,
   Sparkles,
   Users,
+  Box,
 } from 'lucide-react'
 import { SchoolSiteHeader } from '@/components/school/SchoolSiteHeader'
 import { Badge } from '@/components/ui/badge'
@@ -31,6 +32,10 @@ export default async function SchoolWebsitePage({
   const key = sp.school || sp.slug || hostSlug
   const brand = key ? await loadSchoolBrandByPublicKey(key) : await loadSchoolBrand(null)
   const location = locationLine(brand)
+  const craftBase = (
+    process.env.NEXT_PUBLIC_BEACONCRAFT_URL?.trim() || 'http://localhost:3001'
+  ).replace(/\/$/, '')
+  const tourUrl = `${craftBase}/?tour=1`
 
   return (
     <div className="min-h-screen min-h-[100dvh] overflow-x-hidden beacon-shell text-foreground">
@@ -57,6 +62,15 @@ export default async function SchoolWebsitePage({
                 Sign in to Beacon
               </Button>
             </Link>
+            <a href={tourUrl} target="_blank" rel="noopener noreferrer">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-emerald-300/40 bg-emerald-500/15 text-white hover:bg-emerald-500/25 hover:text-white"
+              >
+                Virtual campus tour
+              </Button>
+            </a>
             <a href="#contact">
               <Button
                 size="lg"
@@ -150,7 +164,66 @@ export default async function SchoolWebsitePage({
         </div>
       </section>
 
-      <section id="families" className="border-y border-border bg-card/40 py-16">
+      <section id="tour" className="border-y border-border bg-card/40 py-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
+                Virtual walkthrough
+              </p>
+              <h2 className="mt-2 text-2xl sm:text-3xl font-bold text-navy dark:text-sky-50">
+                Explore campus in 3D
+              </h2>
+              <p className="mt-3 text-muted-foreground leading-relaxed">
+                Take a guided tour of {brand.name} — entrance, classrooms, chapel, gym, and yard —
+                in a live digital twin. No login required for the public tour.
+              </p>
+              <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
+                {[
+                  'Orbit the property or walk first-person',
+                  'See how rooms map to real campus spaces',
+                  'Same twin staff use for live badge presence',
+                ].map((t) => (
+                  <li key={t} className="flex gap-2">
+                    <Box className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a href={tourUrl} target="_blank" rel="noopener noreferrer">
+                  <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25">
+                    Start virtual tour
+                  </Button>
+                </a>
+                <a href={craftBase} target="_blank" rel="noopener noreferrer">
+                  <Button size="lg" variant="outline">
+                    Open campus twin
+                  </Button>
+                </a>
+              </div>
+            </div>
+            <Card className="overflow-hidden border-emerald-200/80 shadow-[var(--shadow-lift)]">
+              <CardContent className="pt-6 space-y-3">
+                <div className="rounded-xl bg-gradient-to-br from-slate-100 via-sky-50 to-emerald-50 p-6 min-h-[180px] flex flex-col justify-end border border-slate-200/80">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    BeaconCraft
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-navy">Live campus twin</p>
+                  <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                    Classroom blocks, course glow, and a step-by-step walkthrough of the property.
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Opens in a new tab · works on laptop and phone · privacy-first public tour mode
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      <section id="families" className="py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 text-center">
           <Heart className="mx-auto h-8 w-8 text-sky-600" />
           <h2 className="mt-3 text-2xl font-bold text-navy dark:text-sky-50">Built for families</h2>
