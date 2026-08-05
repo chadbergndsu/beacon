@@ -232,6 +232,44 @@ const LOGIN_CRITICAL_CSS = `
     font-weight: 650;
     color: #0369a1;
   }
+  .login-craft {
+    margin-top: 0.85rem;
+    border-radius: 1rem;
+    border: 1px solid #d1fae5;
+    background: linear-gradient(145deg, #ecfdf5 0%, #ffffff 55%, #f0f9ff 100%);
+    padding: 0.95rem 1rem;
+  }
+  .login-craft strong {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #047857;
+  }
+  .login-craft p {
+    margin: 0.3rem 0 0;
+    font-size: 0.875rem;
+    color: #5b6b7c;
+    line-height: 1.4;
+  }
+  .login-craft a.login-craft-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+    min-height: 2.65rem;
+    border-radius: 0.75rem;
+    background: linear-gradient(180deg, #10b981, #059669);
+    color: #fff !important;
+    font-size: 0.9rem;
+    font-weight: 650;
+    box-shadow: 0 10px 22px rgb(5 150 105 / 0.28);
+  }
+  .login-craft a.login-craft-btn:hover {
+    filter: brightness(1.05);
+  }
   .login-footer {
     margin-top: 1.15rem;
     display: flex;
@@ -304,6 +342,13 @@ const LOGIN_CRITICAL_CSS = `
 /** Pilot form prefill only — does not grant role by itself. */
 const PILOT_PRINCIPAL_EMAIL = 'principal@lighthouse.test'
 
+/** Voxel campus twin (separate app). Override in Vercel / .env.local when deployed. */
+function beaconCraftUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_BEACONCRAFT_URL?.trim()
+  if (raw) return raw.replace(/\/$/, '')
+  return 'http://localhost:3001'
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
@@ -314,6 +359,7 @@ export default async function LoginPage({
   const asPrincipal = params.as === 'principal'
   const brand = await loadSchoolBrand(null)
   const principalEmail = demoPrincipalEmail() || PILOT_PRINCIPAL_EMAIL
+  const craftUrl = beaconCraftUrl()
 
   return (
     <>
@@ -400,6 +446,24 @@ export default async function LoginPage({
                     <strong>Principal</strong>
                     <p>Open the dedicated office workspace for school leadership.</p>
                     <Link href="/login?as=principal">Principal sign-in →</Link>
+                  </div>
+
+                  <div className="login-craft">
+                    <strong>BeaconCraft mode</strong>
+                    <p>
+                      Explore the {brand.shortName} campus as a live voxel twin — badge
+                      presence, rooms, and fly mode. No school password required for the
+                      demo twin.
+                    </p>
+                    <a
+                      href={craftUrl}
+                      className="login-craft-btn"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Enter BeaconCraft
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                    </a>
                   </div>
 
                   <div className="login-footer">
