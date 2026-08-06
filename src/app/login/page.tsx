@@ -234,49 +234,87 @@ const LOGIN_CRITICAL_CSS = `
   }
   .login-craft {
     margin-top: 0.85rem;
-    border-radius: 1rem;
-    border: 1px solid #d1fae5;
-    background: linear-gradient(145deg, #ecfdf5 0%, #ffffff 55%, #f0f9ff 100%);
-    padding: 0.95rem 1rem;
+    border-radius: 1.1rem;
+    border: 2px solid #10b981;
+    background: linear-gradient(145deg, #ecfdf5 0%, #ffffff 40%, #eff6ff 100%);
+    padding: 1.05rem 1.05rem 1.15rem;
+    box-shadow: 0 12px 28px rgb(5 150 105 / 0.14);
   }
   .login-craft strong {
     display: block;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: #047857;
   }
+  .login-craft .login-craft-title {
+    margin: 0.35rem 0 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #064e3b;
+    line-height: 1.25;
+  }
   .login-craft p {
-    margin: 0.3rem 0 0;
+    margin: 0.35rem 0 0;
     font-size: 0.875rem;
-    color: #5b6b7c;
-    line-height: 1.4;
+    color: #475569;
+    line-height: 1.45;
+  }
+  .login-craft-actions {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
   }
   .login-craft a.login-craft-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
-    margin-top: 0.75rem;
-    min-height: 2.65rem;
+    min-height: 2.85rem;
     border-radius: 0.75rem;
     background: linear-gradient(180deg, #10b981, #059669);
     color: #fff !important;
-    font-size: 0.9rem;
-    font-weight: 650;
-    box-shadow: 0 10px 22px rgb(5 150 105 / 0.28);
+    font-size: 0.95rem;
+    font-weight: 700;
+    box-shadow: 0 10px 22px rgb(5 150 105 / 0.32);
   }
   .login-craft a.login-craft-btn:hover {
     filter: brightness(1.05);
   }
   .login-craft a.login-craft-secondary {
-    display: block;
-    margin-top: 0.55rem;
-    text-align: center;
-    font-size: 0.8rem;
-    font-weight: 650;
-    color: #047857;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 2.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid #a7f3d0;
+    background: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #047857 !important;
+  }
+  .login-craft-bullets {
+    margin: 0.55rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.25rem;
+  }
+  .login-craft-bullets li {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #065f46;
+    padding-left: 1rem;
+    position: relative;
+  }
+  .login-craft-bullets li::before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: #10b981;
   }
   .login-footer {
     margin-top: 1.15rem;
@@ -394,23 +432,23 @@ export default async function LoginPage({
           <div className="login-layout">
             <aside className="login-story">
               <div>
-                <p className="login-story-kicker">One platform</p>
+                <p className="login-story-kicker">Live campus twin</p>
                 <h1>
-                  Academics. Families.
+                  See your school
                   <br />
-                  Operations. Clarity.
+                  in 3D.
                 </h1>
                 <p>
-                  Beacon is the full school suite for <strong>{brand.name}</strong> — transparent
-                  grades, family communication, principal office, and QuickBooks-ready tuition.
-                  Built for any school that wants one clear system.
+                  Beacon is the full school suite for <strong>{brand.name}</strong> — plus a{' '}
+                  <strong>digital campus twin</strong> where badge scans place kids in rooms and
+                  staff can walk the property. Grades, families, and principal tools live here too.
                 </p>
               </div>
               <div className="login-story-grid">
                 {[
-                  { k: 'Academics', v: 'Transparent grades' },
-                  { k: 'Families', v: 'Comms & portal' },
-                  { k: 'Office', v: 'Tuition & QB' },
+                  { k: '3D twin', v: 'Orbit & walk campus' },
+                  { k: 'Badges', v: 'Kids appear in rooms' },
+                  { k: 'Suite', v: 'Grades · families · ops' },
                 ].map((item) => (
                   <div key={item.k}>
                     <strong>{item.k}</strong>
@@ -451,35 +489,44 @@ export default async function LoginPage({
                   </p>
                   <LoginForm nextPath={nextPath} />
 
+                  <div className="login-craft">
+                    <strong>Featured · BeaconCraft</strong>
+                    <p className="login-craft-title">3D digital campus twin</p>
+                    <p>
+                      Explore the full {brand.shortName} property in real time — badge check-ins
+                      show who&apos;s in each room. No login needed for the public tour.
+                    </p>
+                    <ul className="login-craft-bullets">
+                      <li>Guided walkthrough of entrance, classes, chapel, gym &amp; yard</li>
+                      <li>Orbit the property or walk first-person</li>
+                      <li>Same twin staff use for live presence</li>
+                    </ul>
+                    <div className="login-craft-actions">
+                      <a
+                        href={tourUrl}
+                        className="login-craft-btn"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Start 3D campus tour
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                      </a>
+                      <a
+                        href={craftUrl}
+                        className="login-craft-secondary"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Open full digital twin
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                      </a>
+                    </div>
+                  </div>
+
                   <div className="login-principal">
                     <strong>Principal</strong>
                     <p>Open the dedicated office workspace for school leadership.</p>
                     <Link href="/login?as=principal">Principal sign-in →</Link>
-                  </div>
-
-                  <div className="login-craft">
-                    <strong>Virtual campus tour</strong>
-                    <p>
-                      Walk the {brand.shortName} property in 3D — guided stops for entrance,
-                      classrooms, chapel, gym, and yard. No password required.
-                    </p>
-                    <a
-                      href={tourUrl}
-                      className="login-craft-btn"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Start virtual tour
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                    </a>
-                    <a
-                      href={craftUrl}
-                      className="login-craft-secondary"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Open full campus twin →
-                    </a>
                   </div>
 
                   <div className="login-footer">

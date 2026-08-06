@@ -71,6 +71,11 @@ export function BadgesAdmin({
     <div className="space-y-8">
       <div className="rounded-2xl border border-violet-200 bg-violet-50/80 p-4 text-sm text-violet-950 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-100">
         <p className="font-semibold">Badge system for Chris&apos;s rooms</p>
+        <p className="mt-1 text-xs leading-relaxed text-violet-900/90 dark:text-violet-100/90">
+          Product plan: scan-in welcomes the student on the kiosk screen and places them in
+          the matching room on the <strong>3D campus twin</strong> (BeaconCraft). See{' '}
+          <code className="text-[10px]">docs/adr/001-campus-twin-scan-presence.md</code>.
+        </p>
         <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs leading-relaxed">
           <li>
             <strong>Assign codes</strong> to students → print badges

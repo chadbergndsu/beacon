@@ -26,6 +26,12 @@ export function KioskScanner({
     { studentId: string; studentName: string; since: string }[]
   >([])
   const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null)
+  /** Full-screen welcome after successful scan (kiosk little screen). */
+  const [welcome, setWelcome] = useState<{
+    name: string
+    room: string
+    direction: ScanDirection
+  } | null>(null)
   const [pending, start] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
   const focusLock = useRef(true)
@@ -65,15 +71,27 @@ export function KioskScanner({
         kioskLabel: rooms.find((x) => x.id === roomId)?.name,
       })
       if (!r.ok) {
+        setWelcome(null)
         setFlash({ ok: false, text: r.error })
+        setTimeout(() => setFlash(null), 6000)
       } else {
+        const roomLabel =
+          r.roomName || rooms.find((x) => x.id === roomId)?.name || 'room'
+        setWelcome({
+          name: r.studentName,
+          room: roomLabel,
+          direction: r.direction,
+        })
         setFlash({ ok: true, text: r.message })
         refreshPresence()
+        setTimeout(() => {
+          setWelcome(null)
+          setFlash(null)
+        }, 4500)
       }
       setCode('')
       focusLock.current = true
       inputRef.current?.focus()
-      setTimeout(() => setFlash(null), 6000)
     })
   }
 
@@ -84,7 +102,35 @@ export function KioskScanner({
   }
 
   return (
-    <div className="min-h-[100dvh] bg-slate-950 text-white flex flex-col">
+    <div className="min-h-[100dvh] bg-slate-950 text-white flex flex-col relative">
+      {welcome && (
+        <div
+          className={cn(
+            'absolute inset-0 z-50 flex flex-col items-center justify-center px-6 text-center',
+            welcome.direction === 'in'
+              ? 'bg-gradient-to-b from-emerald-600 to-emerald-900'
+              : 'bg-gradient-to-b from-amber-500 to-slate-900'
+          )}
+          role="status"
+          aria-live="polite"
+        >
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-white/80">
+            {welcome.direction === 'in' ? 'Welcome' : 'See you later'}
+          </p>
+          <p className="mt-3 text-4xl sm:text-5xl font-black leading-tight tracking-tight">
+            {welcome.name}
+          </p>
+          <p className="mt-4 text-lg sm:text-xl font-semibold text-white/90">
+            {welcome.direction === 'in' ? 'Checked in · ' : 'Checked out · '}
+            {welcome.room}
+          </p>
+          <p className="mt-8 text-sm text-white/70 max-w-sm">
+            You&apos;re on the campus twin for this room — have a great{' '}
+            {welcome.direction === 'in' ? 'class' : 'day'}!
+          </p>
+        </div>
+      )}
+
       <header className="border-b border-white/10 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-400">
