@@ -10,6 +10,12 @@ import {
   enrollStudent,
   updateCategory,
 } from '@/app/actions/class-setup'
+import { Button, buttonClassName } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Field, FieldError } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
 import { validateCategoryWeights } from '@/lib/grades'
 import type { Assignment, GradeCategory, Student } from '@/lib/types'
 import Link from 'next/link'
@@ -49,41 +55,28 @@ export function ClassSetupPanel({
       <div
         className={`rounded-xl border px-4 py-3 text-sm ${
           weights.ok
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-            : 'border-amber-200 bg-amber-50 text-amber-950'
+            ? 'border-success/25 bg-success-soft text-success'
+            : 'border-warning/30 bg-warning-soft text-warning'
         }`}
       >
         <strong>Category weights:</strong> {weights.message}
       </div>
 
-      {message && (
-        <p className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+      {message ? (
+        <p className="rounded-xl border border-success/25 bg-success-soft px-3.5 py-2.5 text-sm text-success">
           {message}
         </p>
-      )}
-      {error && (
-        <p className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-          {error}
-        </p>
-      )}
+      ) : null}
+      <FieldError>{error}</FieldError>
 
       <div className="flex flex-wrap gap-2 text-sm">
-        <Link
-          href={`/classes/${classId}`}
-          className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-bold text-white"
-        >
+        <Link href={`/classes/${classId}`} className={buttonClassName('primary', 'sm')}>
           ← Back to gradebook
         </Link>
-        <Link
-          href="/teacher/settings"
-          className="rounded-lg border px-3 py-1.5 text-xs font-semibold"
-        >
+        <Link href="/teacher/settings" className={buttonClassName('outline', 'sm')}>
           Teacher settings
         </Link>
-        <Link
-          href="/teacher/classroom"
-          className="rounded-lg border px-3 py-1.5 text-xs font-semibold"
-        >
+        <Link href="/teacher/classroom" className={buttonClassName('outline', 'sm')}>
           Students &amp; classes
         </Link>
       </div>
@@ -93,16 +86,17 @@ export function ClassSetupPanel({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">Grade categories (weights)</h2>
           {categories.length === 0 && (
-            <button
+            <Button
               type="button"
+              size="sm"
+              variant="outline"
               disabled={pending}
-              className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-900"
               onClick={() =>
                 run(() => applyDefaultGradeWeights(classId), 'Abeka-style weights applied (100%).')
               }
             >
               Apply Abeka-style weights (100%)
-            </button>
+            </Button>
           )}
         </div>
         <p className="text-xs text-muted-foreground">
@@ -111,41 +105,35 @@ export function ClassSetupPanel({
         <ul className="space-y-3">
           {categories.map((cat) => (
             <li key={cat.id} className="grid gap-2 sm:grid-cols-[1fr_90px_90px_auto] items-end border rounded-lg p-3">
-              <label className="text-xs font-medium text-muted-foreground">
-                Name
-                <input
-                  id={`cat-name-${cat.id}`}
-                  defaultValue={cat.name}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="text-xs font-medium text-muted-foreground">
-                Weight %
-                <input
+              <Field>
+                <Label htmlFor={`cat-name-${cat.id}`}>Name</Label>
+                <Input id={`cat-name-${cat.id}`} defaultValue={cat.name} />
+              </Field>
+              <Field>
+                <Label htmlFor={`cat-weight-${cat.id}`}>Weight %</Label>
+                <Input
                   id={`cat-weight-${cat.id}`}
                   type="number"
                   min={0}
                   max={100}
                   step={0.5}
                   defaultValue={cat.weight}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
                 />
-              </label>
-              <label className="text-xs font-medium text-muted-foreground">
-                Drop lowest
-                <input
+              </Field>
+              <Field>
+                <Label htmlFor={`cat-drop-${cat.id}`}>Drop lowest</Label>
+                <Input
                   id={`cat-drop-${cat.id}`}
                   type="number"
                   min={0}
                   defaultValue={cat.drop_lowest}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
                 />
-              </label>
+              </Field>
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
+                  size="sm"
                   disabled={pending}
-                  className="rounded-lg bg-primary text-primary-foreground px-3 py-2 text-sm font-medium disabled:opacity-50"
                   onClick={() => {
                     const name = (document.getElementById(`cat-name-${cat.id}`) as HTMLInputElement)
                       .value
@@ -162,18 +150,19 @@ export function ClassSetupPanel({
                   }}
                 >
                   Save
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  size="sm"
+                  variant="danger"
                   disabled={pending}
-                  className="rounded-lg border border-red-200 text-red-700 px-3 py-2 text-sm font-medium disabled:opacity-50"
                   onClick={() => {
                     if (!confirm(`Delete category “${cat.name}”?`)) return
                     run(() => deleteCategory(classId, cat.id), `Deleted ${cat.name}`)
                   }}
                 >
                   Del
-                </button>
+                </Button>
               </div>
             </li>
           ))}
@@ -196,44 +185,35 @@ export function ClassSetupPanel({
             e.currentTarget.reset()
           }}
         >
-          <label className="text-xs font-medium text-muted-foreground">
-            New category
-            <input
-              name="name"
-              required
-              placeholder="e.g. Projects"
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="text-xs font-medium text-muted-foreground">
-            Weight %
-            <input
+          <Field>
+            <Label htmlFor="new-cat-name">New category</Label>
+            <Input id="new-cat-name" name="name" required placeholder="e.g. Projects" />
+          </Field>
+          <Field>
+            <Label htmlFor="new-cat-weight">Weight %</Label>
+            <Input
+              id="new-cat-weight"
               name="weight"
               type="number"
               min={0}
               max={100}
               step={0.5}
               defaultValue={10}
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
             />
-          </label>
-          <label className="text-xs font-medium text-muted-foreground">
-            Drop lowest
-            <input
+          </Field>
+          <Field>
+            <Label htmlFor="new-cat-drop">Drop lowest</Label>
+            <Input
+              id="new-cat-drop"
               name="drop_lowest"
               type="number"
               min={0}
               defaultValue={0}
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
             />
-          </label>
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50"
-          >
+          </Field>
+          <Button type="submit" size="sm" disabled={pending}>
             Add
-          </button>
+          </Button>
         </form>
       </section>
 
@@ -241,7 +221,7 @@ export function ClassSetupPanel({
       <section className="rounded-xl border bg-background p-4 space-y-4">
         <h2 className="text-lg font-semibold">Assignments</h2>
         {assignments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No assignments yet.</p>
+          <EmptyState title="No assignments yet." />
         ) : (
           <ul className="divide-y rounded-lg border">
             {assignments.map((a) => {
@@ -256,17 +236,18 @@ export function ClassSetupPanel({
                       {a.is_extra_credit ? ' · extra credit' : ''}
                     </p>
                   </div>
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
+                    variant="danger"
                     disabled={pending}
-                    className="rounded-lg border border-red-200 text-red-700 px-3 py-1.5 text-xs font-medium"
                     onClick={() => {
                       if (!confirm(`Delete “${a.title}”? Grades for it will be removed.`)) return
                       run(() => deleteAssignment(classId, a.id), `Deleted ${a.title}`)
                     }}
                   >
                     Delete
-                  </button>
+                  </Button>
                 </li>
               )
             })}
@@ -292,53 +273,49 @@ export function ClassSetupPanel({
             e.currentTarget.reset()
           }}
         >
-          <label className="text-xs font-medium text-muted-foreground sm:col-span-2">
-            Title
-            <input
+          <Field className="sm:col-span-2">
+            <Label htmlFor="assignment-title">Title</Label>
+            <Input
+              id="assignment-title"
               name="title"
               required
               placeholder="e.g. Chapter 4 Quiz"
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
             />
-          </label>
-          <label className="text-xs font-medium text-muted-foreground">
-            Category
-            <select name="category_id" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+          </Field>
+          <Field>
+            <Label htmlFor="assignment-category">Category</Label>
+            <Select id="assignment-category" name="category_id">
               <option value="">Uncategorized</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
-            </select>
-          </label>
-          <label className="text-xs font-medium text-muted-foreground">
-            Max points
-            <input
+            </Select>
+          </Field>
+          <Field>
+            <Label htmlFor="assignment-max-points">Max points</Label>
+            <Input
+              id="assignment-max-points"
               name="max_points"
               type="number"
               min={1}
               step={0.5}
               defaultValue={100}
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
             />
-          </label>
-          <label className="text-xs font-medium text-muted-foreground">
-            Due date
-            <input name="due_date" type="date" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-          </label>
+          </Field>
+          <Field>
+            <Label htmlFor="assignment-due-date">Due date</Label>
+            <Input id="assignment-due-date" name="due_date" type="date" />
+          </Field>
           <label className="flex items-center gap-2 text-sm mt-6">
             <input name="is_extra_credit" type="checkbox" className="h-4 w-4" />
             Extra credit
           </label>
           <div className="sm:col-span-2">
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50"
-            >
+            <Button type="submit" disabled={pending}>
               Add assignment
-            </button>
+            </Button>
           </div>
         </form>
       </section>
@@ -371,25 +348,21 @@ export function ClassSetupPanel({
             e.currentTarget.reset()
           }}
         >
-          <label className="text-xs font-medium text-muted-foreground">
-            First name
-            <input name="first_name" required className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-          </label>
-          <label className="text-xs font-medium text-muted-foreground">
-            Last name
-            <input name="last_name" required className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-          </label>
-          <label className="text-xs font-medium text-muted-foreground">
-            Grade level
-            <input name="grade_level" placeholder="5" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-          </label>
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50"
-          >
+          <Field>
+            <Label htmlFor="enroll-first-name">First name</Label>
+            <Input id="enroll-first-name" name="first_name" required />
+          </Field>
+          <Field>
+            <Label htmlFor="enroll-last-name">Last name</Label>
+            <Input id="enroll-last-name" name="last_name" required />
+          </Field>
+          <Field>
+            <Label htmlFor="enroll-grade-level">Grade level</Label>
+            <Input id="enroll-grade-level" name="grade_level" placeholder="5" />
+          </Field>
+          <Button type="submit" disabled={pending}>
             Enroll student
-          </button>
+          </Button>
         </form>
       </section>
     </div>
