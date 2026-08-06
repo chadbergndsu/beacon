@@ -7,13 +7,18 @@ import { loadSchoolBrand } from '@/lib/school-brand'
 
 /**
  * Critical CSS keeps the login usable even if the Tailwind chunk fails.
+ * Kept in sync with the calm Beacon chrome (navy / primary / white card).
  */
 const LOGIN_CRITICAL_CSS = `
   .login-shell {
     min-height: 100dvh;
     min-height: 100vh;
     box-sizing: border-box;
-    background: linear-gradient(145deg, #06101f 0%, #0b1f3a 48%, #0c4a6e 100%);
+    background: #07111f;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgb(2 132 199 / 0.22), transparent 50%),
+      radial-gradient(ellipse at 85% 0%, rgb(14 165 233 / 0.12), transparent 45%),
+      linear-gradient(160deg, #06101f 0%, #0a1628 55%, #0c1a2e 100%);
     color: #f8fafc;
     font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     padding: max(1rem, env(safe-area-inset-top, 0px)) 1rem max(1.5rem, env(safe-area-inset-bottom, 0px));
@@ -31,8 +36,8 @@ const LOGIN_CRITICAL_CSS = `
   .login-brand {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    margin: 0 auto 1.25rem;
+    gap: 0.75rem;
+    margin: 0 auto 1.5rem;
     max-width: 26rem;
     width: 100%;
   }
@@ -42,29 +47,28 @@ const LOGIN_CRITICAL_CSS = `
     height: 2.75rem;
     align-items: center;
     justify-content: center;
-    border-radius: 0.9rem;
-    background: #0ea5e9;
+    border-radius: 0.75rem;
+    background: #0284c7;
     color: #fff;
-    font-weight: 800;
+    font-weight: 700;
     font-size: 1.05rem;
-    box-shadow: 0 10px 28px rgb(14 165 233 / 0.35);
     flex-shrink: 0;
   }
   .login-brand-title {
     margin: 0;
-    font-size: 1.15rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-size: 1.25rem;
+    font-weight: 650;
+    letter-spacing: -0.025em;
     color: #fff;
-    line-height: 1.2;
+    line-height: 1.15;
   }
   .login-brand-sub {
-    margin: 0.1rem 0 0;
+    margin: 0.15rem 0 0;
     font-size: 0.65rem;
     font-weight: 600;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: rgb(125 211 252 / 0.9);
+    color: rgb(148 163 184);
   }
   .login-layout {
     width: 100%;
@@ -73,10 +77,10 @@ const LOGIN_CRITICAL_CSS = `
   }
   @media (min-width: 1024px) {
     .login-layout {
-      max-width: 56rem;
+      max-width: 52rem;
       display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: 1.5rem;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.75rem;
       align-items: stretch;
     }
   }
@@ -85,98 +89,81 @@ const LOGIN_CRITICAL_CSS = `
     .login-story {
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      border-radius: 1.5rem;
-      border: 1px solid rgb(255 255 255 / 0.12);
-      background: rgb(255 255 255 / 0.05);
-      padding: 2.25rem;
+      justify-content: flex-end;
+      border-radius: 1.25rem;
+      border: 1px solid rgb(255 255 255 / 0.08);
+      background: rgb(255 255 255 / 0.04);
+      padding: 2rem;
       color: #fff;
-      backdrop-filter: blur(12px);
     }
   }
   .login-story-kicker {
     margin: 0;
     font-size: 0.7rem;
     font-weight: 600;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: #7dd3fc;
   }
   .login-story h1 {
-    margin: 0.75rem 0 0;
-    font-size: 2.15rem;
-    line-height: 1.15;
+    margin: 0.65rem 0 0;
+    font-size: 2rem;
+    line-height: 1.12;
     letter-spacing: -0.03em;
-    font-weight: 700;
+    font-weight: 650;
     color: #fff;
   }
   .login-story p {
-    margin: 1rem 0 0;
-    max-width: 28rem;
-    font-size: 1rem;
-    line-height: 1.6;
-    color: #cbd5e1;
+    margin: 0.85rem 0 0;
+    max-width: 26rem;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: #94a3b8;
   }
-  .login-story-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.75rem;
+  .login-story-meta {
     margin-top: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    font-size: 0.8rem;
+    color: #64748b;
   }
-  .login-story-grid div {
-    border-radius: 1rem;
-    border: 1px solid rgb(255 255 255 / 0.1);
-    background: rgb(255 255 255 / 0.06);
-    padding: 0.75rem;
-  }
-  .login-story-grid strong {
-    display: block;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #7dd3fc;
-  }
-  .login-story-grid span {
-    display: block;
-    margin-top: 0.35rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: rgb(255 255 255 / 0.92);
+  .login-story-meta strong {
+    color: #e2e8f0;
+    font-weight: 600;
   }
   .login-card {
     width: 100%;
     border-radius: 1.25rem;
     background: #ffffff;
     color: #0b1220;
-    border: 1px solid rgb(255 255 255 / 0.55);
-    box-shadow: 0 24px 60px rgb(2 8 23 / 0.35);
-    padding: 1.35rem 1.25rem 1.5rem;
+    border: 1px solid rgb(255 255 255 / 0.4);
+    box-shadow: 0 20px 50px rgb(2 8 23 / 0.35);
+    padding: 1.5rem 1.25rem 1.35rem;
   }
   @media (min-width: 640px) {
-    .login-card { border-radius: 1.5rem; padding: 2rem; }
+    .login-card { border-radius: 1.25rem; padding: 1.75rem 1.75rem 1.5rem; }
   }
   .login-card h1 {
     margin: 0;
-    text-align: center;
-    font-size: 1.4rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: #0a1628;
+    font-size: 1.35rem;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+    color: #0b1220;
     line-height: 1.25;
   }
   .login-card .login-card-sub {
-    margin: 0.4rem 0 0;
-    text-align: center;
+    margin: 0.35rem 0 0;
     font-size: 0.875rem;
     color: #5b6b7c;
+    line-height: 1.4;
   }
-  .login-card form { margin-top: 1.35rem; display: grid; gap: 1rem; }
+  .login-card form { margin-top: 1.35rem; }
   .login-card label {
     display: block;
-    margin-bottom: 0.4rem;
+    margin-bottom: 0;
     font-size: 0.7rem;
-    font-weight: 700;
+    font-weight: 650;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #5b6b7c;
@@ -184,7 +171,7 @@ const LOGIN_CRITICAL_CSS = `
   .login-card input[type="email"],
   .login-card input[type="password"] {
     width: 100%;
-    min-height: 2.85rem;
+    min-height: 2.75rem;
     border-radius: 0.75rem;
     border: 1px solid #e2e8f0;
     background: #fff;
@@ -194,149 +181,79 @@ const LOGIN_CRITICAL_CSS = `
   }
   .login-card button[type="submit"] {
     width: 100%;
-    min-height: 3rem;
+    min-height: 2.75rem;
     border: 0;
     border-radius: 0.75rem;
-    background: linear-gradient(180deg, #0ea5e9, #0284c7);
+    background: #0284c7;
     color: #fff;
-    font-size: 0.95rem;
-    font-weight: 650;
+    font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 10px 24px rgb(2 132 199 / 0.25);
   }
-  .login-principal {
+  .login-links {
     margin-top: 1.15rem;
-    border-radius: 1rem;
-    border: 1px solid #e0f2fe;
-    background: linear-gradient(160deg, #f0f9ff, #ffffff);
-    padding: 0.95rem 1rem;
-  }
-  .login-principal strong {
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #0369a1;
-  }
-  .login-principal p {
-    margin: 0.3rem 0 0;
-    font-size: 0.875rem;
-    color: #5b6b7c;
-    line-height: 1.4;
-  }
-  .login-principal a {
-    display: inline-flex;
-    margin-top: 0.55rem;
-    font-size: 0.875rem;
-    font-weight: 650;
-    color: #0369a1;
-  }
-  .login-craft {
-    margin-top: 0.85rem;
-    border-radius: 1.1rem;
-    border: 2px solid #10b981;
-    background: linear-gradient(145deg, #ecfdf5 0%, #ffffff 40%, #eff6ff 100%);
-    padding: 1.05rem 1.05rem 1.15rem;
-    box-shadow: 0 12px 28px rgb(5 150 105 / 0.14);
-  }
-  .login-craft strong {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #047857;
-  }
-  .login-craft .login-craft-title {
-    margin: 0.35rem 0 0;
-    font-size: 1.05rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: #064e3b;
-    line-height: 1.25;
-  }
-  .login-craft p {
-    margin: 0.35rem 0 0;
-    font-size: 0.875rem;
-    color: #475569;
-    line-height: 1.45;
-  }
-  .login-craft-actions {
     display: grid;
     gap: 0.5rem;
-    margin-top: 0.85rem;
   }
-  .login-craft a.login-craft-btn {
+  .login-link-row {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    min-height: 2.85rem;
+    justify-content: space-between;
+    gap: 0.75rem;
     border-radius: 0.75rem;
-    background: linear-gradient(180deg, #10b981, #059669);
-    color: #fff !important;
-    font-size: 0.95rem;
-    font-weight: 700;
-    box-shadow: 0 10px 22px rgb(5 150 105 / 0.32);
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 0.75rem 0.9rem;
+    font-size: 0.875rem;
+    color: #0b1220;
+    transition: background 0.15s ease, border-color 0.15s ease;
   }
-  .login-craft a.login-craft-btn:hover {
-    filter: brightness(1.05);
+  .login-link-row:hover {
+    background: #f0f9ff;
+    border-color: #bae6fd;
   }
-  .login-craft a.login-craft-secondary {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    min-height: 2.5rem;
-    border-radius: 0.75rem;
-    border: 1px solid #a7f3d0;
-    background: #fff;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #047857 !important;
-  }
-  .login-craft-bullets {
-    margin: 0.55rem 0 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    gap: 0.25rem;
-  }
-  .login-craft-bullets li {
-    font-size: 0.78rem;
+  .login-link-row span {
+    display: block;
+    font-size: 0.7rem;
     font-weight: 600;
-    color: #065f46;
-    padding-left: 1rem;
-    position: relative;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #64748b;
   }
-  .login-craft-bullets li::before {
-    content: "▸";
-    position: absolute;
-    left: 0;
-    color: #10b981;
+  .login-link-row strong {
+    display: block;
+    margin-top: 0.1rem;
+    font-weight: 650;
+    color: #0b1220;
+  }
+  .login-link-row em {
+    font-style: normal;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #0284c7;
+    white-space: nowrap;
   }
   .login-footer {
-    margin-top: 1.15rem;
+    margin-top: 1rem;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 0.35rem 0.75rem;
     font-size: 0.75rem;
-    color: #5b6b7c;
+    color: #64748b;
   }
-  .login-footer a { font-weight: 600; color: #0369a1; }
+  .login-footer a { font-weight: 600; color: #0284c7; }
   .login-principal-card {
     width: 100%;
     border-radius: 1.25rem;
     background: #ffffff;
     color: #0b1220;
-    border: 1px solid rgb(56 189 248 / 0.25);
-    box-shadow: 0 24px 60px rgb(2 8 23 / 0.35);
-    padding: 1.35rem 1.25rem 1.5rem;
+    border: 1px solid rgb(255 255 255 / 0.4);
+    box-shadow: 0 20px 50px rgb(2 8 23 / 0.35);
+    padding: 1.5rem 1.25rem 1.35rem;
   }
   @media (min-width: 640px) {
-    .login-principal-card { border-radius: 1.5rem; padding: 2rem; }
+    .login-principal-card { padding: 1.75rem; }
   }
   .login-principal-head {
     display: flex;
@@ -346,11 +263,11 @@ const LOGIN_CRITICAL_CSS = `
   }
   .login-principal-icon {
     display: flex;
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 2.5rem;
+    height: 2.5rem;
     align-items: center;
     justify-content: center;
-    border-radius: 0.9rem;
+    border-radius: 0.75rem;
     background: #0a1628;
     color: #fff;
     flex-shrink: 0;
@@ -366,8 +283,9 @@ const LOGIN_CRITICAL_CSS = `
   .login-principal-head h2 {
     margin: 0.15rem 0 0;
     font-size: 1.2rem;
-    font-weight: 700;
-    color: #0a1628;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: #0b1220;
   }
   .login-principal-head p {
     margin: 0.3rem 0 0;
@@ -381,7 +299,7 @@ const LOGIN_CRITICAL_CSS = `
     text-align: center;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #0369a1;
+    color: #0284c7;
   }
 `
 
@@ -412,49 +330,40 @@ export default async function LoginPage({
     <>
       <style dangerouslySetInnerHTML={{ __html: LOGIN_CRITICAL_CSS }} />
       <div className="login-shell relative overflow-x-hidden">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 overflow-hidden opacity-50"
-        >
-          <div className="mobile-safe-blur absolute -left-10 top-0 h-40 w-40 rounded-full bg-sky-500/30 blur-3xl sm:h-72 sm:w-72" />
-          <div className="mobile-safe-blur absolute bottom-0 right-0 h-44 w-44 rounded-full bg-cyan-400/20 blur-3xl sm:h-80 sm:w-80" />
-        </div>
-
         <div className="relative z-10 w-full">
           <Link href="/school" className="login-brand group">
-            <span className="login-mark transition group-hover:scale-105">{brand.logoLetter}</span>
-            <span>
-              <p className="login-brand-title">Beacon</p>
-              <p className="login-brand-sub">School suite · {brand.shortName}</p>
+            <span className="login-mark transition group-hover:brightness-110">{brand.logoLetter}</span>
+            <span className="min-w-0">
+              <p className="login-brand-title truncate">{brand.name}</p>
+              <p className="login-brand-sub">Powered by Beacon</p>
             </span>
           </Link>
 
           <div className="login-layout">
             <aside className="login-story">
               <div>
-                <p className="login-story-kicker">Live campus twin</p>
+                <p className="login-story-kicker">{brand.shortName}</p>
                 <h1>
-                  See your school
+                  Sign in to
                   <br />
-                  in 3D.
+                  your school.
                 </h1>
                 <p>
-                  Beacon is the full school suite for <strong>{brand.name}</strong> — plus a{' '}
-                  <strong>digital campus twin</strong> where badge scans place kids in rooms and
-                  staff can walk the property. Grades, families, and principal tools live here too.
+                  Academics, family communication, and calm operations for{' '}
+                  <strong style={{ color: '#e2e8f0', fontWeight: 600 }}>{brand.name}</strong>
+                  — plus an optional 3D campus twin for presence and tours.
                 </p>
               </div>
-              <div className="login-story-grid">
-                {[
-                  { k: '3D twin', v: 'Orbit & walk campus' },
-                  { k: 'Badges', v: 'Kids appear in rooms' },
-                  { k: 'Suite', v: 'Grades · families · ops' },
-                ].map((item) => (
-                  <div key={item.k}>
-                    <strong>{item.k}</strong>
-                    <span>{item.v}</span>
-                  </div>
-                ))}
+              <div className="login-story-meta">
+                <span>
+                  <strong>Teachers</strong> · grades &amp; attendance
+                </span>
+                <span>
+                  <strong>Families</strong> · digest &amp; balances
+                </span>
+                <span>
+                  <strong>Office</strong> · tuition &amp; go-live
+                </span>
               </div>
             </aside>
 
@@ -466,9 +375,9 @@ export default async function LoginPage({
                       <Shield className="h-5 w-5" aria-hidden />
                     </div>
                     <div className="min-w-0">
-                      <p className="kicker">Principal access</p>
+                      <p className="kicker">Principal</p>
                       <h2>School leadership</h2>
-                      <p>Dedicated principal workspace for {brand.name}.</p>
+                      <p>Dedicated office workspace for {brand.name}.</p>
                     </div>
                   </div>
                   <LoginForm
@@ -483,55 +392,55 @@ export default async function LoginPage({
                 </div>
               ) : (
                 <div className="login-card">
-                  <h1>Sign in to Beacon</h1>
+                  <h1>Sign in</h1>
                   <p className="login-card-sub">
-                    Teachers, staff, parents &amp; leadership · {brand.shortName}
+                    Teachers, staff, parents &amp; leadership
                   </p>
                   <LoginForm nextPath={nextPath} />
 
-                  <div className="login-craft">
-                    <strong>Featured · BeaconCraft</strong>
-                    <p className="login-craft-title">3D digital campus twin</p>
-                    <p>
-                      Explore the full {brand.shortName} property in real time — badge check-ins
-                      show who&apos;s in each room. No login needed for the public tour.
-                    </p>
-                    <ul className="login-craft-bullets">
-                      <li>Guided walkthrough of entrance, classes, chapel, gym &amp; yard</li>
-                      <li>Orbit the property or walk first-person</li>
-                      <li>Same twin staff use for live presence</li>
-                    </ul>
-                    <div className="login-craft-actions">
-                      <a
-                        href={tourUrl}
-                        className="login-craft-btn"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Start 3D campus tour
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                      </a>
-                      <a
-                        href={craftUrl}
-                        className="login-craft-secondary"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Open full digital twin
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                      </a>
-                    </div>
-                  </div>
-
-                  <div className="login-principal">
-                    <strong>Principal</strong>
-                    <p>Open the dedicated office workspace for school leadership.</p>
-                    <Link href="/login?as=principal">Principal sign-in →</Link>
+                  <div className="login-links">
+                    <a
+                      href={tourUrl}
+                      className="login-link-row"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <span>
+                        <span>Campus</span>
+                        <strong>3D campus tour</strong>
+                      </span>
+                      <em>
+                        Open
+                        <ExternalLink className="ml-1 inline h-3 w-3" aria-hidden />
+                      </em>
+                    </a>
+                    <a
+                      href={craftUrl}
+                      className="login-link-row"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <span>
+                        <span>BeaconCraft</span>
+                        <strong>Full digital twin</strong>
+                      </span>
+                      <em>
+                        Open
+                        <ExternalLink className="ml-1 inline h-3 w-3" aria-hidden />
+                      </em>
+                    </a>
+                    <Link href="/login?as=principal" className="login-link-row">
+                      <span>
+                        <span>Leadership</span>
+                        <strong>Principal sign-in</strong>
+                      </span>
+                      <em>Continue →</em>
+                    </Link>
                   </div>
 
                   <div className="login-footer">
                     <Link href="/school">School site</Link>
-                    {brand.websiteUrl && (
+                    {brand.websiteUrl ? (
                       <>
                         <span aria-hidden>·</span>
                         <a
@@ -540,13 +449,13 @@ export default async function LoginPage({
                           rel="noreferrer"
                           className="inline-flex items-center gap-1"
                         >
-                          School website
+                          Website
                           <ExternalLink className="h-3 w-3" aria-hidden />
                         </a>
                       </>
-                    )}
+                    ) : null}
                     <span aria-hidden>·</span>
-                    <Link href="/about">About Beacon</Link>
+                    <Link href="/about">About</Link>
                     <span aria-hidden>·</span>
                     <Link href="/privacy">Privacy</Link>
                   </div>

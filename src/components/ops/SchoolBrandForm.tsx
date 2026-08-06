@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import { saveSchoolBrand } from '@/app/actions/ops'
 import type { SchoolBrand } from '@/lib/school-brand'
 import { Button } from '@/components/ui/button'
+import { Field, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 export function SchoolBrandForm({ brand }: { brand: SchoolBrand }) {
   const router = useRouter()
@@ -45,19 +47,19 @@ export function SchoolBrandForm({ brand }: { brand: SchoolBrand }) {
       }}
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="sm:col-span-2">
+        <Field className="sm:col-span-2">
           <Label htmlFor="name">School name</Label>
           <Input id="name" name="name" required defaultValue={brand.name} />
-        </div>
-        <div>
+        </Field>
+        <Field>
           <Label htmlFor="shortName">Short name</Label>
           <Input id="shortName" name="shortName" defaultValue={brand.shortName} placeholder="e.g. RHS" />
-        </div>
-        <div>
+        </Field>
+        <Field>
           <Label htmlFor="tagline">Tagline</Label>
           <Input id="tagline" name="tagline" defaultValue={brand.tagline} />
-        </div>
-        <div>
+        </Field>
+        <Field>
           <Label htmlFor="websiteUrl">Website URL</Label>
           <Input
             id="websiteUrl"
@@ -66,24 +68,24 @@ export function SchoolBrandForm({ brand }: { brand: SchoolBrand }) {
             defaultValue={brand.websiteUrl || ''}
             placeholder="https://"
           />
-        </div>
-        <div>
+        </Field>
+        <Field>
           <Label htmlFor="email">Office email</Label>
           <Input id="email" name="email" type="email" defaultValue={brand.email || ''} />
-        </div>
-        <div>
+        </Field>
+        <Field>
           <Label htmlFor="phone">Phone</Label>
           <Input id="phone" name="phone" defaultValue={brand.phone || ''} />
-        </div>
-        <div>
+        </Field>
+        <Field>
           <Label htmlFor="city">City</Label>
           <Input id="city" name="city" defaultValue={brand.city || ''} />
-        </div>
-        <div>
+        </Field>
+        <Field>
           <Label htmlFor="state">State</Label>
           <Input id="state" name="state" defaultValue={brand.state || ''} />
-        </div>
-        <div>
+        </Field>
+        <Field>
           <Label htmlFor="gradesServed">Grades served</Label>
           <Input
             id="gradesServed"
@@ -91,24 +93,23 @@ export function SchoolBrandForm({ brand }: { brand: SchoolBrand }) {
             defaultValue={brand.gradesServed || ''}
             placeholder="K4–12"
           />
-        </div>
-        <div className="sm:col-span-2">
+        </Field>
+        <Field className="sm:col-span-2">
           <Label htmlFor="mission">Mission / hero blurb</Label>
-          <textarea
+          <Textarea
             id="mission"
             name="mission"
             rows={3}
             defaultValue={brand.mission || ''}
-            className="flex w-full rounded-xl border border-border bg-card px-3.5 py-2 text-base sm:text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
           />
-        </div>
+        </Field>
       </div>
-      {error && (
-        <p className="text-sm text-red-700" role="alert">
-          {error}
+      <FieldError>{error}</FieldError>
+      {ok ? (
+        <p className="text-sm font-medium text-success">
+          School branding saved — public site updated.
         </p>
-      )}
-      {ok && <p className="text-sm text-emerald-700">School branding saved — public site updated.</p>}
+      ) : null}
       <Button type="submit" disabled={pending}>
         {pending ? 'Saving…' : 'Save school branding'}
       </Button>

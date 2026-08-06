@@ -3,9 +3,9 @@
 import { useActionState } from 'react'
 import { login, type AuthState } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
+import { Field, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
 
 const initial: AuthState = {}
 
@@ -26,7 +26,7 @@ export function LoginForm({
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="next" value={nextPath} />
-      <div>
+      <Field>
         <Label htmlFor="email">Email</Label>
         <Input
           id="email"
@@ -36,10 +36,9 @@ export function LoginForm({
           required
           defaultValue={defaultEmail}
           placeholder="you@school.org"
-          className={cn(isPrincipal && 'border-sky-300/50 bg-white/95 dark:bg-slate-900')}
         />
-      </div>
-      <div>
+      </Field>
+      <Field>
         <Label htmlFor="password">Password</Label>
         <Input
           id="password"
@@ -48,23 +47,15 @@ export function LoginForm({
           autoComplete="current-password"
           required
           placeholder="••••••••"
-          className={cn(isPrincipal && 'border-sky-300/50 bg-white/95 dark:bg-slate-900')}
         />
-      </div>
-      {state?.error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
-        >
-          {state.error}
-        </div>
-      )}
+      </Field>
+      <FieldError>{state?.error}</FieldError>
       <Button
         type="submit"
         disabled={pending}
         size="lg"
         variant={isPrincipal ? 'navy' : 'primary'}
-        className="w-full shadow-lg shadow-sky-500/15"
+        className="w-full"
       >
         {pending ? 'Signing in…' : submitLabel}
       </Button>
