@@ -2,9 +2,8 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import type { FeedItem } from '@/lib/parent-feed'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
-import { cn } from '@/lib/utils'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 
 const TYPE_LABEL: Record<FeedItem['type'], string> = {
   announcement: 'Announcement',
@@ -15,58 +14,61 @@ const TYPE_LABEL: Record<FeedItem['type'], string> = {
   missing: 'Missing work',
 }
 
-function toneClasses(tone?: FeedItem['tone']) {
-  if (tone === 'warning') return 'border-warning/30 bg-warning-soft/40'
-  if (tone === 'success') return 'border-success/25 bg-success-soft/50'
-  if (tone === 'info') return 'border-primary/20 bg-primary/5'
-  return 'border-border/80 bg-card'
-}
-
 export function ParentFeed({ items }: { items: FeedItem[] }) {
   if (!items.length) {
     return (
       <EmptyState
         title="Family feed is quiet"
-        description="Grades, Beacon Pulse, attendance, and announcements will show up here."
+        description="Grades, pulse, attendance, and announcements appear here."
       />
     )
   }
 
   return (
-    <div className="space-y-3 animate-beacon-in">
+    <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold tracking-tight">Family feed</h2>
-        <Badge variant="muted">{items.length} updates</Badge>
+        <h2 className="text-[13px] font-medium text-foreground">Family feed</h2>
+        <Badge variant="muted">{items.length}</Badge>
       </div>
-      <ul className="space-y-2">
-        {items.map((item) => (
-          <li key={item.id}>
-            <Link href={item.href} className="block">
-              <Card className={cn('card-interactive transition', toneClasses(item.tone))}>
-                <CardContent className="flex flex-wrap items-start justify-between gap-3 pt-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="muted" className="text-[10px]">
-                        {TYPE_LABEL[item.type]}
-                      </Badge>
-                      <span className="text-[11px] text-muted-foreground">
-                        {safeFormat(item.at)}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-sm font-semibold">{item.title}</p>
-                    {item.body ? (
-                      <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
-                        {item.body}
-                      </p>
-                    ) : null}
-                  </div>
-                  <span className="shrink-0 text-xs font-semibold text-primary">View →</span>
-                </CardContent>
-              </Card>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <Table>
+        <THead>
+          <TR>
+            <TH>Type</TH>
+            <TH>When</TH>
+            <TH>Update</TH>
+            <TH className="text-right" />
+          </TR>
+        </THead>
+        <TBody>
+          {items.map((item) => (
+            <TR key={item.id}>
+              <TD>
+                <Badge variant="muted" className="text-[10px]">
+                  {TYPE_LABEL[item.type]}
+                </Badge>
+              </TD>
+              <TD className="whitespace-nowrap text-[12px] text-muted-foreground">
+                {safeFormat(item.at)}
+              </TD>
+              <TD className="min-w-[12rem]">
+                <Link href={item.href} className="block hover:text-primary">
+                  <span className="font-medium text-foreground">{item.title}</span>
+                  {item.body ? (
+                    <span className="mt-0.5 block line-clamp-1 text-[12px] text-muted-foreground">
+                      {item.body}
+                    </span>
+                  ) : null}
+                </Link>
+              </TD>
+              <TD className="text-right">
+                <Link href={item.href} className="text-[12px] font-medium text-primary hover:underline">
+                  Open
+                </Link>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
     </div>
   )
 }

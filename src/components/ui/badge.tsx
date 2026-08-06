@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 type Variant = 'default' | 'sky' | 'navy' | 'success' | 'warning' | 'danger' | 'muted' | 'outline'
 
 const styles: Record<Variant, string> = {
-  default: 'bg-primary/10 text-primary border-primary/15',
+  default: 'bg-muted text-foreground border-border',
   sky: 'bg-sky-50 text-sky-800 border-sky-200 dark:bg-sky-950/50 dark:text-sky-200 dark:border-sky-800',
   navy: 'bg-navy text-navy-foreground border-transparent',
   success: 'bg-success-soft text-success border-emerald-200/80 dark:border-emerald-800',
@@ -25,7 +25,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold tracking-wide',
+        'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium',
         styles[variant],
         className
       )}

@@ -50,7 +50,7 @@ export function InvoicesPanel({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+      <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
         <p className="font-semibold">Family billing (school-owned)</p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           Portal pay links, reminders, payment plans, and recurring tuition — built into Beacon.

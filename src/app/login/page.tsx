@@ -4,6 +4,7 @@ import { LoginForm } from '@/components/auth/LoginForm'
 import { demoPrincipalEmail } from '@/lib/roles'
 import { safeInternalPath } from '@/lib/safe-redirect'
 import { loadSchoolBrand } from '@/lib/school-brand'
+import { beaconCraftBaseUrl, beaconCraftTourUrl } from '@/lib/beaconcraft-url'
 
 /**
  * Critical CSS keeps the login usable even if the Tailwind chunk fails.
@@ -306,13 +307,6 @@ const LOGIN_CRITICAL_CSS = `
 /** Pilot form prefill only — does not grant role by itself. */
 const PILOT_PRINCIPAL_EMAIL = 'principal@lighthouse.test'
 
-/** Voxel campus twin (separate app). Override in Vercel / .env.local when deployed. */
-function beaconCraftUrl(tour = false): string {
-  const raw = process.env.NEXT_PUBLIC_BEACONCRAFT_URL?.trim()
-  const base = (raw || 'http://localhost:3001').replace(/\/$/, '')
-  return tour ? `${base}/?tour=1` : base
-}
-
 export default async function LoginPage({
   searchParams,
 }: {
@@ -323,8 +317,8 @@ export default async function LoginPage({
   const asPrincipal = params.as === 'principal'
   const brand = await loadSchoolBrand(null)
   const principalEmail = demoPrincipalEmail() || PILOT_PRINCIPAL_EMAIL
-  const craftUrl = beaconCraftUrl()
-  const tourUrl = beaconCraftUrl(true)
+  const craftUrl = beaconCraftBaseUrl()
+  const tourUrl = beaconCraftTourUrl()
 
   return (
     <>
@@ -349,21 +343,12 @@ export default async function LoginPage({
                   your school.
                 </h1>
                 <p>
-                  Academics, family communication, and calm operations for{' '}
-                  <strong style={{ color: '#e2e8f0', fontWeight: 600 }}>{brand.name}</strong>
-                  — plus an optional 3D campus twin for presence and tours.
+                  Academics, family communication, and school operations for{' '}
+                  <strong style={{ color: '#e2e8f0', fontWeight: 600 }}>{brand.name}</strong>.
                 </p>
               </div>
               <div className="login-story-meta">
-                <span>
-                  <strong>Teachers</strong> · grades &amp; attendance
-                </span>
-                <span>
-                  <strong>Families</strong> · digest &amp; balances
-                </span>
-                <span>
-                  <strong>Office</strong> · tuition &amp; go-live
-                </span>
+                <span>Teachers · Families · Office</span>
               </div>
             </aside>
 
@@ -399,36 +384,6 @@ export default async function LoginPage({
                   <LoginForm nextPath={nextPath} />
 
                   <div className="login-links">
-                    <a
-                      href={tourUrl}
-                      className="login-link-row"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <span>
-                        <span>Campus</span>
-                        <strong>3D campus tour</strong>
-                      </span>
-                      <em>
-                        Open
-                        <ExternalLink className="ml-1 inline h-3 w-3" aria-hidden />
-                      </em>
-                    </a>
-                    <a
-                      href={craftUrl}
-                      className="login-link-row"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <span>
-                        <span>BeaconCraft</span>
-                        <strong>Full digital twin</strong>
-                      </span>
-                      <em>
-                        Open
-                        <ExternalLink className="ml-1 inline h-3 w-3" aria-hidden />
-                      </em>
-                    </a>
                     <Link href="/login?as=principal" className="login-link-row">
                       <span>
                         <span>Leadership</span>
@@ -454,6 +409,14 @@ export default async function LoginPage({
                         </a>
                       </>
                     ) : null}
+                    <span aria-hidden>·</span>
+                    <a href={tourUrl} target="_blank" rel="noopener noreferrer">
+                      Campus tour
+                    </a>
+                    <span aria-hidden>·</span>
+                    <a href={craftUrl} target="_blank" rel="noopener noreferrer">
+                      Campus twin
+                    </a>
                     <span aria-hidden>·</span>
                     <Link href="/about">About</Link>
                     <span aria-hidden>·</span>

@@ -11,6 +11,8 @@
  *   BEACONCRAFT_ROOM_MAP={"<beacon-room-uuid>":"room-a101"}
  */
 
+import { BEACONCRAFT_PRODUCTION_URL } from '@/lib/beaconcraft-url'
+
 export type TwinScanNotify = {
   studentId: string
   studentName: string
@@ -63,8 +65,9 @@ export function resolveCraftRoomId(roomId: string, roomName: string): string | n
 
 function craftBaseUrl(): string | null {
   const raw =
-    process.env.BEACONCRAFT_URL?.trim() || process.env.NEXT_PUBLIC_BEACONCRAFT_URL?.trim()
-  if (!raw) return null
+    process.env.BEACONCRAFT_URL?.trim() ||
+    process.env.NEXT_PUBLIC_BEACONCRAFT_URL?.trim() ||
+    BEACONCRAFT_PRODUCTION_URL
   return raw.replace(/\/$/, '')
 }
 

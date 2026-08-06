@@ -47,10 +47,10 @@ export function PrincipalNav() {
     <nav className="space-y-3" aria-label="Principal office">
       {groups.map((group) => (
         <div key={group.label} className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
-          <p className="w-14 shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          <p className="w-14 shrink-0 text-[10px] font-medium text-muted-foreground">
             {group.label}
           </p>
-          <div className="mobile-scroll-x gap-1.5 sm:flex-wrap sm:overflow-visible">
+          <div className="mobile-scroll-x gap-1 sm:flex-wrap sm:overflow-visible">
             {group.links.map((l) => {
               const active =
                 l.href === '/principal'
@@ -61,10 +61,10 @@ export function PrincipalNav() {
                   key={l.href}
                   href={l.href}
                   className={cn(
-                    'shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition',
+                    'shrink-0 whitespace-nowrap rounded-md border px-2.5 py-1.5 text-[13px] font-medium transition',
                     active
-                      ? 'bg-navy text-navy-foreground shadow-sm'
-                      : 'bg-muted/60 text-foreground hover:bg-muted'
+                      ? 'border-border bg-card text-foreground shadow-sm'
+                      : 'border-transparent text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground'
                   )}
                 >
                   {l.label}

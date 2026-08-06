@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge'
 import { PageHeader } from '@/components/ui/page-header'
 import { buttonClassName } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 
 export default async function ClassGradebookPage({
   params,
@@ -164,7 +165,7 @@ export default async function ClassGradebookPage({
 
       {canEnter ? (
         <ViewSection id="class_family_email" title="Family email">
-          <div className="rounded-2xl border border-border/80 bg-card px-4 py-4 shadow-[var(--shadow-soft)]">
+          <div className="rounded-lg border border-border bg-card px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
               Dinner Table Digest
             </p>
@@ -181,7 +182,7 @@ export default async function ClassGradebookPage({
 
       {showMissing && missingRollup ? (
         <ViewSection id="missing_work" title="Missing work radar">
-          <div className="rounded-2xl border border-warning/30 bg-warning-soft/60 px-4 py-3">
+          <div className="rounded-lg border border-warning/30 bg-warning-soft/60 px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-warning">
@@ -214,30 +215,40 @@ export default async function ClassGradebookPage({
 
       {showRoster ? (
         <ViewSection id="roster_chips" title="Student quick links">
-          <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-[var(--shadow-soft)]">
-            <h2 className="mb-2 text-sm font-semibold tracking-tight">
-              Students ({students.length})
-            </h2>
-            <ul className="flex flex-wrap gap-2">
+          <Table>
+            <THead>
+              <TR>
+                <TH>Student</TH>
+                <TH>Grade</TH>
+                <TH className="text-right" />
+              </TR>
+            </THead>
+            <TBody>
               {students.map((s) => (
-                <li key={s.id}>
-                  <Link
-                    href={`/classes/${classId}/students/${s.id}`}
-                    className="inline-flex rounded-lg border border-border/80 px-3 py-1.5 text-sm transition hover:border-primary/40 hover:bg-primary/5"
-                  >
+                <TR key={s.id}>
+                  <TD className="font-medium">
                     {s.last_name}, {s.first_name}
-                  </Link>
-                </li>
+                  </TD>
+                  <TD className="text-muted-foreground">{s.grade_level || '—'}</TD>
+                  <TD className="text-right">
+                    <Link
+                      href={`/classes/${classId}/students/${s.id}`}
+                      className="text-[12px] font-medium text-primary hover:underline"
+                    >
+                      Gradebook
+                    </Link>
+                  </TD>
+                </TR>
               ))}
-            </ul>
-          </div>
+            </TBody>
+          </Table>
         </ViewSection>
       ) : null}
 
       {showGradeEntry ? (
         <ViewSection id="grade_entry" title="Grade entry & parent preview">
           {!canEnter ? (
-            <p className="text-sm text-muted-foreground rounded-2xl border bg-card p-4">
+            <p className="text-sm text-muted-foreground rounded-lg border bg-card p-4">
               You can view transparent grades via the student links above. Score entry is limited
               to the class teacher and school leadership.
             </p>
@@ -311,7 +322,7 @@ export default async function ClassGradebookPage({
       {showPulse ? (
         <ViewSection id="pulse" title="Pulse panel">
           {students.length === 0 ? (
-            <div className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
+            <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
               Enroll students before logging Beacon Pulse.
             </div>
           ) : (

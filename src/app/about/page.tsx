@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Heart, School, Shield, Sparkles, HandHeart } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { buttonClassName } from '@/components/ui/button'
 import { loadSchoolBrand } from '@/lib/school-brand'
 
 export default async function AboutPage() {
@@ -9,59 +10,59 @@ export default async function AboutPage() {
   return (
     <div className="min-h-screen beacon-shell">
       <header className="border-b border-border/80 bg-navy text-navy-foreground">
-        <div className="mx-auto max-w-2xl px-4 py-4 flex items-center justify-between">
-          <Link href="/login" className="flex items-center gap-2.5 font-bold">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500 text-sm text-white">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
+          <Link href="/login" className="flex items-center gap-2.5 font-semibold">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm text-primary-foreground">
               B
             </span>
             Beacon
           </Link>
           <Link
             href="/login"
-            className="text-sm font-medium text-sky-200 hover:text-white transition"
+            className="text-sm font-medium text-navy-foreground/70 transition hover:text-navy-foreground"
           >
             Sign in →
           </Link>
         </div>
       </header>
 
-      <div className="mx-auto max-w-2xl space-y-8 animate-beacon-in px-4 py-10">
+      <div className="mx-auto max-w-2xl animate-beacon-in space-y-8 px-4 py-10">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
             About Beacon
           </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-navy dark:text-sky-50">
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
             The full school suite — for any school
           </h1>
-          <p className="mt-3 text-muted-foreground leading-relaxed">
+          <p className="mt-3 leading-relaxed text-muted-foreground">
             Not “just another gradebook.” Beacon is the operating system for schools: academics,
             family communications, principal operations, and tuition payments — Jupiter-familiar
             where teachers need speed, cleaner than Blackbaud where families need clarity.
           </p>
         </div>
 
-        <Card className="overflow-hidden border-sky-100 dark:border-sky-900/40 shadow-[var(--shadow-lift)]">
-          <div className="bg-gradient-to-r from-navy via-slate-900 to-sky-900 px-6 py-5 text-white">
+        <Card className="overflow-hidden border-border/80 shadow-[var(--shadow-soft)]">
+          <div className="border-b border-border/80 bg-muted/30 px-6 py-5">
             <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500 font-black text-lg shadow-lg shadow-sky-500/30">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary font-bold text-lg text-primary-foreground">
                 B
               </span>
               <div>
-                <p className="font-bold text-lg leading-tight">Beacon</p>
-                <p className="text-xs text-sky-200/90 mt-0.5">
+                <p className="text-lg font-semibold leading-tight text-foreground">Beacon</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   Multi-school ready · Currently serving {brand.name}
                 </p>
               </div>
             </div>
           </div>
-          <CardContent className="pt-6 space-y-5">
+          <CardContent className="space-y-5 pt-6">
             <div className="flex gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-semibold text-navy dark:text-sky-50">What makes it different</h2>
-                <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                <h2 className="font-semibold tracking-tight text-foreground">What makes it different</h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                   Dinner Table Digest, Conference Brief, Beacon Pulse, and Beacon Signal — products
                   parents and principals actually use, not another portal of tables.
                 </p>
@@ -73,8 +74,8 @@ export default async function AboutPage() {
                 <School className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-semibold tracking-tight">Your school’s brand</h2>
-                <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                <h2 className="font-semibold tracking-tight text-foreground">Your school’s brand</h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                   School name, mission, contact, and website come from your school record — so Beacon
                   looks like <strong className="text-foreground">{brand.name}</strong>, not a demo
                   for someone else.
@@ -83,12 +84,12 @@ export default async function AboutPage() {
             </div>
 
             <div className="flex gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning-soft text-warning">
                 <Shield className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-semibold text-navy dark:text-sky-50">Trust & access</h2>
-                <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                <h2 className="font-semibold tracking-tight text-foreground">Trust & access</h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                   Parents only see linked students. Staff are scoped by school. Email and QuickBooks
                   modes are labeled (live vs log-only / sandbox) so leadership never ships a surprise.
                 </p>
@@ -97,12 +98,12 @@ export default async function AboutPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-sky-200/80 dark:border-sky-900/50 bg-sky-50/40 dark:bg-sky-950/20">
+        <Card className="border-primary/20 bg-primary/5">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <HandHeart className="h-5 w-5 text-sky-700 dark:text-sky-300 mt-0.5 shrink-0" />
+              <HandHeart className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
               <div className="space-y-2 text-sm leading-relaxed">
-                <h2 className="font-semibold text-navy dark:text-sky-50">Stewardship & origin</h2>
+                <h2 className="font-semibold tracking-tight text-foreground">Stewardship & origin</h2>
                 <p className="text-muted-foreground">
                   <strong className="text-foreground">Beacon is created by CommonCentsIP as a
                   volunteer ministry.</strong>{' '}
@@ -117,11 +118,11 @@ export default async function AboutPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-dashed">
+        <Card className="border-dashed border-border/80">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <Heart className="h-5 w-5 text-sky-600 mt-0.5 shrink-0" />
-              <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
+              <Heart className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <div className="space-y-2 text-sm leading-relaxed text-muted-foreground">
                 <p>
                   <strong className="text-foreground">The full suite:</strong> teachers get fast
                   grade entry; parents get transparent calculations; the principal gets operations,
@@ -137,11 +138,11 @@ export default async function AboutPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-sm flex flex-wrap justify-center gap-4">
-          <Link href="/school" className="font-semibold text-sky-700 hover:underline">
+        <p className="flex flex-wrap justify-center gap-4 text-center text-sm">
+          <Link href="/school" className={buttonClassName('ghost', 'sm', 'text-primary')}>
             {brand.shortName} school site
           </Link>
-          <Link href="/login" className="font-semibold text-sky-700 hover:underline">
+          <Link href="/login" className={buttonClassName('primary', 'sm')}>
             Sign in to Beacon →
           </Link>
         </p>

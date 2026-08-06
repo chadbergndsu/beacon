@@ -220,10 +220,10 @@ export function ConfigurableView({
             Edit view
           </Button>
         ) : (
-          <div className="flex w-full flex-col gap-3 rounded-2xl border border-sky-200 bg-sky-50/90 p-4 shadow-sm dark:border-sky-900 dark:bg-sky-950/40">
+          <div className="flex w-full flex-col gap-3 rounded-lg border border-border bg-muted/40 p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-bold text-navy dark:text-sky-50">
+                <p className="text-[13px] font-medium text-foreground">
                   Edit view — {catalog.title}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
@@ -268,7 +268,7 @@ export function ConfigurableView({
               </div>
             </div>
 
-            <ul className="divide-y rounded-xl border border-sky-100 bg-white dark:border-sky-900 dark:bg-slate-900">
+            <ul className="divide-y rounded-lg border border-border bg-card">
               {orderedSections.map((el, index) => {
                 const id = el.props.id
                 const meta = sectionMeta.get(id)

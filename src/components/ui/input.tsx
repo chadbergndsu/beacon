@@ -10,7 +10,7 @@ export function Input({
       type={type}
       className={cn(
         // text-base (16px) on phones — smaller than 16px triggers iOS zoom on focus
-        'flex h-11 w-full rounded-xl border border-border bg-card px-3.5 py-2 text-base sm:text-sm text-foreground',
+        'flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-base sm:text-sm text-foreground',
         'shadow-sm transition-all duration-150',
         'placeholder:text-muted-foreground/70',
         'hover:border-primary/35',

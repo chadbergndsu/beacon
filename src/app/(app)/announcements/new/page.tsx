@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AnnouncementForm } from '@/components/announcements/AnnouncementForm'
+import { PageHeader } from '@/components/ui/page-header'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -26,20 +27,19 @@ export default async function NewAnnouncementPage() {
   const { data: classes } = await classesQuery
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-          <Link href="/announcements" className="hover:underline">
-            Announcements
-          </Link>
-          {' / '}
-          New
-        </p>
-        <h1 className="text-2xl font-bold tracking-tight mt-1">New announcement</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Posts in Beacon and optionally emails recipients through the system mailer.
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        eyebrow={
+          <>
+            <Link href="/announcements" className="hover:underline">
+              Announcements
+            </Link>
+            {' / New'}
+          </>
+        }
+        title="New announcement"
+        description="Posts in Beacon and optionally emails recipients through the system mailer."
+      />
       <AnnouncementForm classes={classes ?? []} />
     </div>
   )

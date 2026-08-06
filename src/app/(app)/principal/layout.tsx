@@ -9,7 +9,7 @@ export default async function PrincipalLayout({ children }: { children: React.Re
 
   return (
     <div className="page-stack animate-beacon-in">
-      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[var(--shadow-soft)]">
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
         <div className="flex flex-col gap-4 border-b border-border/70 px-5 py-5 sm:flex-row sm:items-end sm:justify-between sm:px-6">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">

@@ -94,8 +94,8 @@ export function PilotSuggestionButton({
         onClick={openPanel}
         className={cn(
           'print:hidden fixed z-40 flex items-center gap-2 rounded-full',
-          'bg-gradient-to-r from-violet-600 to-sky-600 text-white shadow-lg shadow-violet-500/30',
-          'hover:from-violet-500 hover:to-sky-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2',
+          'bg-primary text-primary-foreground shadow-md',
+          'hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           'bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))]',
           'px-4 py-3 text-sm font-bold'
         )}
@@ -122,18 +122,15 @@ export function PilotSuggestionButton({
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="relative z-10 w-full max-w-md rounded-t-2xl border border-border bg-card p-5 shadow-2xl sm:rounded-2xl"
+            className="relative z-10 w-full max-w-md rounded-t-lg border border-border bg-card p-5 shadow-2xl sm:rounded-lg"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2.5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300">
-                  <Lightbulb className="h-5 w-5" aria-hidden />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-primary">
+                  <Lightbulb className="h-4 w-4" aria-hidden />
                 </div>
                 <div>
-                  <h2
-                    id={titleId}
-                    className="text-base font-bold text-navy dark:text-sky-50"
-                  >
+                  <h2 id={titleId} className="text-[13px] font-medium text-foreground">
                     Pilot suggestion
                   </h2>
                   <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
@@ -206,8 +203,8 @@ export function PilotSuggestionButton({
                         className={cn(
                           'rounded-full border px-3 py-1 text-xs font-semibold transition',
                           category === c
-                            ? 'border-violet-600 bg-violet-600 text-white'
-                            : 'border-border bg-background text-foreground hover:border-violet-300'
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border bg-background text-foreground hover:border-primary/40'
                         )}
                       >
                         {FEEDBACK_CATEGORY_LABEL[c]}
@@ -222,7 +219,7 @@ export function PilotSuggestionButton({
                   </Label>
                   <textarea
                     id="pilot-feedback-message"
-                    className="mt-1 w-full min-h-[120px] rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                    className="mt-1 w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
                     placeholder="What should we fix or add? Include enough detail that we can reproduce a bug if needed."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
@@ -255,7 +252,7 @@ export function PilotSuggestionButton({
                     size="sm"
                     disabled={pending || message.trim().length < 5}
                     onClick={submit}
-                    className="gap-1.5 bg-violet-600 hover:bg-violet-500"
+                    className="gap-1.5"
                   >
                     {pending ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -16,20 +16,20 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'rounded-2xl border px-5 py-8 text-center sm:px-8',
+        'rounded-lg border px-4 py-5 sm:px-5',
         tone === 'primary'
-          ? 'border-primary/20 bg-primary/5'
-          : 'border-border/80 bg-card/80',
+          ? 'border-border/80 bg-muted/40'
+          : 'border-dashed border-border/80 bg-transparent',
         className
       )}
     >
-      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <p className="text-sm font-medium text-foreground">{title}</p>
       {description ? (
-        <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-1 max-w-lg text-[13px] leading-relaxed text-muted-foreground">
           {description}
         </p>
       ) : null}
-      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+      {action ? <div className="mt-3">{action}</div> : null}
     </div>
   )
 }

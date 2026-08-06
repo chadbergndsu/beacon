@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PageHeader } from '@/components/ui/page-header'
 import { cn } from '@/lib/utils'
 
 const STATUSES: AttendanceStatus[] = ['present', 'absent', 'tardy', 'excused']
@@ -54,27 +55,25 @@ export function AttendancePanel({
 
   return (
     <div className="space-y-6 animate-beacon-in">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-700">
-            Daily habit
-          </p>
-          <h2 className="text-xl font-bold text-navy dark:text-sky-50 flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5 text-sky-600" />
+      <PageHeader
+        eyebrow="Daily habit"
+        title={
+          <span className="inline-flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5 text-primary" />
             Attendance
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Mark the roster, save once. Optionally notify parents of absent/tardy.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {STATUSES.map((s) => (
-            <Badge key={s} variant={s === 'absent' ? 'warning' : s === 'present' ? 'success' : 'sky'}>
-              {ATTENDANCE_LABEL[s]}: {counts[s]}
-            </Badge>
-          ))}
-        </div>
-      </div>
+          </span>
+        }
+        description="Mark the roster, save once. Optionally notify parents of absent/tardy."
+        actions={
+          <>
+            {STATUSES.map((s) => (
+              <Badge key={s} variant={s === 'absent' ? 'warning' : s === 'present' ? 'success' : 'outline'}>
+                {ATTENDANCE_LABEL[s]}: {counts[s]}
+              </Badge>
+            ))}
+          </>
+        }
+      />
 
       <Card>
         <CardContent className="pt-5 flex flex-wrap items-end gap-4">
@@ -144,12 +143,12 @@ export function AttendancePanel({
       </Card>
 
       {message && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div className="rounded-lg border border-success/25 bg-success-soft px-4 py-3 text-sm text-success">
           {message}
         </div>
       )}
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div className="rounded-lg border border-red-200 bg-danger-soft px-4 py-3 text-sm text-danger">
           {error}
         </div>
       )}

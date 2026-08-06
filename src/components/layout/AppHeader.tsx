@@ -83,9 +83,9 @@ function NavLink({
       href={item.href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition whitespace-nowrap',
+        'shrink-0 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition whitespace-nowrap',
         active
-          ? 'bg-chrome-active text-primary-foreground'
+          ? 'bg-chrome-active text-chrome-foreground'
           : 'text-chrome-muted hover:bg-chrome-hover hover:text-chrome-foreground',
         className
       )}
@@ -132,7 +132,7 @@ function MoreMenu({
         className={cn(
           'inline-flex shrink-0 items-center gap-0.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition whitespace-nowrap',
           moreActive || open
-            ? 'bg-chrome-active text-primary-foreground'
+            ? 'bg-chrome-active text-chrome-foreground'
             : 'text-chrome-muted hover:bg-chrome-hover hover:text-chrome-foreground'
         )}
       >
@@ -201,14 +201,12 @@ export function AppHeader({
     <header className="sticky top-0 z-50 border-b border-chrome-border bg-chrome/95 text-chrome-foreground backdrop-blur-xl pt-safe">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-3 py-2.5 sm:gap-4 sm:px-6">
         <Link href="/dashboard" className="flex min-w-0 shrink-0 items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-chrome-active text-sm font-bold text-primary-foreground shadow-sm">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-chrome-border bg-chrome-elevated text-sm font-semibold text-chrome-foreground">
             B
           </span>
           <div className="min-w-0 leading-tight">
-            <p className="truncate text-sm font-semibold tracking-tight">{schoolShortName}</p>
-            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-chrome-muted">
-              Beacon
-            </p>
+            <p className="truncate text-sm font-medium tracking-tight">{schoolShortName}</p>
+            <p className="text-[10px] text-chrome-muted">Beacon</p>
           </div>
         </Link>
 
@@ -224,17 +222,17 @@ export function AppHeader({
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           {profile ? (
-            <div className="hidden items-center gap-2 rounded-full border border-chrome-border bg-chrome-elevated/60 py-1 pl-2.5 pr-1 sm:flex">
+            <div className="hidden items-center gap-2 rounded-md border border-chrome-border bg-chrome-elevated/60 py-1 pl-2.5 pr-1 sm:flex">
               <div className="min-w-0 text-right">
-                <p className="max-w-[9rem] truncate text-xs font-semibold leading-none lg:max-w-[12rem]">
+                <p className="max-w-[9rem] truncate text-xs font-medium leading-none lg:max-w-[12rem]">
                   {displayName}
                 </p>
                 {roleText ? (
-                  <p className="mt-0.5 text-[10px] font-medium text-chrome-muted">{roleText}</p>
+                  <p className="mt-0.5 text-[10px] text-chrome-muted">{roleText}</p>
                 ) : null}
               </div>
               <span
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-chrome-active/90 text-[11px] font-bold text-primary-foreground"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-chrome-border bg-chrome-hover text-[11px] font-medium text-chrome-foreground"
                 aria-hidden
               >
                 {initial}

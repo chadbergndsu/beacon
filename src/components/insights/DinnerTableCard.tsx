@@ -101,7 +101,7 @@ export function DinnerTableCard({ digest }: { digest: DinnerTableDigest }) {
           </section>
         ) : null}
 
-        <section className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3.5">
+        <section className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
           <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
             <MessageCircle className="h-3.5 w-3.5" />
             Ask at dinner

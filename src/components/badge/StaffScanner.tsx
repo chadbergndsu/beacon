@@ -11,6 +11,7 @@ import { CameraQrScanner } from '@/components/badge/CameraQrScanner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PageHeader } from '@/components/ui/page-header'
 import { cn } from '@/lib/utils'
 
 export function StaffScanner() {
@@ -75,14 +76,11 @@ export function StaffScanner() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-navy dark:text-sky-50">Staff scanner</h1>
-        <p className="text-sm text-muted-foreground">
-          Badge, camera QR, or name search from your signed-in desk. Public room kiosks require a
-          physical badge only.
-        </p>
-      </div>
+    <div className="mx-auto max-w-lg page-stack">
+      <PageHeader
+        title="Staff scanner"
+        description="Badge, camera QR, or name search from your signed-in desk. Public room kiosks require a physical badge only."
+      />
 
       {err && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
@@ -187,7 +185,7 @@ export function StaffScanner() {
                     <span className="text-muted-foreground"> · {h.gradeLevel}</span>
                   )}
                   {h.badgeCode && (
-                    <span className="ml-2 font-mono text-xs text-sky-700 dark:text-sky-300">
+                    <span className="ml-2 font-mono text-xs text-primary">
                       ···{h.badgeCode.slice(-3)}
                     </span>
                   )}

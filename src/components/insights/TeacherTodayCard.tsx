@@ -1,12 +1,10 @@
 import Link from 'next/link'
-import { Sunrise, Users } from 'lucide-react'
 import type { ClassMissingRollup } from '@/lib/insights/missing-work'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 
 /**
- * Teacher "Today" — Jupiter-style less-clicking, more teaching.
- * Surfaces class pressure without a district analytics wall.
+ * Teacher "Today" — class pressure at a glance.
  */
 export function TeacherTodayCard({
   rollups,
@@ -20,85 +18,80 @@ export function TeacherTodayCard({
   if (!rollups.length) return null
 
   return (
-    <Card className="overflow-hidden">
-      <div className="border-b border-border/70 bg-muted/40 px-5 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Sunrise className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                Teacher Today
-              </p>
-              <h2 className="font-semibold tracking-tight">Where to focus</h2>
-            </div>
-          </div>
-          <div className="flex gap-1.5">
-            <Badge variant={totalMissingItems > 0 ? 'warning' : 'success'}>
-              {totalMissingItems} open items
-            </Badge>
-            <Badge variant="sky">{totalMissingStudents} students</Badge>
-          </div>
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[13px] font-medium text-foreground">Today&apos;s focus</p>
+        <div className="flex gap-1.5">
+          <Badge variant={totalMissingItems > 0 ? 'warning' : 'success'}>
+            {totalMissingItems} open
+          </Badge>
+          <Badge variant="muted">{totalMissingStudents} students</Badge>
         </div>
       </div>
-      <CardContent className="pt-4">
-        <ul className="space-y-3">
+      <Table>
+        <THead>
+          <TR>
+            <TH>Class</TH>
+            <TH className="text-right">Enrolled</TH>
+            <TH className="text-right">Missing</TH>
+            <TH>Top students</TH>
+            <TH className="text-right">Actions</TH>
+          </TR>
+        </THead>
+        <TBody>
           {rollups.map((r) => (
-            <li
-              key={r.classId}
-              className="rounded-xl border border-border px-3.5 py-3 hover:border-sky-300/60 transition"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <Link
-                    href={`/classes/${r.classId}`}
-                    className="font-semibold text-primary hover:underline"
-                  >
-                    {r.className}
-                  </Link>
-                  <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {r.studentCount} enrolled · {r.studentsWithMissing} with missing work
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Link
-                    href="/teacher/quick"
-                    className="text-xs font-semibold text-muted-foreground hover:text-foreground hover:underline"
-                  >
-                    Quick mode
-                  </Link>
-                  <Link
-                    href={`/classes/${r.classId}`}
-                    className="text-xs font-semibold text-primary hover:underline"
-                  >
-                    Gradebook →
-                  </Link>
-                </div>
-              </div>
-              {r.topStudents.length > 0 && (
-                <ul className="mt-2 flex flex-wrap gap-1.5">
-                  {r.topStudents.map((s) => (
-                    <li key={s.studentId}>
+            <TR key={r.classId}>
+              <TD>
+                <Link
+                  href={`/classes/${r.classId}`}
+                  className="font-medium text-foreground hover:text-primary hover:underline"
+                >
+                  {r.className}
+                </Link>
+              </TD>
+              <TD className="text-right tabular-nums text-muted-foreground">{r.studentCount}</TD>
+              <TD className="text-right tabular-nums">
+                {r.studentsWithMissing > 0 ? (
+                  <span className="font-medium text-warning">{r.studentsWithMissing}</span>
+                ) : (
+                  <span className="text-muted-foreground">0</span>
+                )}
+              </TD>
+              <TD>
+                {r.topStudents.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {r.topStudents.map((s) => (
                       <Link
+                        key={s.studentId}
                         href={`/students/${s.studentId}`}
-                        className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-900 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-100 dark:border-amber-800"
+                        className="rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[11px] text-foreground hover:bg-muted"
                       >
                         {s.studentName}
-                        <span className="tabular-nums opacity-70">×{s.count}</span>
+                        <span className="ml-0.5 tabular-nums text-muted-foreground">×{s.count}</span>
                       </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {r.topStudents.length === 0 && (
-                <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">
-                  No missing work pressure in this class.
-                </p>
-              )}
-            </li>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-[12px] text-muted-foreground">Clear</span>
+                )}
+              </TD>
+              <TD className="text-right">
+                <div className="inline-flex gap-2 text-[12px]">
+                  <Link href="/teacher/quick" className="text-muted-foreground hover:text-foreground">
+                    Quick
+                  </Link>
+                  <Link
+                    href={`/classes/${r.classId}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Gradebook
+                  </Link>
+                </div>
+              </TD>
+            </TR>
           ))}
-        </ul>
-      </CardContent>
-    </Card>
+        </TBody>
+      </Table>
+    </div>
   )
 }

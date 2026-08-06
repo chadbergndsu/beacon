@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { Download, Keyboard, Mail, Save } from 'lucide-react'
+import { Download, Mail, Save } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonClassName } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -216,70 +216,57 @@ export function GradeEntryGrid({
   }
 
   return (
-    <div className="space-y-4 animate-beacon-in">
-      <Card className="overflow-hidden">
-        <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-4">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              Grade entry
-            </p>
-            <h2 className="mt-0.5 truncate text-xl font-semibold tracking-tight">{classTitle}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {students.length} students · {assignments.length} assignments · {gradedCells} scores
-              entered
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {exportHref ? (
-              <a href={exportHref} className={buttonClassName('outline', 'sm')}>
-                <Download className="h-3.5 w-3.5" />
-                Export
-              </a>
-            ) : null}
-            <Button size="md" onClick={handleSave} disabled={saving || !onSave} className="min-w-[8.5rem]">
-              <Save className="h-4 w-4" />
-              {saving ? 'Saving…' : 'Save grades'}
-            </Button>
-          </div>
+    <div className="space-y-3 animate-beacon-in">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 pb-3">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-medium tracking-tight">{classTitle}</h2>
+          <p className="text-[12px] text-muted-foreground">
+            {students.length} students · {assignments.length} assignments · {gradedCells} entered
+          </p>
         </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 bg-muted/30 px-5 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {categories.length > 0 ? (
-              categories.map((c) => (
-                <Badge key={c.id} variant="default">
-                  {c.name}
-                  <span className="font-normal opacity-70">{c.weight}%</span>
-                  {c.drop_lowest > 0 && (
-                    <span className="font-normal opacity-60">drop {c.drop_lowest}</span>
-                  )}
-                </Badge>
-              ))
-            ) : (
-              <Badge variant="muted">No categories — simple averages</Badge>
-            )}
-            {weightInfo && !weightInfo.ok ? <Badge variant="warning">{weightInfo.message}</Badge> : null}
-            {setupHref ? (
-              <a href={setupHref} className="text-xs font-medium text-primary hover:underline">
-                Edit weights
-              </a>
-            ) : null}
-            <a href={settingsHref} className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline">
-              All classes
+        <div className="flex flex-wrap items-center gap-2">
+          {exportHref ? (
+            <a href={exportHref} className={buttonClassName('outline', 'sm')}>
+              <Download className="h-3.5 w-3.5" />
+              Export
             </a>
-          </div>
-          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border/80 bg-card px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted/70">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-              checked={notifyParents}
-              onChange={(e) => setNotifyParents(e.target.checked)}
-            />
-            <Mail className="h-3.5 w-3.5 text-primary" />
-            Email parents on save
-          </label>
+          ) : null}
+          <Button size="sm" onClick={handleSave} disabled={saving || !onSave}>
+            <Save className="h-3.5 w-3.5" />
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
         </div>
-      </Card>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {categories.length > 0 ? (
+            categories.map((c) => (
+              <Badge key={c.id} variant="muted">
+                {c.name} {c.weight}%
+              </Badge>
+            ))
+          ) : (
+            <Badge variant="muted">Simple averages</Badge>
+          )}
+          {weightInfo && !weightInfo.ok ? <Badge variant="warning">{weightInfo.message}</Badge> : null}
+          {setupHref ? (
+            <a href={setupHref} className="text-[12px] text-primary hover:underline">
+              Weights
+            </a>
+          ) : null}
+        </div>
+        <label className="flex cursor-pointer items-center gap-1.5 text-[12px] text-muted-foreground">
+          <input
+            type="checkbox"
+            className="h-3.5 w-3.5 rounded border-input text-primary"
+            checked={notifyParents}
+            onChange={(e) => setNotifyParents(e.target.checked)}
+          />
+          <Mail className="h-3 w-3" />
+          Notify parents
+        </label>
+      </div>
 
       <Card className="overflow-hidden p-0">
         <p className="border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground sm:hidden">
@@ -294,9 +281,9 @@ export function GradeEntryGrid({
               <tr>
                 <th
                   className={cn(
-                    'sticky left-0 z-40 min-w-[120px] max-w-[140px] border-b border-r border-border sm:min-w-[200px] sm:max-w-none',
+                    'sticky left-0 z-40 min-w-[120px] max-w-[140px] border-b border-r border-border sm:min-w-[180px] sm:max-w-none',
                     'bg-muted/95 backdrop-blur-md',
-                    'px-2 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:px-4'
+                    'px-2 py-1.5 text-left text-[11px] font-medium text-muted-foreground sm:px-3'
                   )}
                 >
                   Student
@@ -307,9 +294,9 @@ export function GradeEntryGrid({
                     <th
                       key={a.id}
                       className={cn(
-                        'min-w-[88px] max-w-[104px] border-b border-border sm:min-w-[104px] sm:max-w-[120px]',
+                        'min-w-[72px] max-w-[88px] border-b border-border sm:min-w-[88px] sm:max-w-[100px]',
                         'bg-muted/95 backdrop-blur-md',
-                        'px-1 py-2.5 text-center font-semibold sm:px-2',
+                        'px-1 py-1.5 text-center font-medium sm:px-1.5',
                         focused?.c === ci && 'bg-primary/10'
                       )}
                       title={a.title}
@@ -338,9 +325,9 @@ export function GradeEntryGrid({
                 })}
                 <th
                   className={cn(
-                    'sticky right-0 z-40 min-w-[64px] border-b border-l border-border sm:min-w-[88px]',
+                    'sticky right-0 z-40 min-w-[52px] border-b border-l border-border sm:min-w-[72px]',
                     'bg-muted/95 backdrop-blur-md',
-                    'px-1.5 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:px-3'
+                    'px-1 py-1.5 text-center text-[11px] font-medium text-muted-foreground sm:px-2'
                   )}
                 >
                   Avg
@@ -358,10 +345,10 @@ export function GradeEntryGrid({
                         'sticky left-0 z-20 border-b border-r border-border',
                         'bg-card group-hover:bg-muted/50',
                         rowHot && 'bg-primary/5',
-                        'px-2 py-1.5 sm:px-4'
+                        'px-2 py-1 sm:px-3'
                       )}
                     >
-                      <div className="text-[12px] font-semibold leading-tight sm:text-[13px]">
+                      <div className="text-[12px] font-medium leading-tight">
                         {student.last_name}, {student.first_name}
                       </div>
                       {student.grade_level ? (
@@ -391,7 +378,7 @@ export function GradeEntryGrid({
                             data-row={ri}
                             data-col={ci}
                             className={cn(
-                              'grade-cell-input w-full min-h-[44px] rounded-lg border px-1 py-2 text-center text-[14px] font-medium tabular-nums sm:min-h-0 sm:px-1.5 sm:text-[13px]',
+                              'grade-cell-input w-full min-h-[36px] rounded-md border px-1 py-1 text-center text-[13px] font-medium tabular-nums sm:min-h-0 sm:text-[12px]',
                               'border-transparent bg-transparent hover:border-border hover:bg-background',
                               'focus:border-primary/40 focus:bg-background focus:outline-none focus:ring-2 focus:ring-ring/70',
                               isMissing &&
@@ -415,7 +402,7 @@ export function GradeEntryGrid({
                         'sticky right-0 z-20 border-b border-l border-border',
                         'bg-card group-hover:bg-muted/50',
                         rowHot && 'bg-primary/5',
-                        'px-1.5 py-2 text-center sm:px-3'
+                        'px-1 py-1 text-center sm:px-2'
                       )}
                     >
                       {summary?.overall != null ? (
@@ -436,21 +423,9 @@ export function GradeEntryGrid({
           </table>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/30 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <span className="hidden sm:inline-flex items-center gap-1.5">
-              <Keyboard className="h-3.5 w-3.5" />
-              Arrows / Enter / Tab move cells
-            </span>
-            <span>
-              Type a score or{' '}
-              <kbd className="rounded-md border bg-card px-1.5 py-0.5 font-semibold text-warning shadow-sm">
-                M
-              </kbd>{' '}
-              for missing
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground">Changes stay local until you save</p>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+          <span className="hidden sm:inline">Arrows / Tab · type M for missing</span>
+          <span>Unsaved until you save</span>
         </div>
       </Card>
     </div>

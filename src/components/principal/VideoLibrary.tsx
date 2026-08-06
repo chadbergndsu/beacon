@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PageHeader } from '@/components/ui/page-header'
 
 export function VideoLibrary({ videos }: { videos: SchoolVideo[] }) {
   const router = useRouter()
@@ -24,19 +25,14 @@ export function VideoLibrary({ videos }: { videos: SchoolVideo[] }) {
 
   return (
     <div className="space-y-6 animate-beacon-in">
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-700">
-          Principal only
-        </p>
-        <h2 className="text-xl font-bold text-navy dark:text-sky-50">Video module</h2>
-        <p className="mt-1 text-sm text-muted-foreground max-w-2xl">
-          Chapel, staff training, family nights, board briefings — a private leadership video hub
-          inside Beacon.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Principal only"
+        title="Video module"
+        description="Chapel, staff training, family nights, board briefings — a private leadership video hub inside Beacon."
+      />
 
       {active && (
-        <Card className="overflow-hidden border-sky-100 shadow-[var(--shadow-lift)]">
+        <Card className="overflow-hidden">
           <div className="aspect-video bg-slate-950">
             {embed ? (
               <iframe
@@ -82,8 +78,8 @@ export function VideoLibrary({ videos }: { videos: SchoolVideo[] }) {
               key={v.id}
               type="button"
               onClick={() => setActiveId(v.id)}
-              className={`rounded-2xl border p-4 text-left transition card-interactive ${
-                active?.id === v.id ? 'border-sky-400 bg-sky-50/50 dark:bg-sky-950/30' : 'bg-card'
+              className={`rounded-lg border p-4 text-left transition card-interactive ${
+                active?.id === v.id ? 'border-primary bg-primary/5' : 'bg-card'
               }`}
             >
               <div className="flex items-center gap-2 text-sky-600 mb-2">

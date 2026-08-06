@@ -37,13 +37,13 @@ export function BirthdayCouponBook({
   return (
     <div className="space-y-8">
       {/* Screen-only controls */}
-      <div className="print:hidden space-y-4 rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 via-orange-50/80 to-white p-5 shadow-sm dark:border-amber-900/50 dark:from-amber-950/40 dark:via-orange-950/20 dark:to-slate-900">
+      <div className="print:hidden space-y-4 rounded-lg border border-border bg-card p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md shadow-amber-500/25">
-            <Gift className="h-5 w-5" aria-hidden />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Gift className="h-4 w-4" aria-hidden />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl font-bold tracking-tight text-navy dark:text-sky-50">
+            <h1 className="text-[13px] font-medium text-foreground">
               Birthday Coupon Book
             </h1>
             <p className="mt-1 text-sm text-muted-foreground leading-relaxed">

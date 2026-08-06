@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { headers } from 'next/headers'
 import { loadSchoolBrand, loadSchoolBrandByPublicKey, locationLine } from '@/lib/school-brand'
+import { beaconCraftBaseUrl, beaconCraftTourUrl } from '@/lib/beaconcraft-url'
 
 export default async function SchoolWebsitePage({
   searchParams,
@@ -31,20 +32,17 @@ export default async function SchoolWebsitePage({
   const key = sp.school || sp.slug || hostSlug
   const brand = key ? await loadSchoolBrandByPublicKey(key) : await loadSchoolBrand(null)
   const location = locationLine(brand)
-  const craftBase = (
-    process.env.NEXT_PUBLIC_BEACONCRAFT_URL?.trim() || 'http://localhost:3001'
-  ).replace(/\/$/, '')
-  const tourUrl = `${craftBase}/?tour=1`
+  const craftBase = beaconCraftBaseUrl()
+  const tourUrl = beaconCraftTourUrl()
 
   return (
     <div className="min-h-screen min-h-[100dvh] overflow-x-hidden beacon-shell text-foreground">
       <SchoolSiteHeader schoolName={brand.name} websiteUrl={brand.websiteUrl} />
 
       <section className="relative min-h-[70vh] overflow-hidden sm:min-h-[78vh]">
-        <div className="absolute inset-0 bg-gradient-to-br from-navy via-[#0c1a2e] to-sky-950" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,rgb(14_165_233/0.22),transparent_50%),radial-gradient(ellipse_at_80%_0%,rgb(2_132_199/0.18),transparent_45%)]" />
+        <div className="absolute inset-0 bg-[#0a1628]" />
         <div className="relative mx-auto flex min-h-[70vh] max-w-6xl flex-col justify-end px-4 pb-14 pt-20 text-white sm:min-h-[78vh] sm:px-6 sm:pb-20 sm:pt-28">
-          <p className="text-sm font-medium tracking-wide text-sky-200/90">
+          <p className="text-sm font-medium tracking-wide text-white/70">
             {brand.tagline || 'A school community worth coming home to'}
           </p>
           <h1 className="mt-3 max-w-4xl text-4xl font-semibold tracking-tight leading-[1.05] sm:text-6xl sm:leading-[1.02]">
@@ -56,7 +54,7 @@ export default async function SchoolWebsitePage({
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/login">
-              <Button size="lg" className="shadow-lg shadow-sky-500/25">
+              <Button size="lg">
                 Sign in
               </Button>
             </Link>
@@ -70,7 +68,7 @@ export default async function SchoolWebsitePage({
               </Button>
             </a>
           </div>
-          <p className="mt-8 text-sm text-sky-200/70">
+          <p className="mt-8 text-sm text-white/60">
             {[brand.gradesServed, location, brand.curriculumNote].filter(Boolean).join(' · ') ||
               'Private & independent schools · K–12 ready'}
           </p>
@@ -112,8 +110,8 @@ export default async function SchoolWebsitePage({
       <section id="academics" className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
         <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-sky-700">Academics</p>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-bold text-navy dark:text-sky-50">
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Academics</p>
+            <h2 className="mt-2 text-2xl font-medium tracking-tight sm:text-3xl">
               Clarity for teachers and families
             </h2>
             <p className="mt-3 text-muted-foreground leading-relaxed">
@@ -128,7 +126,7 @@ export default async function SchoolWebsitePage({
                 'Conference Brief in one tap',
               ].map((t) => (
                 <li key={t} className="flex gap-2">
-                  <BookOpen className="h-4 w-4 shrink-0 text-sky-600 mt-0.5" />
+                  <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   {t}
                 </li>
               ))}
@@ -210,8 +208,8 @@ export default async function SchoolWebsitePage({
 
       <section id="families" className="py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 text-center">
-          <Heart className="mx-auto h-8 w-8 text-sky-600" />
-          <h2 className="mt-3 text-2xl font-bold text-navy dark:text-sky-50">Built for families</h2>
+          <Heart className="mx-auto h-8 w-8 text-primary" />
+          <h2 className="mt-3 text-2xl font-medium tracking-tight">Built for families</h2>
           <p className="mx-auto mt-3 max-w-2xl text-muted-foreground leading-relaxed">
             Parents see only their children. Staff stay scoped to the school. Access is designed so
             your school can trust Beacon with real student data.
@@ -222,27 +220,27 @@ export default async function SchoolWebsitePage({
       <section id="contact" className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
         <div className="grid gap-6 lg:grid-cols-2">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-sky-700">Contact</p>
-            <h2 className="mt-2 text-2xl font-bold text-navy dark:text-sky-50">{brand.name}</h2>
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Contact</p>
+            <h2 className="mt-2 text-2xl font-medium tracking-tight">{brand.name}</h2>
             <ul className="mt-5 space-y-3 text-sm">
               {location && (
                 <li className="flex gap-2 items-start">
-                  <MapPin className="h-4 w-4 text-sky-600 mt-0.5 shrink-0" />
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   {location}
                 </li>
               )}
               {brand.email && (
                 <li className="flex gap-2 items-center">
-                  <Mail className="h-4 w-4 text-sky-600 shrink-0" />
-                  <a className="text-sky-700 hover:underline" href={`mailto:${brand.email}`}>
+                  <Mail className="h-4 w-4 shrink-0 text-primary" />
+                  <a className="text-primary hover:underline" href={`mailto:${brand.email}`}>
                     {brand.email}
                   </a>
                 </li>
               )}
               {brand.phone && (
                 <li className="flex gap-2 items-center">
-                  <Phone className="h-4 w-4 text-sky-600 shrink-0" />
-                  <a className="text-sky-700 hover:underline" href={`tel:${brand.phone}`}>
+                  <Phone className="h-4 w-4 shrink-0 text-primary" />
+                  <a className="text-primary hover:underline" href={`tel:${brand.phone}`}>
                     {brand.phone}
                   </a>
                 </li>
@@ -255,17 +253,17 @@ export default async function SchoolWebsitePage({
               )}
             </ul>
           </div>
-          <Card className="bg-navy text-white border-0">
-            <CardContent className="pt-6 space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-300">
+          <Card className="border bg-primary text-primary-foreground">
+            <CardContent className="space-y-4 pt-6">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-primary-foreground/70">
                 School suite
               </p>
-              <h3 className="text-xl font-bold">Sign in to Beacon</h3>
-              <p className="text-sm text-slate-300 leading-relaxed">
+              <h3 className="text-xl font-medium">Sign in to Beacon</h3>
+              <p className="text-sm leading-relaxed text-primary-foreground/85">
                 Teachers, staff, parents, and leadership use one platform for {brand.name}.
               </p>
               <Link href="/login">
-                <Button className="bg-sky-500 hover:bg-sky-400 text-white">Open Beacon →</Button>
+                <Button variant="secondary">Open Beacon →</Button>
               </Link>
             </CardContent>
           </Card>
@@ -276,7 +274,7 @@ export default async function SchoolWebsitePage({
         <p className="font-semibold text-foreground">{brand.name}</p>
         <p className="mt-1">
           Powered by Beacon ·{' '}
-          <Link href="/about" className="text-sky-700 hover:underline">
+          <Link href="/about" className="text-primary hover:underline">
             About the suite
           </Link>
           {brand.websiteUrl && (
@@ -286,7 +284,7 @@ export default async function SchoolWebsitePage({
                 href={brand.websiteUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-sky-700 hover:underline"
+                className="text-primary hover:underline"
               >
                 Official website
               </a>

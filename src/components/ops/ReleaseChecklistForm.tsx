@@ -31,7 +31,7 @@ export function ReleaseChecklistForm({
             <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
               {g.title}
             </h3>
-            <ul className="mt-2 divide-y divide-border rounded-2xl border bg-card">
+            <ul className="mt-2 divide-y divide-border rounded-lg border bg-card">
               {list.map((item) => {
                 const checked = Boolean(state[item.id])
                 return (

@@ -11,6 +11,7 @@ import { OnboardingProgress } from '@/components/ops/OnboardingProgress'
 import { loadSchoolOnboarding } from '@/lib/ops/onboarding'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function PrincipalReleasePage() {
   const { schoolId } = await requirePrincipal()
@@ -31,20 +32,12 @@ export default async function PrincipalReleasePage() {
   })
 
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
-          Ops &amp; trust
-        </p>
-        <h2 className="mt-1 text-2xl font-bold tracking-tight text-navy dark:text-sky-50">
-          Go-live for {brand.name}
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-          Finish platform health, label demo vs live integrations, set your school branding, and
-          tick the human checklist before wider parent rollout. Beacon works for any school — this
-          page is your launch control.
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        eyebrow="Ops & trust"
+        title={`Go-live for ${brand.name}`}
+        description="Finish platform health, label demo vs live integrations, set your school branding, and tick the human checklist before wider parent rollout. Beacon works for any school — this page is your launch control."
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
@@ -52,7 +45,7 @@ export default async function PrincipalReleasePage() {
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
               Ready score
             </p>
-            <p className="mt-1 text-3xl font-bold tabular-nums text-navy dark:text-sky-50">
+            <p className="mt-1 text-2xl font-semibold tabular-nums">
               {health.readyScore}
               <span className="text-base font-semibold text-muted-foreground">/100</span>
             </p>
@@ -63,7 +56,7 @@ export default async function PrincipalReleasePage() {
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
               Checklist
             </p>
-            <p className="mt-1 text-3xl font-bold tabular-nums text-navy dark:text-sky-50">
+            <p className="mt-1 text-2xl font-semibold tabular-nums">
               {done}
               <span className="text-base font-semibold text-muted-foreground">/{total}</span>
             </p>
@@ -90,7 +83,7 @@ export default async function PrincipalReleasePage() {
 
       <Card>
         <div className="border-b border-border px-5 py-4">
-          <h3 className="font-semibold text-navy dark:text-sky-50">School branding</h3>
+          <h3 className="font-medium text-foreground">School branding</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Powers login, public school site, emails, and report cards for this tenant.
           </p>
@@ -102,7 +95,7 @@ export default async function PrincipalReleasePage() {
 
       <Card>
         <div className="border-b border-border px-5 py-4">
-          <h3 className="font-semibold text-navy dark:text-sky-50">Automated health</h3>
+          <h3 className="font-medium text-foreground">Automated health</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Probed just now · {new Date(health.generatedAt).toLocaleString()}
           </p>
@@ -114,7 +107,7 @@ export default async function PrincipalReleasePage() {
 
       <Card>
         <div className="border-b border-border px-5 py-4">
-          <h3 className="font-semibold text-navy dark:text-sky-50">Human checklist</h3>
+          <h3 className="font-medium text-foreground">Human checklist</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Saved on your school record — any principal/admin on this school can update.
           </p>

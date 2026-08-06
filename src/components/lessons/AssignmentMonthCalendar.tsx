@@ -1,9 +1,7 @@
 'use client'
 
 /**
- * Monthly assignment calendar — SchoolWorx style Jen shared:
- * month grid, chips per day (homework/quizzes/tests), overflow "+ more",
- * optional holiday banner strip.
+ * Monthly assignment calendar — month grid with due-work chips.
  */
 
 import { useMemo, useState } from 'react'
@@ -49,7 +47,6 @@ function isoDate(d: Date): string {
 /** Monday-first weeks covering the visible month */
 function buildMonthCells(month: Date): { date: Date; inMonth: boolean }[] {
   const first = startOfMonth(month)
-  // Monday = 0 … Sunday = 6
   const dow = (first.getDay() + 6) % 7
   const gridStart = new Date(first)
   gridStart.setDate(first.getDate() - dow)
@@ -63,7 +60,6 @@ function buildMonthCells(month: Date): { date: Date; inMonth: boolean }[] {
       inMonth: d.getMonth() === month.getMonth(),
     })
   }
-  // trim trailing empty week if all out of month
   while (cells.length > 35) {
     const last7 = cells.slice(-7)
     if (last7.every((c) => !c.inMonth)) cells.splice(-7)
@@ -72,21 +68,12 @@ function buildMonthCells(month: Date): { date: Date; inMonth: boolean }[] {
   return cells
 }
 
-function chipColor(title: string, className: string): string {
-  const t = `${title} ${className}`.toLowerCase()
+function chipClass(title: string): string {
+  const t = title.toLowerCase()
   if (t.includes('test') || t.includes('quiz') || t.includes('exam')) {
-    return 'bg-sky-700 text-white border-sky-800'
+    return 'border-primary/30 bg-primary text-primary-foreground'
   }
-  if (t.includes('health') || t.includes('history') || t.includes('science')) {
-    return 'bg-teal-600 text-white border-teal-700'
-  }
-  if (t.includes('math') || t.includes('arithmetic')) {
-    return 'bg-indigo-600 text-white border-indigo-700'
-  }
-  if (t.includes('write') || t.includes('language') || t.includes('spell') || t.includes('read')) {
-    return 'bg-sky-600 text-white border-sky-700'
-  }
-  return 'bg-slate-600 text-white border-slate-700'
+  return 'border-border bg-muted text-foreground'
 }
 
 function holidaysSpanning(
@@ -125,48 +112,40 @@ export function AssignmentMonthCalendar({
   const cells = useMemo(() => buildMonthCells(cursor), [cursor])
   const monthLabel = cursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
-  // Detect multi-day holiday rows to show banner on first day of span in week
   function holidayBannerForCell(dateIso: string, inMonth: boolean): string | null {
     if (!inMonth) return null
     for (const h of holidays) {
       if (dateIso >= h.startDate && dateIso <= h.endDate) {
-        // show label only on first day of holiday or first visible day of week
         if (dateIso === h.startDate) return h.label
         const d = new Date(dateIso + 'T12:00:00')
-        if ((d.getDay() + 6) % 7 === 0 && dateIso > h.startDate) return h.label // Monday continue
+        if ((d.getDay() + 6) % 7 === 0 && dateIso > h.startDate) return h.label
       }
     }
     return null
   }
 
   return (
-    <div className="space-y-4 animate-beacon-in">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="page-stack animate-beacon-in">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border/80 pb-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-700">
-            Calendar
-          </p>
-          <h1 className="text-2xl font-bold tracking-tight text-navy dark:text-sky-50">{title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground max-w-xl">
-            Month view of due work — like SchoolWorx. Each chip is an assignment; open a class to
-            edit.
+          <p className="text-[13px] font-medium text-foreground">{title}</p>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            Due dates across your classes
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
-            className="rounded-lg border border-border bg-card p-2 hover:bg-muted"
+            className="rounded-md border border-border bg-card p-1.5 hover:bg-muted"
             aria-label="Previous month"
             onClick={() => setCursor((c) => addMonths(c, -1))}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <span className="min-w-[10rem] text-center text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-100">
-            {monthLabel}
-          </span>
+          <span className="min-w-[9rem] text-center text-[13px] font-medium">{monthLabel}</span>
           <button
             type="button"
-            className="rounded-lg border border-border bg-card p-2 hover:bg-muted"
+            className="rounded-md border border-border bg-card p-1.5 hover:bg-muted"
             aria-label="Next month"
             onClick={() => setCursor((c) => addMonths(c, 1))}
           >
@@ -174,28 +153,27 @@ export function AssignmentMonthCalendar({
           </button>
           <button
             type="button"
-            className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold"
+            className="rounded-md border border-border bg-card px-2.5 py-1.5 text-[11px] font-medium"
             onClick={() => setCursor(startOfMonth(new Date()))}
           >
-            This month
+            Today
           </button>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-300 shadow-sm dark:border-slate-700">
-        {/* Weekday headers */}
-        <div className="grid grid-cols-7 bg-slate-700 text-white">
+      <div className="overflow-hidden rounded-lg border border-border">
+        <div className="grid grid-cols-7 border-b border-border bg-muted/50">
           {WEEKDAYS.map((d) => (
             <div
               key={d}
-              className="border-r border-slate-600 px-2 py-2 text-center text-xs font-bold last:border-r-0"
+              className="border-r border-border px-1 py-1.5 text-center text-[11px] font-medium text-muted-foreground last:border-r-0"
             >
               {d}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-7 bg-white dark:bg-slate-950">
+        <div className="grid grid-cols-7 bg-card">
           {cells.map(({ date, inMonth }) => {
             const iso = isoDate(date)
             const items = byDate.get(iso) || []
@@ -210,18 +188,17 @@ export function AssignmentMonthCalendar({
               <div
                 key={iso}
                 className={cn(
-                  'min-h-[110px] border-b border-r border-slate-200 p-1.5 last:border-r-0 dark:border-slate-800 sm:min-h-[128px]',
-                  !inMonth && 'bg-slate-50/80 text-slate-400 dark:bg-slate-900/40',
-                  isHoliday && inMonth && 'bg-amber-50/40 dark:bg-amber-950/20',
-                  isToday && 'ring-2 ring-inset ring-sky-500/50'
+                  'min-h-[96px] border-b border-r border-border p-1 last:border-r-0 sm:min-h-[112px]',
+                  !inMonth && 'bg-muted/20 text-muted-foreground/60',
+                  isHoliday && inMonth && 'bg-warning-soft/30',
+                  isToday && 'ring-1 ring-inset ring-primary/40'
                 )}
               >
                 <div className="mb-1 flex items-center justify-between gap-1">
                   <span
                     className={cn(
-                      'text-xs font-bold tabular-nums',
-                      isToday &&
-                        'flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-white'
+                      'text-[11px] font-medium tabular-nums',
+                      isToday && 'rounded-md bg-primary px-1.5 py-0.5 text-primary-foreground'
                     )}
                   >
                     {date.getDate()}
@@ -229,8 +206,8 @@ export function AssignmentMonthCalendar({
                 </div>
 
                 {holidayLabel && (
-                  <div className="mb-1 truncate rounded bg-amber-400/90 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-950">
-                    Holiday: {holidayLabel}
+                  <div className="mb-1 truncate rounded border border-warning/30 bg-warning-soft px-1 py-0.5 text-[10px] font-medium text-warning">
+                    {holidayLabel}
                   </div>
                 )}
 
@@ -241,8 +218,8 @@ export function AssignmentMonthCalendar({
                         href={`/classes/${a.classId}`}
                         title={`${a.className}: ${a.title}`}
                         className={cn(
-                          'block truncate rounded border px-1 py-0.5 text-[10px] font-medium leading-tight shadow-sm transition hover:brightness-110',
-                          chipColor(a.title, a.className)
+                          'block truncate rounded border px-1 py-0.5 text-[10px] font-medium leading-tight hover:opacity-90',
+                          chipClass(a.title)
                         )}
                       >
                         {a.title}
@@ -254,19 +231,19 @@ export function AssignmentMonthCalendar({
                 {!expanded && overflow > 0 && (
                   <button
                     type="button"
-                    className="mt-0.5 w-full text-left text-[10px] font-semibold text-sky-700 hover:underline dark:text-sky-300"
+                    className="mt-0.5 w-full text-left text-[10px] font-medium text-primary hover:underline"
                     onClick={() => setExpandedDays((s) => ({ ...s, [iso]: true }))}
                   >
-                    + more ({overflow})
+                    +{overflow} more
                   </button>
                 )}
                 {expanded && items.length > CHIP_MAX && (
                   <button
                     type="button"
-                    className="mt-0.5 text-[10px] font-semibold text-muted-foreground hover:underline"
+                    className="mt-0.5 text-[10px] font-medium text-muted-foreground hover:underline"
                     onClick={() => setExpandedDays((s) => ({ ...s, [iso]: false }))}
                   >
-                    Show less
+                    Less
                   </button>
                 )}
               </div>
@@ -275,9 +252,8 @@ export function AssignmentMonthCalendar({
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Chips use assignment due dates from your classes. Add due dates under Class → setup when
-        creating assignments.
+      <p className="text-[11px] text-muted-foreground">
+        Set due dates under Class → Setup when creating assignments.
       </p>
     </div>
   )

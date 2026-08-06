@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { PageHeader } from '@/components/ui/page-header'
 import { cn } from '@/lib/utils'
 
 type PreviewMode = 'day' | 'week'
@@ -66,13 +67,13 @@ function LessonDetail({ plan }: { plan: LessonPlan }) {
     <div className="space-y-2.5 text-sm leading-relaxed text-foreground">
       {plan.unit && (
         <p>
-          <span className="font-semibold text-sky-800 dark:text-sky-300">Topic: </span>
+          <span className="font-semibold text-foreground">Topic: </span>
           {plan.unit}
         </p>
       )}
       {plan.scripture && (
         <p>
-          <span className="font-semibold text-sky-800 dark:text-sky-300">Scripture: </span>
+          <span className="font-semibold text-foreground">Scripture: </span>
           {plan.scripture}
         </p>
       )}
@@ -133,8 +134,8 @@ function LessonCell({
       className={cn(
         'rounded-lg border text-left transition',
         expanded
-          ? 'border-sky-300 bg-sky-50/80 dark:border-sky-700 dark:bg-sky-950/40'
-          : 'border-border/80 bg-card hover:border-sky-200'
+          ? 'border-primary/30 bg-muted/40'
+          : 'border-border bg-card hover:border-primary/30'
       )}
     >
       <button
@@ -144,7 +145,7 @@ function LessonCell({
         aria-expanded={expanded}
       >
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-sky-800 dark:text-sky-300 line-clamp-1">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-foreground line-clamp-1">
             {plan.title}
           </p>
           {plan.unit && (
@@ -159,7 +160,7 @@ function LessonCell({
         <ChevronDown
           className={cn(
             'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
-            expanded && 'rotate-180 text-sky-600'
+            expanded && 'rotate-180 text-primary'
           )}
           aria-hidden
         />
@@ -247,13 +248,11 @@ export function LessonPlansPanel({
 
   return (
     <div className="space-y-6 animate-beacon-in">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-700">
-            Academics
-          </p>
-          <h2 className="text-xl font-bold text-navy dark:text-sky-50">Lesson plan preview</h2>
-          <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+      <PageHeader
+        eyebrow="Academics"
+        title="Lesson plan preview"
+        description={
+          <>
             {className ? (
               <>
                 <strong className="text-foreground">{className}</strong>
@@ -262,27 +261,28 @@ export function LessonPlansPanel({
             ) : null}
             Switch Day or Week, then tap the down arrow to open the full lesson (objectives,
             procedures, homework).
-          </p>
-        </div>
-        <Badge variant="sky">
-          {initial.length} plan{initial.length === 1 ? '' : 's'}
-        </Badge>
-      </div>
+          </>
+        }
+        actions={
+          <Badge variant="outline">
+            {initial.length} plan{initial.length === 1 ? '' : 's'}
+          </Badge>
+        }
+      />
 
-      {/* Preview controls — mirrors SchoolWorx: Preview Day | Week */}
-      <Card className="overflow-hidden border-slate-200 dark:border-slate-700">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-slate-800 px-4 py-3 text-white">
+      <Card className="overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/50 px-4 py-3">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-semibold tracking-wide">Preview</span>
-            <div className="inline-flex rounded-lg bg-white/10 p-0.5">
+            <span className="text-[13px] font-medium text-foreground">Preview</span>
+            <div className="inline-flex rounded-md border border-border bg-card p-0.5">
               {(['day', 'week'] as const).map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setMode(m)}
                   className={cn(
-                    'rounded-md px-3 py-1.5 text-sm font-semibold capitalize transition',
-                    mode === m ? 'bg-white text-slate-900 shadow' : 'text-white/85 hover:bg-white/10'
+                    'rounded-md px-3 py-1.5 text-[13px] font-medium capitalize transition',
+                    mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
                   )}
                 >
                   {m}
@@ -293,7 +293,7 @@ export function LessonPlansPanel({
           <div className="flex items-center gap-1">
             <button
               type="button"
-              className="rounded-lg p-2 hover:bg-white/10"
+              className="rounded-md p-2 hover:bg-muted"
               aria-label="Previous"
               onClick={() => (mode === 'week' ? shiftWeek(-1) : shiftDay(-1))}
             >
@@ -304,17 +304,13 @@ export function LessonPlansPanel({
             </span>
             <button
               type="button"
-              className="rounded-lg p-2 hover:bg-white/10"
+              className="rounded-md p-2 hover:bg-muted"
               aria-label="Next"
               onClick={() => (mode === 'week' ? shiftWeek(1) : shiftDay(1))}
             >
               <ChevronRight className="h-4 w-4" />
             </button>
-            <Button
-              size="sm"
-              className="ml-2 bg-sky-500 hover:bg-sky-400 text-white"
-              onClick={() => openAdd(mode === 'day' ? selectedDay : isoDate(weekDays[0]))}
-            >
+            <Button size="sm" className="ml-2" onClick={() => openAdd(mode === 'day' ? selectedDay : isoDate(weekDays[0]))}>
               <Plus className="h-3.5 w-3.5" />
               Add lesson
             </Button>
@@ -332,10 +328,10 @@ export function LessonPlansPanel({
                   <div key={date} className="min-h-[200px] flex flex-col bg-card">
                     <div
                       className={cn(
-                        'border-b border-border px-2 py-2 text-center text-xs font-bold',
+                        'border-b border-border px-2 py-2 text-center text-[11px] font-medium',
                         isToday
-                          ? 'bg-sky-700 text-white'
-                          : 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-100'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-foreground'
                       )}
                     >
                       {formatDayHeader(d)}
@@ -347,7 +343,7 @@ export function LessonPlansPanel({
                           onClick={() => openAdd(date)}
                           className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border px-2 py-6 text-center text-xs text-muted-foreground hover:border-primary/40 hover:bg-primary/5"
                         >
-                          <span className="font-semibold uppercase tracking-wide text-[10px] text-sky-800 dark:text-sky-300">
+                          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                             {className || 'Class'}
                           </span>
                           <span>Click to add lesson plan.</span>
@@ -391,7 +387,7 @@ export function LessonPlansPanel({
                         <button
                           type="button"
                           onClick={() => openAdd(date)}
-                          className="mt-auto rounded-md py-1 text-[11px] font-semibold text-sky-700 hover:underline"
+                          className="mt-auto rounded-md py-1 text-[11px] font-medium text-primary hover:underline"
                         >
                           + Add another
                         </button>
@@ -444,14 +440,14 @@ export function LessonPlansPanel({
       </Card>
 
       {/* Create form */}
-      <Card id="lesson-plan-form" className="overflow-hidden border-sky-100/80">
+      <Card id="lesson-plan-form" className="overflow-hidden">
         <button
           type="button"
-          className="flex w-full items-center justify-between gap-2 border-b border-border bg-gradient-to-r from-sky-50 to-transparent px-5 py-4 text-left dark:from-sky-950/40"
+          className="flex w-full items-center justify-between gap-2 border-b border-border bg-muted/30 px-4 py-3 text-left"
           onClick={() => setShowForm((v) => !v)}
         >
-          <h3 className="font-semibold flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-sky-600" />
+          <h3 className="text-[13px] font-medium flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-primary" />
             {showForm ? 'New lesson plan' : 'New lesson plan (tap to expand)'}
           </h3>
           <ChevronDown

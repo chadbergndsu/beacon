@@ -3,12 +3,13 @@ import Link from 'next/link'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSchoolStaff } from '@/lib/roles'
-import {
-  AssignmentMonthCalendar,
+import { AssignmentMonthCalendar,
   type CalendarAssignment,
   type CalendarHoliday,
 } from '@/components/lessons/AssignmentMonthCalendar'
 import type { Assignment } from '@/lib/types'
+import { buttonClassName } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 export default async function TeacherCalendarPage() {
   const { profile, user } = await getProfile()
@@ -84,15 +85,12 @@ export default async function TeacherCalendarPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 text-sm">
-        <Link
-          href="/teacher/lessons"
-          className="rounded-xl border border-border bg-card px-3 py-2 font-semibold hover:border-sky-300"
-        >
+        <Link href="/teacher/lessons" className={buttonClassName('outline', 'sm')}>
           ← Lesson day/week
         </Link>
         <Link
           href="/teacher/calendar"
-          className="rounded-xl border border-sky-300 bg-sky-50 px-3 py-2 font-semibold text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
+          className={cn(buttonClassName('primary', 'sm'), 'pointer-events-none')}
         >
           Assignment month
         </Link>

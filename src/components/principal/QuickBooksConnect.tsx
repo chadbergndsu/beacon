@@ -34,23 +34,23 @@ export function QuickBooksConnect({
   return (
     <div className="space-y-4">
       {flash?.connected && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div className="rounded-lg border border-success/25 bg-success-soft px-4 py-3 text-sm text-success">
           QuickBooks connected successfully.
         </div>
       )}
       {message && (
-        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
+        <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-foreground">
           {message}
         </div>
       )}
       {error && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <div className="rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
           {error}
         </div>
       )}
 
       <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-[#2CA01C] to-[#1a7a12] px-5 py-4 text-white flex flex-wrap items-center justify-between gap-3">
+        <div className="border-b border-border bg-[#2CA01C] px-4 py-4 text-white flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
               <Building2 className="h-6 w-6" />
@@ -95,7 +95,7 @@ export function QuickBooksConnect({
           </div>
 
           {!qbConfigured && (
-            <div className="rounded-xl border border-dashed border-sky-200 bg-sky-50/50 p-4 text-sm text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground">
               <p className="font-semibold text-foreground mb-1">Live OAuth setup</p>
               <p>
                 Add these to Vercel / <code className="text-xs bg-muted px-1 rounded">.env.local</code> to
@@ -113,7 +113,7 @@ export function QuickBooksConnect({
                   href="https://developer.intuit.com"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sky-700 font-medium underline"
+                  className="text-primary font-medium underline"
                 >
                   developer.intuit.com
                 </a>
@@ -124,7 +124,7 @@ export function QuickBooksConnect({
           )}
 
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-navy dark:text-sky-50">What to sync</p>
+            <p className="text-sm font-medium text-foreground">What to sync</p>
             {[
               {
                 key: 'customers',

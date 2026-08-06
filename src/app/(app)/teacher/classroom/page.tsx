@@ -8,6 +8,7 @@ import {
   type TeacherClass,
   type TeacherStudent,
 } from '@/components/roster/TeacherClassroomHub'
+import { PageHeader } from '@/components/ui/page-header'
 import type { Role } from '@/lib/types'
 
 export default async function TeacherClassroomPage() {
@@ -155,19 +156,11 @@ export default async function TeacherClassroomPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-          Teacher tools
-        </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy dark:text-sky-50">
-          My classroom
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-          Own your Abeka classes and roster. Principals still approve deletions and can restore
-          anything school-wide.
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        title="My classroom"
+        description="Abeka classes, roster, and deletion requests. Principal approves removals."
+      />
 
       <TeacherClassroomHub
         teacherName={profile.full_name || ''}

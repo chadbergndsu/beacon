@@ -9,10 +9,10 @@ export function OnboardingProgress({ status }: { status: OnboardingStatus }) {
     <Card className="overflow-hidden">
       <div className="border-b border-border bg-muted/30 px-5 py-4 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-sky-700">
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
             First-run setup
           </p>
-          <h3 className="font-semibold text-navy dark:text-sky-50">School onboarding</h3>
+          <h3 className="font-medium text-foreground">School onboarding</h3>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={status.readyForParents ? 'success' : 'warning'}>
@@ -28,7 +28,7 @@ export function OnboardingProgress({ status }: { status: OnboardingStatus }) {
       <CardContent className="pt-4">
         <div className="mb-4 h-2 rounded-full bg-muted overflow-hidden">
           <div
-            className="h-full rounded-full bg-sky-500 transition-all"
+            className="h-full rounded-full bg-primary transition-all"
             style={{ width: `${status.percent}%` }}
           />
         </div>
@@ -41,7 +41,7 @@ export function OnboardingProgress({ status }: { status: OnboardingStatus }) {
                 <Circle className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
               )}
               <div className="min-w-0">
-                <Link href={s.href} className="font-semibold hover:text-sky-700 hover:underline">
+                <Link href={s.href} className="font-medium hover:text-primary hover:underline">
                   {s.label}
                 </Link>
                 <p className="text-xs text-muted-foreground">{s.detail}</p>

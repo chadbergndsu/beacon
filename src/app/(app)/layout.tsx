@@ -34,10 +34,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden beacon-shell">
         <AppHeader profile={profile} schoolShortName={brand.shortName} />
         <TrustModeBanner emailLive={emailLive} qbLiveConfigured={qbLive} role={profile?.role} />
-        <main className="mx-auto w-full max-w-7xl min-w-0 flex-1 px-3 py-5 sm:px-6 sm:py-8">
+        <main className="mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 py-4 sm:px-6 sm:py-6">
           <div className="animate-beacon-in min-w-0">{children}</div>
         </main>
-        <footer className="border-t border-border/70 bg-card/40 px-3 py-4 pb-safe text-center text-xs text-muted-foreground">
+        <footer className="border-t border-border/70 px-4 py-3 pb-safe text-center text-[11px] text-muted-foreground">
           Beacon · {brand.name}
           {brand.websiteUrl ? (
             <>

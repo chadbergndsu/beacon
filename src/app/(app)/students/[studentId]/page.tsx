@@ -17,6 +17,8 @@ import { buildStudentDinnerAndConference } from '@/lib/insights/load-student-ins
 import { loadScreenLayout } from '@/lib/view-prefs/store'
 import { PageHeader } from '@/components/ui/page-header'
 import { buttonClassName } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
 export default async function StudentOverviewPage({
@@ -165,36 +167,54 @@ export default async function StudentOverviewPage({
 
       <ViewSection id="grades" title="Class grades">
         {sections.length === 0 ? (
-          <p className="rounded-xl border p-4 text-sm text-muted-foreground">
-            No class enrollments.
-          </p>
+          <EmptyState title="No class enrollments" />
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-4">
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Class</TH>
+                  <TH>Details</TH>
+                  <TH className="text-right">Grade</TH>
+                  <TH className="text-right" />
+                </TR>
+              </THead>
+              <TBody>
+                {sections.map(({ classRow, result }) => (
+                  <TR key={classRow.id}>
+                    <TD className="font-medium">{classRow.name}</TD>
+                    <TD className="text-muted-foreground">
+                      {[classRow.subject, classRow.term].filter(Boolean).join(' · ') || '—'}
+                    </TD>
+                    <TD className="text-right tabular-nums font-medium">
+                      {result.overall != null ? `${result.overall}%` : '—'}
+                      {result.letter ? ` ${result.letter}` : ''}
+                    </TD>
+                    <TD className="text-right">
+                      <Link
+                        href={`/classes/${classRow.id}/students/${studentId}`}
+                        className="text-[12px] font-medium text-primary hover:underline"
+                      >
+                        Detail
+                      </Link>
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
             {sections.map(({ classRow, result }) => (
-              <section
-                key={classRow.id}
-                className="rounded-2xl border bg-background p-6 shadow-sm"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                  <div>
-                    <h2 className="text-lg font-semibold">{classRow.name}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {[classRow.subject, classRow.term].filter(Boolean).join(' · ')}
-                    </p>
-                  </div>
-                  <Link
-                    href={`/classes/${classRow.id}/students/${studentId}`}
-                    className="text-sm font-medium text-sky-700 hover:underline"
-                  >
-                    Class detail →
-                  </Link>
+              <details key={classRow.id} className="rounded-lg border border-border">
+                <summary className="cursor-pointer px-3 py-2 text-[13px] font-medium">
+                  {classRow.name} — calculation
+                </summary>
+                <div className="border-t border-border px-3 py-3">
+                  <TransparentGradeView
+                    result={result}
+                    studentName={name}
+                    photoUrl={student.photo_url}
+                  />
                 </div>
-                <TransparentGradeView
-                  result={result}
-                  studentName={name}
-                  photoUrl={student.photo_url}
-                />
-              </section>
+              </details>
             ))}
           </div>
         )}

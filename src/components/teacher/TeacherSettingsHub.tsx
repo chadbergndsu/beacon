@@ -9,15 +9,17 @@ import {
   LayoutGrid,
   Loader2,
   Scale,
-  Settings2,
   Users,
 } from 'lucide-react'
 import { applyDefaultGradeWeights } from '@/app/actions/class-setup'
 import { validateCategoryWeights } from '@/lib/grades'
 import { SkinPicker } from '@/components/skins/SkinPicker'
 import type { SkinId } from '@/lib/skins/catalog'
-import { Button } from '@/components/ui/button'
+import { Button, buttonClassName } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageHeader } from '@/components/ui/page-header'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
 export type SettingsClassRow = {
@@ -45,25 +47,12 @@ export function TeacherSettingsHub({
   const [busyId, setBusyId] = useState<string | null>(null)
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy text-white">
-            <Settings2 className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              Teacher preferences
-            </p>
-            <h2 className="mt-1 text-xl font-semibold tracking-tight">
-              {teacherName ? `${teacherName.split(' ')[0]}'s settings` : 'Teacher settings'}
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Students, weighted grades, and the gradebook — same tools as Classroom, one calm place.
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        eyebrow="Teacher preferences"
+        title={teacherName ? `${teacherName.split(' ')[0]}'s settings` : 'Teacher settings'}
+        description="Students, weighted grades, and the gradebook — same tools as Classroom, one calm place."
+      />
 
       {msg ? (
         <p className="rounded-xl border border-success/25 bg-success-soft px-4 py-3 text-sm text-success">
@@ -110,7 +99,7 @@ export function TeacherSettingsHub({
           <Link
             key={item.href}
             href={item.href}
-            className="card-interactive rounded-2xl border border-border/80 bg-card p-4 shadow-[var(--shadow-soft)]"
+            className="card-interactive rounded-lg border border-border bg-card p-4"
           >
             <item.icon className="h-5 w-5 text-primary" />
             <p className="mt-2 font-semibold tracking-tight">{item.label}</p>
@@ -119,7 +108,7 @@ export function TeacherSettingsHub({
         ))}
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]">
+      <section className="space-y-4 rounded-lg border border-border bg-card p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Scale className="h-5 w-5 text-primary" />
@@ -137,104 +126,110 @@ export function TeacherSettingsHub({
         </p>
 
         {classes.length === 0 ? (
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm">
-            <p className="font-semibold">No classes yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Create Abeka classes first, then set weights and open the gradebook.
-            </p>
-            <Link
-              href="/teacher/classroom"
-              className="mt-3 inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
-            >
-              Open classroom →
-            </Link>
-          </div>
+          <EmptyState
+            tone="primary"
+            title="No classes yet"
+            description="Create Abeka classes first, then set weights and open the gradebook."
+            action={
+              <Link href="/teacher/classroom" className={buttonClassName('primary', 'sm')}>
+                Open classroom →
+              </Link>
+            }
+          />
         ) : (
-          <ul className="space-y-3">
-            {classes.map((c) => {
-              const weights = validateCategoryWeights(
-                c.categories.map((x) => ({ weight: x.weight }))
-              )
-              return (
-                <li
-                  key={c.id}
-                  className="rounded-2xl border border-border/80 bg-background p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-semibold tracking-tight">{c.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {[c.subject, c.grade_level].filter(Boolean).join(' · ') || 'Class'} ·{' '}
-                        {c.studentCount} students
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
+          <Table>
+            <THead>
+              <TR>
+                <TH>Class</TH>
+                <TH>Subject</TH>
+                <TH className="text-right">Students</TH>
+                <TH>Weights</TH>
+                <TH className="text-right">Actions</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {classes.map((c) => {
+                const weights = validateCategoryWeights(
+                  c.categories.map((x) => ({ weight: x.weight }))
+                )
+                return (
+                  <TR key={c.id}>
+                    <TD className="font-medium">{c.name}</TD>
+                    <TD className="text-muted-foreground">
+                      {[c.subject, c.grade_level].filter(Boolean).join(' · ') || '—'}
+                    </TD>
+                    <TD className="text-right tabular-nums">{c.studentCount}</TD>
+                    <TD>
+                      <div className="flex flex-wrap gap-1">
                         {c.categories.length === 0 ? (
-                          <Badge variant="warning">No weights yet</Badge>
+                          <Badge variant="warning">None</Badge>
                         ) : (
-                          c.categories.map((cat) => (
-                            <Badge key={cat.id} variant="default">
-                              {cat.name} {cat.weight}%
+                          <>
+                            {c.categories.map((cat) => (
+                              <Badge key={cat.id} variant="muted">
+                                {cat.name} {cat.weight}%
+                              </Badge>
+                            ))}
+                            <Badge variant={weights.ok ? 'success' : 'warning'}>
+                              {weights.ok ? 'OK' : weights.message}
                             </Badge>
-                          ))
-                        )}
-                        {c.categories.length > 0 && (
-                          <Badge variant={weights.ok ? 'success' : 'warning'}>
-                            {weights.ok ? 'Weights OK' : weights.message}
-                          </Badge>
+                          </>
                         )}
                       </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Link href={`/classes/${c.id}`}>
-                        <Button type="button" size="sm">
-                          Gradebook
-                        </Button>
-                      </Link>
-                      <Link href={`/classes/${c.id}?tab=setup`}>
-                        <Button type="button" size="sm" variant="outline">
-                          Weights &amp; setup
-                        </Button>
-                      </Link>
-                      {c.categories.length === 0 && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={pending}
-                          onClick={() => {
-                            setMsg(null)
-                            setErr(null)
-                            setBusyId(c.id)
-                            start(async () => {
-                              const r = await applyDefaultGradeWeights(c.id)
-                              setBusyId(null)
-                              if (!r.ok) {
-                                setErr(r.error)
-                                return
-                              }
-                              setMsg(r.note)
-                              router.refresh()
-                            })
-                          }}
-                        >
-                          {pending && busyId === c.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : null}
-                          Apply Abeka-style weights
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+                    </TD>
+                    <TD className="text-right">
+                      <div className="inline-flex flex-wrap justify-end gap-1.5">
+                        <Link href={`/classes/${c.id}`}>
+                          <Button type="button" size="sm">
+                            Gradebook
+                          </Button>
+                        </Link>
+                        <Link href={`/classes/${c.id}?tab=setup`}>
+                          <Button type="button" size="sm" variant="outline">
+                            Setup
+                          </Button>
+                        </Link>
+                        {c.categories.length === 0 && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={pending}
+                            onClick={() => {
+                              setMsg(null)
+                              setErr(null)
+                              setBusyId(c.id)
+                              start(async () => {
+                                const r = await applyDefaultGradeWeights(c.id)
+                                setBusyId(null)
+                                if (!r.ok) {
+                                  setErr(r.error)
+                                  return
+                                }
+                                setMsg(r.note)
+                                router.refresh()
+                              })
+                            }}
+                          >
+                            {pending && busyId === c.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : null}
+                            Defaults
+                          </Button>
+                        )}
+                      </div>
+                    </TD>
+                  </TR>
+                )
+              })}
+            </TBody>
+          </Table>
         )}
       </section>
 
       {/* How weights work */}
-      <section className="rounded-2xl border bg-muted/30 p-5 text-sm space-y-2">
-        <h3 className="font-bold text-navy dark:text-sky-50">How weighted grades work</h3>
+      <section className="rounded-lg border bg-muted/30 p-4 text-sm space-y-2">
+        <h3 className="font-semibold tracking-tight text-foreground">How weighted grades work</h3>
         <ul className="list-disc space-y-1 pl-5 text-muted-foreground text-xs leading-relaxed">
           <li>
             Categories (Tests, Quizzes, Homework…) each get a <strong>weight %</strong> that should

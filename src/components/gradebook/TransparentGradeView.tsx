@@ -76,7 +76,7 @@ export function TransparentGradeView({
           ) : (
             <div
               className={cn(
-                'flex items-center justify-center rounded-xl bg-navy font-semibold text-white',
+                'flex items-center justify-center rounded-lg bg-primary font-medium text-primary-foreground',
                 compact ? 'h-12 w-12 text-base' : 'h-16 w-16 text-xl'
               )}
             >
@@ -104,7 +104,7 @@ export function TransparentGradeView({
           <div className="ml-auto flex items-center gap-3">
             <div
               className={cn(
-                'flex flex-col items-center justify-center rounded-2xl shadow-sm',
+                'flex flex-col items-center justify-center rounded-lg',
                 letterTone(result.letter),
                 compact ? 'h-16 w-16' : 'h-20 w-20'
               )}
@@ -205,7 +205,7 @@ export function TransparentGradeView({
                   key={cat.name}
                   className={cn(
                     'overflow-hidden transition-shadow duration-200',
-                    open && 'shadow-[var(--shadow-lift)] border-sky-200/80 dark:border-sky-800'
+                    open && 'border-primary/30'
                   )}
                 >
                   <button
@@ -213,7 +213,7 @@ export function TransparentGradeView({
                     onClick={() => hasAssignments && toggle(cat.name)}
                     className={cn(
                       'w-full text-left px-5 py-4 flex flex-wrap items-center gap-4',
-                      'hover:bg-sky-50/50 dark:hover:bg-sky-950/30 transition-colors',
+                      'hover:bg-muted/40 transition-colors',
                       hasAssignments ? 'cursor-pointer' : 'cursor-default'
                     )}
                   >
@@ -231,8 +231,8 @@ export function TransparentGradeView({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="font-semibold text-navy dark:text-sky-50">{cat.name}</h4>
-                        <Badge variant="sky">{cat.weight}% of grade</Badge>
+                        <h4 className="font-medium text-foreground">{cat.name}</h4>
+                        <Badge variant="outline">{cat.weight}% of grade</Badge>
                         {cat.dropped > 0 && (
                           <Badge variant="muted">Dropped {cat.dropped} lowest</Badge>
                         )}
@@ -248,9 +248,9 @@ export function TransparentGradeView({
                           </>
                         )}
                       </p>
-                      <div className="mt-2.5 h-1.5 max-w-xs rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div className="mt-2.5 h-1.5 max-w-xs rounded-full bg-muted overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-sky-400 to-sky-600 transition-all duration-500"
+                          className="h-full rounded-full bg-primary transition-all duration-500"
                           style={{
                             width: `${cat.average != null ? Math.min(100, cat.average) : 0}%`,
                           }}
@@ -259,7 +259,7 @@ export function TransparentGradeView({
                     </div>
 
                     <div className="text-right shrink-0">
-                      <div className="text-2xl font-bold tabular-nums text-navy dark:text-sky-50">
+                      <div className="text-xl font-semibold tabular-nums text-foreground">
                         {cat.average != null ? `${cat.average}%` : '—'}
                       </div>
                       <div className="text-[11px] font-medium text-muted-foreground">
@@ -269,7 +269,7 @@ export function TransparentGradeView({
                   </button>
 
                   {open && hasAssignments && (
-                    <div className="border-t border-border bg-slate-50/60 dark:bg-slate-900/40 px-3 py-2 sm:px-4">
+                    <div className="border-t border-border bg-muted/30 px-3 py-2 sm:px-4">
                       <ul className="divide-y divide-border/70">
                         {cat.assignments!.map((a, idx) => (
                           <li
@@ -316,7 +316,7 @@ export function TransparentGradeView({
                                     : a.pct >= 90
                                       ? 'text-success'
                                       : a.pct >= 70
-                                        ? 'text-sky-700 dark:text-sky-300'
+                                        ? 'text-primary'
                                         : 'text-muted-foreground'
                                 )}
                               >

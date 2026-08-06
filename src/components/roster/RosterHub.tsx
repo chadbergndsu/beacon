@@ -189,18 +189,15 @@ export function RosterHub({
   }
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]">
-        <p className="font-semibold tracking-tight">Start with people you know</p>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          Add a <strong>teacher</strong> or <strong>parent</strong> with their real email → Beacon
-          creates a login and shows a temporary password once. Then add students, classes, and link
-          parents to kids. School: <strong className="text-foreground">{schoolName}</strong>.
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Counts: {students.length} students · {teachers.length} teachers · {parents.length} parents
-          · {classes.length} classes
-        </p>
+    <div className="page-stack">
+      <div className="flex flex-wrap items-end justify-between gap-2 border-b border-border/80 pb-3">
+        <div>
+          <p className="text-[13px] font-medium text-foreground">School roster</p>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            {schoolName} · {students.length} students · {teachers.length} teachers ·{' '}
+            {parents.length} parents · {classes.length} classes
+          </p>
+        </div>
       </div>
 
       {msg ? (
@@ -211,7 +208,7 @@ export function RosterHub({
       <FieldError>{err}</FieldError>
 
       {creds && (
-        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 shadow-sm dark:border-amber-800 dark:bg-amber-950/40">
+        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">
           <div className="flex items-start gap-3">
             <KeyRound className="mt-0.5 h-5 w-5 text-amber-800" />
             <div className="min-w-0 flex-1">
@@ -259,10 +256,10 @@ export function RosterHub({
       )}
 
       {/* 1. People you know */}
-      <section className="rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]">
+      <section className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-center gap-2">
           <UserPlus className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-bold text-navy dark:text-sky-50">
+          <h2 className="text-[13px] font-medium text-foreground">
             1. Add someone you know (email login)
           </h2>
         </div>
@@ -354,10 +351,10 @@ export function RosterHub({
       </section>
 
       {/* 2. Students */}
-      <section className="rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]">
+      <section className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-bold text-navy dark:text-sky-50">2. Students</h2>
+          <h2 className="text-[13px] font-medium text-foreground">2. Students</h2>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
           Students do not need email. Add a few by hand, or paste a CSV.
@@ -463,33 +460,39 @@ export function RosterHub({
         </div>
 
         {students.length > 0 && (
-          <div className="mt-4 max-h-48 overflow-y-auto">
+          <div className="mt-3">
             <Table className="min-w-0">
               <THead>
                 <TR>
                   <TH>Name</TH>
                   <TH>Grade</TH>
+                  <TH>Status</TH>
                 </TR>
               </THead>
               <TBody>
-                {students.slice(0, 50).map((s) => (
+                {students.slice(0, 100).map((s) => (
                   <TR key={s.id}>
                     <TD>
                       <Link
                         href={`/students/${s.id}`}
-                        className="font-medium text-sky-800 hover:underline dark:text-sky-300"
+                        className="font-medium text-foreground hover:text-primary hover:underline"
                       >
                         {s.last_name}, {s.first_name}
                       </Link>
                     </TD>
                     <TD className="text-muted-foreground">{s.grade_level || '—'}</TD>
+                    <TD>
+                      <Badge variant={s.active === false ? 'warning' : 'success'}>
+                        {s.active === false ? 'Inactive' : 'Active'}
+                      </Badge>
+                    </TD>
                   </TR>
                 ))}
               </TBody>
             </Table>
-            {students.length > 50 && (
-              <p className="border-t px-3 py-2 text-xs text-muted-foreground">
-                Showing 50 of {students.length}
+            {students.length > 100 && (
+              <p className="border-t px-2.5 py-1.5 text-[12px] text-muted-foreground">
+                Showing 100 of {students.length}
               </p>
             )}
           </div>
@@ -497,8 +500,8 @@ export function RosterHub({
       </section>
 
       {/* 3. Classes — Abeka + assign teacher */}
-      <section className="rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]">
-        <h2 className="text-lg font-bold text-navy dark:text-sky-50">3. Classes (Abeka)</h2>
+      <section className="rounded-lg border border-border bg-card p-4">
+        <h2 className="text-[13px] font-medium text-foreground">3. Classes (Abeka)</h2>
         <p className="mt-1 text-xs text-muted-foreground">
           Build grade + subject classes and assign a teacher. Teachers can also self-serve under My
           classroom. Removals use Approvals &amp; history.
@@ -655,47 +658,55 @@ export function RosterHub({
         </div>
 
         {classes.length > 0 && (
-          <ul className="mt-4 space-y-2">
-            {classes.map((c) => (
-              <li
-                key={c.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm"
-              >
-                <div>
-                  <Link
-                    href={`/classes/${c.id}`}
-                    className="font-semibold text-sky-800 hover:underline dark:text-sky-300"
-                  >
-                    {c.name}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">
-                    {[c.subject, c.grade_level].filter(Boolean).join(' · ') || 'Class'}
-                    {' · '}
-                    {c.enrollment_count} students
-                  </p>
-                </div>
-                <Select
-                  className="h-9 w-auto min-w-[10rem] text-xs"
-                  value={c.teacher_id || ''}
-                  disabled={pending}
-                  onChange={(e) =>
-                    run(
-                      () =>
-                        assignTeacherToClassAction(c.id, e.target.value || null),
-                      'Teacher assigned.'
-                    )
-                  }
-                >
-                  <option value="">No teacher</option>
-                  {teachers.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.full_name || t.email}
-                    </option>
-                  ))}
-                </Select>
-              </li>
-            ))}
-          </ul>
+          <Table className="mt-3">
+            <THead>
+              <TR>
+                <TH>Class</TH>
+                <TH>Details</TH>
+                <TH className="text-right">Students</TH>
+                <TH>Teacher</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {classes.map((c) => (
+                <TR key={c.id}>
+                  <TD>
+                    <Link
+                      href={`/classes/${c.id}`}
+                      className="font-medium text-foreground hover:text-primary hover:underline"
+                    >
+                      {c.name}
+                    </Link>
+                  </TD>
+                  <TD className="text-muted-foreground">
+                    {[c.subject, c.grade_level].filter(Boolean).join(' · ') || '—'}
+                  </TD>
+                  <TD className="text-right tabular-nums">{c.enrollment_count}</TD>
+                  <TD>
+                    <Select
+                      className="h-8 min-w-[10rem] text-[12px]"
+                      value={c.teacher_id || ''}
+                      disabled={pending}
+                      onChange={(e) =>
+                        run(
+                          () =>
+                            assignTeacherToClassAction(c.id, e.target.value || null),
+                          'Teacher assigned.'
+                        )
+                      }
+                    >
+                      <option value="">No teacher</option>
+                      {teachers.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.full_name || t.email}
+                        </option>
+                      ))}
+                    </Select>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
 
         {classes.length > 0 && students.length > 0 && (
@@ -747,8 +758,8 @@ export function RosterHub({
       </section>
 
       {/* 4. Parent links */}
-      <section className="rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]">
-        <h2 className="text-lg font-bold text-navy dark:text-sky-50">
+      <section className="rounded-lg border border-border bg-card p-4">
+        <h2 className="text-[13px] font-medium text-foreground">
           4. Link parents to students
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
@@ -806,31 +817,42 @@ export function RosterHub({
         )}
 
         {parents.length > 0 && (
-          <ul className="mt-4 space-y-2 text-sm">
-            {parents.map((p) => {
-              const kids = linksByParent.get(p.id) ?? []
-              return (
-                <li key={p.id} className="rounded-lg border px-3 py-2">
-                  <span className="font-medium">{p.full_name || p.email}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{p.email}</span>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {kids.length === 0 ? (
-                      <Badge variant="warning">No students linked</Badge>
-                    ) : (
-                      kids.map((sid) => {
-                        const st = students.find((s) => s.id === sid)
-                        return (
-                          <Badge key={sid} variant="sky">
-                            {st ? `${st.first_name} ${st.last_name}` : sid.slice(0, 6)}
-                          </Badge>
-                        )
-                      })
-                    )}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+          <Table className="mt-3">
+            <THead>
+              <TR>
+                <TH>Parent</TH>
+                <TH>Email</TH>
+                <TH>Linked students</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {parents.map((p) => {
+                const kids = linksByParent.get(p.id) ?? []
+                return (
+                  <TR key={p.id}>
+                    <TD className="font-medium">{p.full_name || '—'}</TD>
+                    <TD className="text-muted-foreground">{p.email || '—'}</TD>
+                    <TD>
+                      {kids.length === 0 ? (
+                        <Badge variant="warning">None</Badge>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {kids.map((sid) => {
+                            const st = students.find((s) => s.id === sid)
+                            return (
+                              <Badge key={sid} variant="muted">
+                                {st ? `${st.first_name} ${st.last_name}` : sid.slice(0, 6)}
+                              </Badge>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </TD>
+                  </TR>
+                )
+              })}
+            </TBody>
+          </Table>
         )}
       </section>
 

@@ -7,7 +7,7 @@ export function Textarea({
   return (
     <textarea
       className={cn(
-        'flex min-h-[6.5rem] w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-base sm:text-sm text-foreground',
+        'flex min-h-[5.5rem] w-full rounded-md border border-border bg-card px-3 py-2 text-base sm:text-sm text-foreground',
         'shadow-sm transition-all duration-150 resize-y',
         'placeholder:text-muted-foreground/70',
         'hover:border-primary/35',

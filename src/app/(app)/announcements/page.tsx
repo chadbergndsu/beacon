@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { buttonClassName } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function AnnouncementsPage() {
   const { profile, user } = await getProfile()
@@ -35,23 +37,18 @@ export default async function AnnouncementsPage() {
       : announcements
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Announcements</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            School notices in Beacon. Staff can also email recipients via the system.
-          </p>
-        </div>
-        {canPost && (
-          <Link
-            href="/announcements/new"
-            className="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold"
-          >
-            New announcement
-          </Link>
-        )}
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        title="Announcements"
+        description="School notices in Beacon. Staff can also email recipients via the system."
+        actions={
+          canPost ? (
+            <Link href="/announcements/new" className={buttonClassName('primary', 'sm')}>
+              New announcement
+            </Link>
+          ) : undefined
+        }
+      />
 
       {visible.length === 0 ? (
         <p className="rounded-xl border bg-background p-6 text-sm text-muted-foreground">

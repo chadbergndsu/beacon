@@ -133,7 +133,7 @@ export function KioskScanner({
 
       <header className="border-b border-white/10 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-400">
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-primary/80">
             Beacon kiosk
           </p>
           <h1 className="text-lg font-bold">{schoolName}</h1>
@@ -151,9 +151,9 @@ export function KioskScanner({
                 type="button"
                 onClick={() => setRoomId(r.id)}
                 className={cn(
-                  'rounded-xl border px-3 py-2 text-sm font-semibold',
+                  'rounded-lg border px-3 py-2 text-sm font-semibold',
                   roomId === r.id
-                    ? 'border-sky-400 bg-sky-500 text-white'
+                    ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-white/15 bg-white/5 text-slate-200'
                 )}
               >
@@ -171,7 +171,7 @@ export function KioskScanner({
               type="button"
               onClick={() => setDirection('in')}
               className={cn(
-                'rounded-2xl py-4 text-lg font-black',
+                'rounded-lg py-4 text-lg font-bold',
                 direction === 'in' ? 'bg-emerald-500 text-white' : 'bg-white/10 text-slate-300'
               )}
             >
@@ -181,7 +181,7 @@ export function KioskScanner({
               type="button"
               onClick={() => setDirection('out')}
               className={cn(
-                'rounded-2xl py-4 text-lg font-black',
+                'rounded-lg py-4 text-lg font-bold',
                 direction === 'out' ? 'bg-amber-500 text-white' : 'bg-white/10 text-slate-300'
               )}
             >
@@ -216,7 +216,7 @@ export function KioskScanner({
               }}
               autoComplete="off"
               autoCapitalize="characters"
-              className="mt-1 w-full rounded-2xl border-2 border-sky-500/50 bg-slate-900 px-4 py-4 text-center text-2xl font-mono font-bold tracking-widest text-white outline-none focus:border-sky-400"
+              className="mt-1 w-full rounded-lg border-2 border-primary/50 bg-slate-900 px-4 py-4 text-center text-2xl font-mono font-bold tracking-widest text-white outline-none focus:border-primary"
               placeholder="SCAN OR TYPE…"
               disabled={pending || !roomId}
             />
@@ -239,7 +239,7 @@ export function KioskScanner({
         {flash && (
           <div
             className={cn(
-              'rounded-2xl border px-4 py-5 text-center text-lg font-bold',
+              'rounded-lg border px-4 py-5 text-center text-lg font-semibold',
               flash.ok
                 ? 'border-emerald-400/50 bg-emerald-500/20 text-emerald-100'
                 : 'border-red-400/50 bg-red-500/20 text-red-100'
@@ -256,7 +256,7 @@ export function KioskScanner({
             </p>
             <button
               type="button"
-              className="text-[11px] text-sky-400"
+              className="text-[11px] text-primary/80 hover:underline"
               onClick={() => refreshPresence()}
             >
               Refresh

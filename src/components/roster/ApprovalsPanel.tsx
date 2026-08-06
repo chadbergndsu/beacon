@@ -6,6 +6,8 @@ import { reviewApprovalAction, restoreRevisionAction } from '@/app/actions/roste
 import type { RosterRevision } from '@/lib/roster/revisions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 
 export function ApprovalsPanel({
   requests,
@@ -27,178 +29,212 @@ export function ApprovalsPanel({
   const [err, setErr] = useState<string | null>(null)
 
   const pendingOnly = requests.filter((r) => r.status === 'pending')
+  const decided = requests.filter((r) => r.status !== 'pending').slice(0, 10)
 
   return (
-    <div className="space-y-8">
-      {msg && (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+    <div className="page-stack">
+      {msg ? (
+        <p className="rounded-lg border border-success/25 bg-success-soft px-4 py-3 text-sm text-success">
           {msg}
         </p>
-      )}
-      {err && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+      ) : null}
+      {err ? (
+        <p className="rounded-lg border border-red-200 bg-danger-soft px-4 py-3 text-sm text-danger">
           {err}
         </p>
-      )}
+      ) : null}
 
-      <section className="rounded-2xl border bg-card p-5 space-y-3">
-        <h2 className="text-lg font-bold text-navy dark:text-sky-50">
-          Pending deletion requests
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          Teachers request student/class removals. Approve to soft-delete (still recoverable from
-          history) or reject to keep as-is.
-        </p>
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-[13px] font-medium text-foreground">Pending deletion requests</h2>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            Teachers request student/class removals. Approve to soft-delete (still recoverable from
+            history) or reject to keep as-is.
+          </p>
+        </div>
+
         {pendingOnly.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No pending requests. All clear.</p>
+          <EmptyState title="No pending requests" description="All clear." />
         ) : (
-          <ul className="space-y-3">
-            {pendingOnly.map((r) => (
-              <li
-                key={r.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3"
-              >
-                <div>
-                  <p className="font-semibold text-amber-950">{r.entityLabel}</p>
-                  <p className="text-xs text-amber-900/80">
+          <Table>
+            <THead>
+              <TR>
+                <TH>Entity</TH>
+                <TH>Kind</TH>
+                <TH>Requested</TH>
+                <TH className="text-right">Actions</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {pendingOnly.map((r) => (
+                <TR key={r.id}>
+                  <TD className="font-medium">{r.entityLabel}</TD>
+                  <TD className="text-muted-foreground">
                     {r.kind.replace(/_/g, ' ')}
-                    {r.requestedByName ? ` · from ${r.requestedByName}` : ''} ·{' '}
+                    {r.requestedByName ? ` · ${r.requestedByName}` : ''}
+                  </TD>
+                  <TD className="whitespace-nowrap text-[12px] text-muted-foreground">
                     {new Date(r.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={pending}
-                    onClick={() => {
-                      setMsg(null)
-                      setErr(null)
-                      start(async () => {
-                        const res = await reviewApprovalAction({
-                          requestId: r.id,
-                          decision: 'approved',
-                        })
-                        if (!res.ok) {
-                          setErr(res.error)
-                          return
-                        }
-                        setMsg(`Approved: ${r.entityLabel}`)
-                        router.refresh()
-                      })
-                    }}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={pending}
-                    onClick={() => {
-                      setMsg(null)
-                      setErr(null)
-                      start(async () => {
-                        const res = await reviewApprovalAction({
-                          requestId: r.id,
-                          decision: 'rejected',
-                          note: 'Rejected by principal',
-                        })
-                        if (!res.ok) {
-                          setErr(res.error)
-                          return
-                        }
-                        setMsg(`Rejected: ${r.entityLabel}`)
-                        router.refresh()
-                      })
-                    }}
-                  >
-                    Reject
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+                  </TD>
+                  <TD className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => {
+                          setMsg(null)
+                          setErr(null)
+                          start(async () => {
+                            const res = await reviewApprovalAction({
+                              requestId: r.id,
+                              decision: 'approved',
+                            })
+                            if (!res.ok) {
+                              setErr(res.error)
+                              return
+                            }
+                            setMsg(`Approved: ${r.entityLabel}`)
+                            router.refresh()
+                          })
+                        }}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() => {
+                          setMsg(null)
+                          setErr(null)
+                          start(async () => {
+                            const res = await reviewApprovalAction({
+                              requestId: r.id,
+                              decision: 'rejected',
+                              note: 'Rejected by principal',
+                            })
+                            if (!res.ok) {
+                              setErr(res.error)
+                              return
+                            }
+                            setMsg(`Rejected: ${r.entityLabel}`)
+                            router.refresh()
+                          })
+                        }}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
 
-        {requests.filter((r) => r.status !== 'pending').length > 0 && (
-          <div className="border-t pt-3">
-            <p className="text-xs font-semibold text-muted-foreground mb-2">Recent decisions</p>
-            <ul className="space-y-1 text-sm">
-              {requests
-                .filter((r) => r.status !== 'pending')
-                .slice(0, 10)
-                .map((r) => (
-                  <li key={r.id} className="flex items-center gap-2">
-                    <Badge variant={r.status === 'approved' ? 'success' : 'warning'}>
-                      {r.status}
-                    </Badge>
-                    <span>{r.entityLabel}</span>
-                  </li>
+        {decided.length > 0 ? (
+          <div className="border-t border-border pt-4">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Recent decisions
+            </p>
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Status</TH>
+                  <TH>Entity</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {decided.map((r) => (
+                  <TR key={r.id}>
+                    <TD>
+                      <Badge variant={r.status === 'approved' ? 'success' : 'warning'}>
+                        {r.status}
+                      </Badge>
+                    </TD>
+                    <TD>{r.entityLabel}</TD>
+                  </TR>
                 ))}
-            </ul>
+              </TBody>
+            </Table>
           </div>
-        )}
+        ) : null}
       </section>
 
-      <section className="rounded-2xl border bg-card p-5 space-y-3">
-        <h2 className="text-lg font-bold text-navy dark:text-sky-50">
-          School roster history (version control)
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          Undo creates, deletes, enrollments, and teacher assignments. Restore writes a new history
-          entry so you can reverse again if needed.
-        </p>
-        {revisions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No revisions yet. Run{' '}
-            <code className="rounded bg-muted px-1">migration 013</code>{' '}
-            if tables are missing.
+      <section className="space-y-3 border-t border-border pt-6">
+        <div>
+          <h2 className="text-[13px] font-medium text-foreground">
+            School roster history (version control)
+          </h2>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            Undo creates, deletes, enrollments, and teacher assignments. Restore writes a new history
+            entry so you can reverse again if needed.
           </p>
+        </div>
+
+        {revisions.length === 0 ? (
+          <EmptyState
+            title="No revisions yet"
+            description="Run migration 013 if tables are missing."
+          />
         ) : (
-          <ul className="max-h-96 space-y-2 overflow-y-auto text-sm">
-            {revisions.map((r) => (
-              <li
-                key={r.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2"
-              >
-                <div>
-                  <span className="font-medium">{r.action}</span>{' '}
-                  <span className="text-muted-foreground">
-                    {r.entityType} · {r.actorRole || 'staff'} ·{' '}
+          <Table>
+            <THead>
+              <TR>
+                <TH>Action</TH>
+                <TH>Entity</TH>
+                <TH>When</TH>
+                <TH>Note</TH>
+                <TH className="text-right" />
+              </TR>
+            </THead>
+            <TBody>
+              {revisions.map((r) => (
+                <TR key={r.id}>
+                  <TD className="font-medium">{r.action}</TD>
+                  <TD className="text-muted-foreground">
+                    {r.entityType} · {r.actorRole || 'staff'}
+                  </TD>
+                  <TD className="whitespace-nowrap text-[12px] text-muted-foreground">
                     {new Date(r.createdAt).toLocaleString([], {
                       month: 'short',
                       day: 'numeric',
                       hour: 'numeric',
                       minute: '2-digit',
                     })}
-                  </span>
-                  {r.note && <p className="text-[11px] text-muted-foreground">{r.note}</p>}
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={pending}
-                  onClick={() => {
-                    setMsg(null)
-                    setErr(null)
-                    start(async () => {
-                      const res = await restoreRevisionAction(r.id)
-                      if (!res.ok) {
-                        setErr(res.error)
-                        return
-                      }
-                      setMsg(res.note)
-                      router.refresh()
-                    })
-                  }}
-                >
-                  Restore
-                </Button>
-              </li>
-            ))}
-          </ul>
+                  </TD>
+                  <TD className="max-w-xs truncate text-[12px] text-muted-foreground">
+                    {r.note || '—'}
+                  </TD>
+                  <TD className="text-right">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={pending}
+                      onClick={() => {
+                        setMsg(null)
+                        setErr(null)
+                        start(async () => {
+                          const res = await restoreRevisionAction(r.id)
+                          if (!res.ok) {
+                            setErr(res.error)
+                            return
+                          }
+                          setMsg(res.note)
+                          router.refresh()
+                        })
+                      }}
+                    >
+                      Restore
+                    </Button>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
       </section>
     </div>

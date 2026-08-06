@@ -13,6 +13,7 @@ import {
 import { isSmsConfigured } from '@/lib/sms/twilio'
 import { isEmailLive } from '@/lib/email/transport'
 import { BadgesAdmin } from '@/components/badge/BadgesAdmin'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function PrincipalBadgesPage() {
   const { schoolId } = await requirePrincipal()
@@ -52,20 +53,12 @@ export default async function PrincipalBadgesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-700">
-          Rooms · attendance · aftercare
-        </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy dark:text-sky-50">
-          Badges &amp; kiosk
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-          Kids scan in and out of rooms for class attendance and after-school tracking. Closed
-          aftercare sessions can create invoices for payments. Parents get email (and optional SMS)
-          on aftercare check-in/out.
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        eyebrow="Rooms · attendance · aftercare"
+        title="Badges & kiosk"
+        description="Kids scan in and out of rooms for class attendance and after-school tracking. Closed aftercare sessions can create invoices for payments. Parents get email (and optional SMS) on aftercare check-in/out."
+      />
 
       {setupError && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">

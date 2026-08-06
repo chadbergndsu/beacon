@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { ArrowUpRight, BookOpen } from 'lucide-react'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateTransparentGrade } from '@/lib/grades'
@@ -18,7 +17,7 @@ import { ViewSection } from '@/components/view-prefs/ViewSection'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Card, CardContent } from '@/components/ui/card'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 import { buttonClassName } from '@/components/ui/button'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
@@ -160,7 +159,6 @@ export default async function DashboardPage() {
     'header',
     'announcements',
     ...(showQuick ? (['quick_mobile'] as const) : []),
-    ...(isPrincipal ? (['principal_banner'] as const) : []),
     ...(teacherToday ? (['teacher_today'] as const) : []),
     ...(isStaffHome ? (['classes'] as const) : []),
     ...(role === 'parent' && schoolId ? (['parent_billing'] as const) : []),
@@ -186,7 +184,7 @@ export default async function DashboardPage() {
         <ViewSection id="quick_mobile" title="Mobile quick mode">
           <Link
             href="/teacher/quick"
-            className="flex items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-primary px-4 py-3.5 text-primary-foreground shadow-[var(--shadow-lift)] sm:hidden"
+            className="flex items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary px-4 py-3 text-primary-foreground sm:hidden"
           >
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/80">
@@ -199,34 +197,6 @@ export default async function DashboardPage() {
               Open →
             </span>
           </Link>
-        </ViewSection>
-      ) : null}
-
-      {isPrincipal ? (
-        <ViewSection id="principal_banner" title="Principal welcome">
-          <Card className="overflow-hidden border-primary/15">
-            <CardContent className="flex flex-col gap-4 pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                  Principal
-                </p>
-                <p className="mt-0.5 text-lg font-semibold tracking-tight">
-                  Leadership workspace
-                </p>
-                <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                  Academics, families, tuition, and go-live — finish trust before wider rollout.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Link href="/principal" className={buttonClassName('primary', 'sm')}>
-                  Open office
-                </Link>
-                <Link href="/principal/release" className={buttonClassName('outline', 'sm')}>
-                  Go-live
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
         </ViewSection>
       ) : null}
 
@@ -244,10 +214,29 @@ export default async function DashboardPage() {
                   href="/teacher/quick"
                   className={buttonClassName('outline', 'sm', 'hidden sm:inline-flex')}
                 >
-                  Quick mode
+                  Quick
                 </Link>
                 <Link href="/announcements/new" className={buttonClassName('outline', 'sm')}>
                   Announce
+                </Link>
+                {isPrincipal ? (
+                  <>
+                    <Link href="/principal" className={buttonClassName('outline', 'sm')}>
+                      Office
+                    </Link>
+                    <Link href="/principal/release" className={buttonClassName('ghost', 'sm')}>
+                      Go-live
+                    </Link>
+                  </>
+                ) : null}
+              </>
+            ) : isPrincipal ? (
+              <>
+                <Link href="/principal" className={buttonClassName('primary', 'sm')}>
+                  Office
+                </Link>
+                <Link href="/principal/release" className={buttonClassName('outline', 'sm')}>
+                  Go-live
                 </Link>
               </>
             ) : undefined
@@ -267,23 +256,22 @@ export default async function DashboardPage() {
 
       {isStaffHome ? (
         <ViewSection id="classes" title="Classes">
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <h2 className="text-lg font-semibold tracking-tight">Classes</h2>
+          <section className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[13px] font-medium text-foreground">Classes</p>
               {classes.length > 0 ? (
                 <Link
                   href="/teacher/classroom"
-                  className="text-sm font-medium text-primary hover:underline"
+                  className="text-[12px] font-medium text-primary hover:underline"
                 >
-                  Manage classroom
+                  Manage
                 </Link>
               ) : null}
             </div>
             {classes.length === 0 ? (
               <EmptyState
-                tone="primary"
                 title="No classes yet"
-                description="Create subjects, add students, and run grades. Deletions need principal approval."
+                description="Create subjects, add students, and run grades."
                 action={
                   <Link href="/teacher/classroom" className={buttonClassName('primary', 'sm')}>
                     Open classroom
@@ -291,31 +279,44 @@ export default async function DashboardPage() {
                 }
               />
             ) : (
-              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {classes.map((c) => (
-                  <li key={c.id}>
-                    <Link
-                      href={`/classes/${c.id}`}
-                      className="card-interactive group flex h-full flex-col rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <BookOpen className="h-4 w-4" />
-                        </div>
-                        <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
-                      </div>
-                      <p className="mt-3 font-semibold tracking-tight">{c.name}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {[c.subject, c.grade_level, c.term].filter(Boolean).join(' · ') || 'Class'}
-                      </p>
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        {rosterCount.get(c.id) || 0} students
-                      </p>
-                      <span className="mt-3 text-xs font-semibold text-primary">Open gradebook</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>Class</TH>
+                    <TH>Subject</TH>
+                    <TH>Grade</TH>
+                    <TH>Term</TH>
+                    <TH className="text-right">Students</TH>
+                    <TH className="text-right" />
+                  </TR>
+                </THead>
+                <TBody>
+                  {classes.map((c) => (
+                    <TR key={c.id}>
+                      <TD>
+                        <Link
+                          href={`/classes/${c.id}`}
+                          className="font-medium text-foreground hover:text-primary hover:underline"
+                        >
+                          {c.name}
+                        </Link>
+                      </TD>
+                      <TD className="text-muted-foreground">{c.subject || '—'}</TD>
+                      <TD className="text-muted-foreground">{c.grade_level || '—'}</TD>
+                      <TD className="text-muted-foreground">{c.term || '—'}</TD>
+                      <TD className="text-right tabular-nums">{rosterCount.get(c.id) || 0}</TD>
+                      <TD className="text-right">
+                        <Link
+                          href={`/classes/${c.id}`}
+                          className="text-[12px] font-medium text-primary hover:underline"
+                        >
+                          Gradebook
+                        </Link>
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
             )}
           </section>
         </ViewSection>
@@ -338,46 +339,53 @@ export default async function DashboardPage() {
 
       {role === 'parent' ? (
         <ViewSection id="children" title="Your children">
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold tracking-tight">Your children</h2>
+          <section className="space-y-2">
+            <p className="text-[13px] font-medium text-foreground">Your children</p>
             {children.length === 0 ? (
-              <EmptyState title="No students linked" description="Ask the school to link your children to this account." />
+              <EmptyState
+                title="No students linked"
+                description="Ask the school to link your children to this account."
+              />
             ) : (
-              <ul className="space-y-3">
-                {children.map((child) => (
-                  <li key={child.id}>
-                    <Card>
-                      <CardContent className="pt-4">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <p className="font-semibold">
-                              {child.last_name}, {child.first_name}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {child.grade_level || 'Student'}
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap gap-3">
-                            <Link
-                              href={`/students/${child.id}`}
-                              className="text-sm font-medium text-primary hover:underline"
-                            >
-                              Overview
-                            </Link>
-                            <Link
-                              href={`/students/${child.id}/report-card`}
-                              className="text-sm font-medium text-primary hover:underline"
-                            >
-                              Report card
-                            </Link>
-                          </div>
-                        </div>
-                        <ParentClassLinksWithGrades studentId={child.id} />
-                      </CardContent>
-                    </Card>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>Student</TH>
+                      <TH>Grade</TH>
+                      <TH className="text-right">Overview</TH>
+                      <TH className="text-right">Report</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {children.map((child) => (
+                      <TR key={child.id}>
+                        <TD className="font-medium">
+                          {child.last_name}, {child.first_name}
+                        </TD>
+                        <TD className="text-muted-foreground">{child.grade_level || '—'}</TD>
+                        <TD className="text-right">
+                          <Link
+                            href={`/students/${child.id}`}
+                            className="text-[12px] font-medium text-primary hover:underline"
+                          >
+                            Open
+                          </Link>
+                        </TD>
+                        <TD className="text-right">
+                          <Link
+                            href={`/students/${child.id}/report-card`}
+                            className="text-[12px] font-medium text-primary hover:underline"
+                          >
+                            View
+                          </Link>
+                        </TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+                <ParentGradesTable linkedChildren={children} />
+              </>
             )}
           </section>
         </ViewSection>
@@ -390,35 +398,45 @@ export default async function DashboardPage() {
       ) : null}
 
       <ViewSection id="announcements" title="Announcements">
-        <Card className="max-w-2xl">
-          <CardContent className="pt-5">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <h2 className="font-semibold tracking-tight">Announcements</h2>
-              <Link href="/announcements" className="text-xs font-medium text-primary hover:underline">
-                View all
-              </Link>
-            </div>
-            {announcements.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No announcements yet.</p>
-            ) : (
-              <ul className="divide-y divide-border/70">
+        <section className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[13px] font-medium text-foreground">Announcements</p>
+            <Link href="/announcements" className="text-[12px] font-medium text-primary hover:underline">
+              View all
+            </Link>
+          </div>
+          {announcements.length === 0 ? (
+            <p className="text-[13px] text-muted-foreground">No announcements yet.</p>
+          ) : (
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Title</TH>
+                  <TH>Audience</TH>
+                  <TH className="text-right">Date</TH>
+                </TR>
+              </THead>
+              <TBody>
                 {announcements.map((a) => (
-                  <li key={a.id} className="py-3 first:pt-0 last:pb-0">
-                    <Link href={`/announcements/${a.id}`} className="block group">
-                      <p className="text-sm font-medium group-hover:text-primary">{a.title}</p>
-                      <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{a.body}</p>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        {a.published_at ? format(new Date(a.published_at), 'MMM d') : ''}
-                        {' · '}
-                        {a.audience}
-                      </p>
-                    </Link>
-                  </li>
+                  <TR key={a.id}>
+                    <TD>
+                      <Link href={`/announcements/${a.id}`} className="block hover:text-primary">
+                        <span className="font-medium text-foreground">{a.title}</span>
+                        <span className="mt-0.5 block line-clamp-1 text-[12px] text-muted-foreground">
+                          {a.body}
+                        </span>
+                      </Link>
+                    </TD>
+                    <TD className="text-muted-foreground">{a.audience}</TD>
+                    <TD className="text-right whitespace-nowrap text-[12px] text-muted-foreground">
+                      {a.published_at ? format(new Date(a.published_at), 'MMM d, yyyy') : '—'}
+                    </TD>
+                  </TR>
                 ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+              </TBody>
+            </Table>
+          )}
+        </section>
       </ViewSection>
     </ConfigurableView>
   )
@@ -437,25 +455,33 @@ async function ParentFeedSection({
   return <ParentFeed items={items} />
 }
 
-async function ParentClassLinksWithGrades({ studentId }: { studentId: string }) {
+async function ParentGradesTable({
+  linkedChildren,
+}: {
+  linkedChildren: { id: string; first_name: string; last_name: string }[]
+}) {
   const admin = createAdminClient()
-  const { data: enrollments } = await admin
-    .from('enrollments')
-    .select('class_id')
-    .eq('student_id', studentId)
+  const rows: {
+    studentId: string
+    studentName: string
+    classId: string
+    className: string
+    overall: number | null
+    letter: string | null
+  }[] = []
 
-  const classIds = (enrollments ?? []).map((e) => e.class_id)
-  if (!classIds.length) {
-    return <p className="mt-2 text-xs text-muted-foreground">No class enrollments.</p>
-  }
+  for (const child of linkedChildren) {
+    const { data: enrollments } = await admin
+      .from('enrollments')
+      .select('class_id')
+      .eq('student_id', child.id)
+    const classIds = (enrollments ?? []).map((e) => e.class_id)
+    if (!classIds.length) continue
 
-  const { data: classes } = await admin.from('classes').select('id, name').in('id', classIds)
-  if (!classes?.length) {
-    return <p className="mt-2 text-xs text-muted-foreground">No class enrollments.</p>
-  }
+    const { data: classes } = await admin.from('classes').select('id, name').in('id', classIds)
+    if (!classes?.length) continue
 
-  const cards = await Promise.all(
-    classes.map(async (c) => {
+    for (const c of classes) {
       const [{ data: categories }, { data: assignmentsData }] = await Promise.all([
         admin.from('grade_categories').select('*').eq('class_id', c.id),
         admin.from('assignments').select('*').eq('class_id', c.id),
@@ -468,31 +494,61 @@ async function ParentClassLinksWithGrades({ studentId }: { studentId: string }) 
         const { data } = await admin
           .from('grades')
           .select('*')
-          .eq('student_id', studentId)
+          .eq('student_id', child.id)
           .in('assignment_id', ids)
         grades = (data ?? []) as Grade[]
       }
       const result = calculateTransparentGrade(cats, assignments, grades)
-      return { ...c, overall: result.overall, letter: result.letter }
-    })
-  )
+      rows.push({
+        studentId: child.id,
+        studentName: `${child.last_name}, ${child.first_name}`,
+        classId: c.id,
+        className: c.name,
+        overall: result.overall,
+        letter: result.letter,
+      })
+    }
+  }
+
+  if (!rows.length) {
+    return (
+      <p className="text-[12px] text-muted-foreground">No class enrollments with grades yet.</p>
+    )
+  }
 
   return (
-    <ul className="mt-3 space-y-2">
-      {cards.map((c) => (
-        <li key={c.id}>
-          <Link
-            href={`/classes/${c.id}/students/${studentId}`}
-            className="flex items-center justify-between gap-2 rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-sm transition hover:border-primary/30 hover:bg-primary/5"
-          >
-            <span className="font-medium">{c.name}</span>
-            <span className="tabular-nums font-semibold text-foreground">
-              {c.overall != null ? `${c.overall}%` : '—'}
-              {c.letter ? ` ${c.letter}` : ''}
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-1.5">
+      <p className="text-[12px] font-medium text-muted-foreground">Grades by class</p>
+      <Table>
+        <THead>
+          <TR>
+            <TH>Student</TH>
+            <TH>Class</TH>
+            <TH className="text-right">Grade</TH>
+            <TH className="text-right" />
+          </TR>
+        </THead>
+        <TBody>
+          {rows.map((r) => (
+            <TR key={`${r.studentId}-${r.classId}`}>
+              <TD className="text-muted-foreground">{r.studentName}</TD>
+              <TD>{r.className}</TD>
+              <TD className="text-right tabular-nums font-medium">
+                {r.overall != null ? `${r.overall}%` : '—'}
+                {r.letter ? ` ${r.letter}` : ''}
+              </TD>
+              <TD className="text-right">
+                <Link
+                  href={`/classes/${r.classId}/students/${r.studentId}`}
+                  className="text-[12px] font-medium text-primary hover:underline"
+                >
+                  Detail
+                </Link>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+    </div>
   )
 }
