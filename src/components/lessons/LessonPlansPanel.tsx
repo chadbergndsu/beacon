@@ -15,8 +15,11 @@ import type { LessonPlan } from '@/lib/school-modules/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 
 type PreviewMode = 'day' | 'week'
@@ -342,7 +345,7 @@ export function LessonPlansPanel({
                         <button
                           type="button"
                           onClick={() => openAdd(date)}
-                          className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border px-2 py-6 text-center text-xs text-muted-foreground hover:border-sky-300 hover:bg-sky-50/50 dark:hover:bg-sky-950/20"
+                          className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border px-2 py-6 text-center text-xs text-muted-foreground hover:border-primary/40 hover:bg-primary/5"
                         >
                           <span className="font-semibold uppercase tracking-wide text-[10px] text-sky-800 dark:text-sky-300">
                             {className || 'Class'}
@@ -408,7 +411,7 @@ export function LessonPlansPanel({
               <button
                 type="button"
                 onClick={() => openAdd(selectedDay)}
-                className="flex w-full flex-col items-center gap-1 rounded-xl border border-dashed border-border py-12 text-sm text-muted-foreground hover:border-sky-300 hover:bg-sky-50/40"
+                className="flex w-full flex-col items-center gap-1 rounded-xl border border-dashed border-border py-12 text-sm text-muted-foreground hover:border-primary/40 hover:bg-primary/5"
               >
                 Click to add lesson plan for this day.
                 <ChevronDown className="h-4 w-4 opacity-50" />
@@ -507,7 +510,7 @@ export function LessonPlansPanel({
                 })
               }}
             >
-              <div className="sm:col-span-2">
+              <Field className="sm:col-span-2">
                 <Label htmlFor="title">Lesson title</Label>
                 <Input
                   id="title"
@@ -515,8 +518,8 @@ export function LessonPlansPanel({
                   required
                   placeholder="e.g. Spelling · List 7"
                 />
-              </div>
-              <div>
+              </Field>
+              <Field>
                 <Label htmlFor="date">Date</Label>
                 <Input
                   id="date"
@@ -526,83 +529,71 @@ export function LessonPlansPanel({
                   key={formDate}
                   defaultValue={formDate}
                 />
-              </div>
-              <div>
+              </Field>
+              <Field>
                 <Label htmlFor="duration">Minutes</Label>
                 <Input id="duration" name="duration" type="number" min={5} defaultValue={45} />
-              </div>
-              <div>
+              </Field>
+              <Field>
                 <Label htmlFor="unit">Topic / unit</Label>
                 <Input id="unit" name="unit" placeholder="Lesson 38 · List 7" />
-              </div>
-              <div>
+              </Field>
+              <Field>
                 <Label htmlFor="status">Status</Label>
-                <select
-                  id="status"
-                  name="status"
-                  className="flex h-11 w-full rounded-xl border border-border bg-card px-3.5 text-sm"
-                  defaultValue="ready"
-                >
+                <Select id="status" name="status" defaultValue="ready">
                   <option value="draft">Draft</option>
                   <option value="ready">Ready</option>
                   <option value="taught">Taught</option>
-                </select>
-              </div>
-              <div className="sm:col-span-2">
+                </Select>
+              </Field>
+              <Field className="sm:col-span-2">
                 <Label htmlFor="scripture">Scripture / character focus</Label>
                 <Input
                   id="scripture"
                   name="scripture"
                   placeholder="e.g. Colossians 3:23 — work heartily"
                 />
-              </div>
-              <div className="sm:col-span-2">
+              </Field>
+              <Field className="sm:col-span-2">
                 <Label htmlFor="objectives">Learning objectives</Label>
-                <textarea
+                <Textarea
                   id="objectives"
                   name="objectives"
                   required
                   rows={2}
-                  className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
                   placeholder="Students will be able to…"
                 />
-              </div>
-              <div className="sm:col-span-2">
+              </Field>
+              <Field className="sm:col-span-2">
                 <Label htmlFor="materials">Materials</Label>
-                <textarea
-                  id="materials"
-                  name="materials"
-                  rows={2}
-                  className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
-                />
-              </div>
-              <div className="sm:col-span-2">
+                <Textarea id="materials" name="materials" rows={2} />
+              </Field>
+              <Field className="sm:col-span-2">
                 <Label htmlFor="activities">Procedures / activities</Label>
-                <textarea
+                <Textarea
                   id="activities"
                   name="activities"
                   required
                   rows={3}
-                  className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
                   placeholder="Hook → teach → practice → close"
                 />
-              </div>
-              <div>
+              </Field>
+              <Field>
                 <Label htmlFor="homework">Homework</Label>
                 <Input id="homework" name="homework" placeholder="List 7 worksheet" />
-              </div>
-              <div>
+              </Field>
+              <Field>
                 <Label htmlFor="assessment">Evaluation</Label>
                 <Input id="assessment" name="assessment" placeholder="Exit ticket, oral check…" />
-              </div>
-              <div className="sm:col-span-2">
+              </Field>
+              <Field className="sm:col-span-2">
                 <Label htmlFor="differentiation">Differentiation / support</Label>
                 <Input
                   id="differentiation"
                   name="differentiation"
                   placeholder="Scaffolding, enrichment…"
                 />
-              </div>
+              </Field>
               {error && (
                 <p className="text-sm text-red-600 sm:col-span-2" role="alert">
                   {error}

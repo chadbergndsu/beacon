@@ -1,15 +1,16 @@
 import type { ConferenceBrief } from '@/lib/insights/conference-brief'
 import { Badge } from '@/components/ui/badge'
 import { PrintButton } from '@/components/insights/PrintButton'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 
 export function ConferenceBriefView({ brief }: { brief: ConferenceBrief }) {
   return (
     <div className="mx-auto max-w-3xl space-y-6 print:max-w-none">
       <header className="border-b border-border pb-5 print:border-black">
-        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-700">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
           Beacon · Conference Brief
         </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy dark:text-sky-50 print:text-black">
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight print:text-black">
           {brief.studentName}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground print:text-slate-700">
@@ -18,52 +19,52 @@ export function ConferenceBriefView({ brief }: { brief: ConferenceBrief }) {
           {new Date(brief.generatedAt).toLocaleDateString()}
         </p>
         <p className="mt-2 text-xs text-muted-foreground print:hidden">
-          Unique to Beacon — one page instead of hunting across portals.
+          One page instead of hunting across portals.
         </p>
         <PrintButton />
       </header>
 
       <section>
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Academics
         </h2>
-        <div className="mt-3 overflow-x-auto rounded-xl border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left">
-              <tr>
-                <th className="px-3 py-2 font-semibold">Class</th>
-                <th className="px-3 py-2 font-semibold">Grade</th>
-                <th className="px-3 py-2 font-semibold">Missing</th>
-                <th className="px-3 py-2 font-semibold">Notes</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="mt-3">
+          <Table>
+            <THead>
+              <TR className="hover:bg-transparent">
+                <TH>Class</TH>
+                <TH>Grade</TH>
+                <TH>Missing</TH>
+                <TH>Notes</TH>
+              </TR>
+            </THead>
+            <TBody>
               {brief.classes.map((c) => (
-                <tr key={c.name} className="border-t border-border">
-                  <td className="px-3 py-2.5">
+                <TR key={c.name}>
+                  <TD>
                     <p className="font-medium">{c.name}</p>
-                    {c.subject && (
+                    {c.subject ? (
                       <p className="text-xs text-muted-foreground">{c.subject}</p>
-                    )}
-                  </td>
-                  <td className="px-3 py-2.5 tabular-nums">
+                    ) : null}
+                  </TD>
+                  <TD className="tabular-nums">
                     {c.overall != null ? (
                       <>
                         <span className="font-semibold">{c.overall.toFixed(0)}%</span>{' '}
-                        <Badge variant="sky">{c.letter}</Badge>
+                        <Badge variant="default">{c.letter}</Badge>
                       </>
                     ) : (
                       '—'
                     )}
-                  </td>
-                  <td className="px-3 py-2.5 tabular-nums">{c.missing || '—'}</td>
-                  <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                  </TD>
+                  <TD className="tabular-nums">{c.missing || '—'}</TD>
+                  <TD className="text-xs text-muted-foreground">
                     {c.highlights.join(' · ') || c.formula}
-                  </td>
-                </tr>
+                  </TD>
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
       </section>
 
@@ -118,8 +119,8 @@ export function ConferenceBriefView({ brief }: { brief: ConferenceBrief }) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <section className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900 dark:bg-emerald-950/20">
-          <h2 className="text-xs font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
+        <section className="rounded-xl border border-success/25 bg-success-soft/50 p-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-success">
             Family wins
           </h2>
           <ul className="mt-2 space-y-1.5 text-sm">
@@ -128,8 +129,8 @@ export function ConferenceBriefView({ brief }: { brief: ConferenceBrief }) {
             ))}
           </ul>
         </section>
-        <section className="rounded-xl border border-sky-200 bg-sky-50/50 p-4 dark:border-sky-900 dark:bg-sky-950/20">
-          <h2 className="text-xs font-bold uppercase tracking-wide text-sky-800 dark:text-sky-300">
+        <section className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-primary">
             Talking points
           </h2>
           <ul className="mt-2 space-y-1.5 text-sm">
@@ -138,8 +139,8 @@ export function ConferenceBriefView({ brief }: { brief: ConferenceBrief }) {
             ))}
           </ul>
         </section>
-        <section className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
-          <h2 className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+        <section className="rounded-xl border border-warning/30 bg-warning-soft/50 p-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-warning">
             Next steps
           </h2>
           <ul className="mt-2 space-y-1.5 text-sm">
