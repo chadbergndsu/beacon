@@ -155,10 +155,10 @@ export default async function SchoolWebsitePage({
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
                 Virtual walkthrough
               </p>
-              <h2 className="mt-2 text-2xl sm:text-3xl font-bold text-navy dark:text-sky-50">
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
                 Explore campus in 3D
               </h2>
               <p className="mt-3 text-muted-foreground leading-relaxed">
@@ -172,16 +172,14 @@ export default async function SchoolWebsitePage({
                   'Same twin staff use for live badge presence',
                 ].map((t) => (
                   <li key={t} className="flex gap-2">
-                    <Box className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+                    <Box className="h-4 w-4 shrink-0 text-primary mt-0.5" />
                     {t}
                   </li>
                 ))}
               </ul>
               <div className="mt-6 flex flex-wrap gap-3">
                 <a href={tourUrl} target="_blank" rel="noopener noreferrer">
-                  <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25">
-                    Start virtual tour
-                  </Button>
+                  <Button size="lg">Start virtual tour</Button>
                 </a>
                 <a href={craftBase} target="_blank" rel="noopener noreferrer">
                   <Button size="lg" variant="outline">
@@ -190,14 +188,14 @@ export default async function SchoolWebsitePage({
                 </a>
               </div>
             </div>
-            <Card className="overflow-hidden border-emerald-200/80 shadow-[var(--shadow-lift)]">
-              <CardContent className="pt-6 space-y-3">
-                <div className="rounded-xl bg-gradient-to-br from-slate-100 via-sky-50 to-emerald-50 p-6 min-h-[180px] flex flex-col justify-end border border-slate-200/80">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+            <Card className="overflow-hidden shadow-[var(--shadow-lift)]">
+              <CardContent className="space-y-3 pt-6">
+                <div className="flex min-h-[180px] flex-col justify-end rounded-xl border border-border/80 bg-muted/40 p-6">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
                     BeaconCraft
                   </p>
-                  <p className="mt-1 text-lg font-bold text-navy">Live campus twin</p>
-                  <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                  <p className="mt-1 text-lg font-semibold tracking-tight">Live campus twin</p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                     Classroom blocks, course glow, and a step-by-step walkthrough of the property.
                   </p>
                 </div>
