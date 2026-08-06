@@ -11,7 +11,6 @@ import {
   Box,
 } from 'lucide-react'
 import { SchoolSiteHeader } from '@/components/school/SchoolSiteHeader'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { headers } from 'next/headers'
@@ -41,55 +40,45 @@ export default async function SchoolWebsitePage({
     <div className="min-h-screen min-h-[100dvh] overflow-x-hidden beacon-shell text-foreground">
       <SchoolSiteHeader schoolName={brand.name} websiteUrl={brand.websiteUrl} />
 
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-navy via-slate-900 to-sky-900" />
-        <div className="mobile-safe-blur absolute -right-10 -top-10 h-48 w-48 rounded-full bg-sky-400/20 blur-3xl sm:h-80 sm:w-80 sm:-right-20 sm:-top-20" />
-        <div className="mobile-safe-blur absolute -left-8 bottom-0 h-40 w-40 rounded-full bg-sky-600/15 blur-3xl sm:h-64 sm:w-64 sm:-left-16" />
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-24 text-white">
-          <Badge className="bg-sky-500/20 text-sky-100 border-sky-400/30 mb-4">
-            {brand.tagline}
-          </Badge>
-          <h1 className="max-w-3xl text-3xl sm:text-5xl font-bold tracking-tight leading-[1.1]">
+      <section className="relative min-h-[70vh] overflow-hidden sm:min-h-[78vh]">
+        <div className="absolute inset-0 bg-gradient-to-br from-navy via-[#0c1a2e] to-sky-950" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,rgb(14_165_233/0.22),transparent_50%),radial-gradient(ellipse_at_80%_0%,rgb(2_132_199/0.18),transparent_45%)]" />
+        <div className="relative mx-auto flex min-h-[70vh] max-w-6xl flex-col justify-end px-4 pb-14 pt-20 text-white sm:min-h-[78vh] sm:px-6 sm:pb-20 sm:pt-28">
+          <p className="text-sm font-medium tracking-wide text-sky-200/90">
+            {brand.tagline || 'A school community worth coming home to'}
+          </p>
+          <h1 className="mt-3 max-w-4xl text-4xl font-semibold tracking-tight leading-[1.05] sm:text-6xl sm:leading-[1.02]">
             {brand.name}
           </h1>
-          <p className="mt-5 max-w-2xl text-lg text-slate-200 leading-relaxed">
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-200/95 sm:text-lg">
             {brand.mission ||
-              'A modern school community powered by Beacon — transparent academics, clear family communication, and calm operations.'}
+              'Transparent academics, clear family communication, and calm operations — powered by Beacon.'}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/login">
-              <Button size="lg" className="shadow-lg shadow-sky-500/30">
-                Sign in to Beacon
+              <Button size="lg" className="shadow-lg shadow-sky-500/25">
+                Sign in
               </Button>
             </Link>
             <a href={tourUrl} target="_blank" rel="noopener noreferrer">
               <Button
                 size="lg"
                 variant="outline"
-                className="border-emerald-300/40 bg-emerald-500/15 text-white hover:bg-emerald-500/25 hover:text-white"
-              >
-                Virtual campus tour
-              </Button>
-            </a>
-            <a href="#contact">
-              <Button
-                size="lg"
-                variant="outline"
                 className="border-white/25 bg-white/10 text-white hover:bg-white/15 hover:text-white"
               >
-                Contact the school
+                Campus tour
               </Button>
             </a>
           </div>
-          <p className="mt-6 text-sm text-sky-200/80">
+          <p className="mt-8 text-sm text-sky-200/70">
             {[brand.gradesServed, location, brand.curriculumNote].filter(Boolean).join(' · ') ||
               'Private & independent schools · K–12 ready'}
           </p>
         </div>
       </section>
 
-      <section id="about" className="mx-auto max-w-6xl px-4 sm:px-6 -mt-10 relative z-10">
-        <div className="grid gap-4 sm:grid-cols-3">
+      <section id="about" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <div className="grid gap-10 sm:grid-cols-3 sm:gap-8">
           {[
             {
               icon: GraduationCap,
@@ -107,17 +96,15 @@ export default async function SchoolWebsitePage({
               body: 'Principal office, tuition, QuickBooks-ready billing, and school climate.',
             },
           ].map((item) => (
-            <Card key={item.title} className="shadow-[var(--shadow-lift)]">
-              <CardContent className="pt-6 flex gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
-                  <item.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="font-semibold text-navy dark:text-sky-50">{item.title}</p>
-                  <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{item.body}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div key={item.title} className="flex gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <item.icon className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-semibold tracking-tight">{item.title}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
+              </div>
+            </div>
           ))}
         </div>
       </section>

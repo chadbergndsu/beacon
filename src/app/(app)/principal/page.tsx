@@ -77,14 +77,14 @@ export default async function PrincipalOverviewPage() {
           ].map((s) => (
             <Card key={s.label}>
               <CardContent className="pt-5 flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <s.icon className="h-5 w-5" />
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     {s.label}
                   </p>
-                  <p className="text-2xl font-bold tabular-nums text-navy dark:text-sky-50 mt-0.5">
+                  <p className="mt-0.5 text-2xl font-semibold tabular-nums tracking-tight">
                     {s.value}
                   </p>
                 </div>
@@ -98,8 +98,8 @@ export default async function PrincipalOverviewPage() {
         <Card className="overflow-hidden">
           <div className="border-b border-border bg-muted/30 px-5 py-4 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Link2 className="h-4 w-4 text-sky-600" />
-              <h2 className="font-semibold text-navy dark:text-sky-50">QuickBooks</h2>
+              <Link2 className="h-4 w-4 text-primary" />
+              <h2 className="font-semibold tracking-tight">QuickBooks</h2>
             </div>
             <Badge
               variant={
@@ -157,7 +157,7 @@ export default async function PrincipalOverviewPage() {
       <ViewSection id="announcements" title="Recent announcements">
         <Card>
           <div className="border-b border-border bg-muted/30 px-5 py-4">
-            <h2 className="font-semibold text-navy dark:text-sky-50">Recent announcements</h2>
+            <h2 className="font-semibold tracking-tight">Recent announcements</h2>
           </div>
           <CardContent className="pt-4">
             {!announcements?.length ? (

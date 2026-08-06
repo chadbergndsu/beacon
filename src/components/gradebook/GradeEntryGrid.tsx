@@ -1,10 +1,11 @@
 'use client'
 
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { Download, Keyboard, Mail, Save, Sparkles } from 'lucide-react'
+import { Download, Keyboard, Mail, Save } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonClassName } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { cn } from '@/lib/utils'
 import { calculateTransparentGrade, getLetterGrade, validateCategoryWeights } from '@/lib/grades'
 import type { Assignment, Grade, GradeCategory, Student } from '@/lib/types'
@@ -183,138 +184,109 @@ export function GradeEntryGrid({
 
   if (!students.length) {
     return (
-      <Card className="p-10 text-center animate-beacon-in">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 dark:bg-sky-950">
-          <Sparkles className="h-6 w-6" />
-        </div>
-        <h3 className="text-lg font-semibold text-navy dark:text-sky-50">No students yet</h3>
-        <p className="mt-2 text-sm text-muted-foreground max-w-sm mx-auto">
-          Enroll students under Class setup to start entering grades — just like Jupiter, but cleaner.
-        </p>
-      </Card>
+      <EmptyState
+        className="animate-beacon-in"
+        title="No students yet"
+        description="Enroll students under Class setup to start entering grades."
+      />
     )
   }
 
   if (!assignments.length) {
     return (
-      <Card className="p-10 text-center animate-beacon-in">
-        <h3 className="text-lg font-semibold text-navy dark:text-sky-50">No assignments yet</h3>
-        <p className="mt-2 text-sm text-muted-foreground max-w-sm mx-auto">
-          Set weighted categories and assignments under Weights &amp; setup, then come back to enter
-          scores.
-        </p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          {setupHref && (
-            <a
-              href={setupHref}
-              className="inline-flex rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white"
-            >
-              Open weights &amp; setup
+      <EmptyState
+        className="animate-beacon-in"
+        tone="primary"
+        title="No assignments yet"
+        description="Set weighted categories and assignments under Setup, then come back to enter scores."
+        action={
+          <div className="flex flex-wrap justify-center gap-2">
+            {setupHref ? (
+              <a href={setupHref} className={buttonClassName('primary', 'sm')}>
+                Open setup
+              </a>
+            ) : null}
+            <a href={settingsHref} className={buttonClassName('outline', 'sm')}>
+              All classes
             </a>
-          )}
-          <a
-            href={settingsHref}
-            className="inline-flex rounded-xl border px-4 py-2 text-sm font-semibold"
-          >
-            Teacher settings
-          </a>
-        </div>
-      </Card>
+          </div>
+        }
+      />
     )
   }
 
   return (
     <div className="space-y-4 animate-beacon-in">
-      {/* Toolbar header */}
-      <Card className="overflow-hidden border-sky-100/80 dark:border-sky-900/40">
-        <div className="bg-gradient-to-r from-navy via-slate-900 to-sky-900 px-5 py-4 text-white">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-300/90">
-                Academics · Class
-              </p>
-              <h2 className="mt-0.5 text-xl font-bold tracking-tight truncate">{classTitle}</h2>
-              <p className="mt-1 text-sm text-slate-300">
-                {students.length} students · {assignments.length} assignments · {gradedCells} scores
-                entered
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {exportHref && (
-                <a href={exportHref}>
-                  <Button variant="outline" size="md" className="border-white/20 bg-white/10 text-white hover:bg-white/15 hover:text-white">
-                    <Download className="h-4 w-4" />
-                    Export CSV
-                  </Button>
-                </a>
-              )}
-              <Button
-                size="lg"
-                onClick={handleSave}
-                disabled={saving || !onSave}
-                className="min-w-[140px] shadow-lg shadow-sky-500/20"
-              >
-                <Save className="h-4 w-4" />
-                {saving ? 'Saving…' : 'Save grades'}
-              </Button>
-            </div>
+      <Card className="overflow-hidden">
+        <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+              Grade entry
+            </p>
+            <h2 className="mt-0.5 truncate text-xl font-semibold tracking-tight">{classTitle}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {students.length} students · {assignments.length} assignments · {gradedCells} scores
+              entered
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {exportHref ? (
+              <a href={exportHref} className={buttonClassName('outline', 'sm')}>
+                <Download className="h-3.5 w-3.5" />
+                Export
+              </a>
+            ) : null}
+            <Button size="md" onClick={handleSave} disabled={saving || !onSave} className="min-w-[8.5rem]">
+              <Save className="h-4 w-4" />
+              {saving ? 'Saving…' : 'Save grades'}
+            </Button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 bg-card px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 bg-muted/30 px-5 py-3">
           <div className="flex flex-wrap items-center gap-2">
             {categories.length > 0 ? (
               categories.map((c) => (
-                <Badge key={c.id} variant="sky">
+                <Badge key={c.id} variant="default">
                   {c.name}
-                  <span className="opacity-70 font-normal">{c.weight}%</span>
+                  <span className="font-normal opacity-70">{c.weight}%</span>
                   {c.drop_lowest > 0 && (
-                    <span className="opacity-60 font-normal">drop {c.drop_lowest}</span>
+                    <span className="font-normal opacity-60">drop {c.drop_lowest}</span>
                   )}
                 </Badge>
               ))
             ) : (
               <Badge variant="muted">No categories — simple averages</Badge>
             )}
-            {weightInfo && !weightInfo.ok && (
-              <Badge variant="warning">{weightInfo.message}</Badge>
-            )}
-            {setupHref && (
-              <a
-                href={setupHref}
-                className="text-xs font-semibold text-violet-700 underline underline-offset-2"
-              >
+            {weightInfo && !weightInfo.ok ? <Badge variant="warning">{weightInfo.message}</Badge> : null}
+            {setupHref ? (
+              <a href={setupHref} className="text-xs font-medium text-primary hover:underline">
                 Edit weights
               </a>
-            )}
-            <a
-              href={settingsHref}
-              className="text-xs font-semibold text-sky-700 underline underline-offset-2"
-            >
+            ) : null}
+            <a href={settingsHref} className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline">
               All classes
             </a>
           </div>
-          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border/80 bg-muted/40 px-3 py-2 text-sm text-muted-foreground hover:bg-muted/70 transition">
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border/80 bg-card px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted/70">
             <input
               type="checkbox"
               className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
               checked={notifyParents}
               onChange={(e) => setNotifyParents(e.target.checked)}
             />
-            <Mail className="h-3.5 w-3.5 text-sky-600" />
+            <Mail className="h-3.5 w-3.5 text-primary" />
             Email parents on save
           </label>
         </div>
       </Card>
 
-      {/* Spreadsheet — horizontal scroll on phones; sticky name col stays usable */}
       <Card className="overflow-hidden p-0">
-        <p className="border-b border-border bg-sky-50/80 px-3 py-2 text-xs font-medium text-sky-900 sm:hidden dark:bg-sky-950/40 dark:text-sky-100">
-          Swipe sideways for more assignments · or use{' '}
-          <a href="/teacher/quick" className="font-bold underline">
+        <p className="border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground sm:hidden">
+          Swipe for more assignments · or use{' '}
+          <a href="/teacher/quick" className="font-semibold text-primary underline">
             Quick mode
-          </a>{' '}
-          on phone
+          </a>
         </p>
         <div className="max-h-[min(70vh,720px)] overflow-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
           <table className="w-full min-w-[520px] border-separate border-spacing-0 text-sm">
@@ -323,8 +295,8 @@ export function GradeEntryGrid({
                 <th
                   className={cn(
                     'sticky left-0 z-40 min-w-[120px] max-w-[140px] border-b border-r border-border sm:min-w-[200px] sm:max-w-none',
-                    'bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md',
-                    'px-2 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground sm:px-4'
+                    'bg-muted/95 backdrop-blur-md',
+                    'px-2 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:px-4'
                   )}
                 >
                   Student
@@ -336,35 +308,39 @@ export function GradeEntryGrid({
                       key={a.id}
                       className={cn(
                         'min-w-[88px] max-w-[104px] border-b border-border sm:min-w-[104px] sm:max-w-[120px]',
-                        'bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md',
-                        'px-1 py-2.5 text-center font-semibold text-navy dark:text-sky-50 sm:px-2',
-                        focused?.c === ci && 'bg-sky-50/95 dark:bg-sky-950/80'
+                        'bg-muted/95 backdrop-blur-md',
+                        'px-1 py-2.5 text-center font-semibold sm:px-2',
+                        focused?.c === ci && 'bg-primary/10'
                       )}
                       title={a.title}
                     >
-                      <div className="truncate text-[12px] leading-tight px-0.5 sm:text-[13px]">{a.title}</div>
+                      <div className="truncate px-0.5 text-[12px] leading-tight sm:text-[13px]">{a.title}</div>
                       <div className="mt-0.5 flex items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground">
                         <span>{a.max_points} pts</span>
-                        {a.is_extra_credit && <Badge variant="sky" className="px-1.5 py-0 text-[9px]">XC</Badge>}
+                        {a.is_extra_credit ? (
+                          <Badge variant="default" className="px-1.5 py-0 text-[9px]">
+                            XC
+                          </Badge>
+                        ) : null}
                       </div>
-                      {fill && (
-                        <div className="mt-1.5 mx-1 h-1 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden sm:mx-2">
+                      {fill ? (
+                        <div className="mx-1 mt-1.5 h-1 overflow-hidden rounded-full bg-border sm:mx-2">
                           <div
-                            className="h-full rounded-full bg-sky-500/80 transition-all"
+                            className="h-full rounded-full bg-primary/70 transition-all"
                             style={{
                               width: `${fill.total ? ((fill.entered + fill.missing) / fill.total) * 100 : 0}%`,
                             }}
                           />
                         </div>
-                      )}
+                      ) : null}
                     </th>
                   )
                 })}
                 <th
                   className={cn(
                     'sticky right-0 z-40 min-w-[64px] border-b border-l border-border sm:min-w-[88px]',
-                    'bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md',
-                    'px-1.5 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground sm:px-3'
+                    'bg-muted/95 backdrop-blur-md',
+                    'px-1.5 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:px-3'
                   )}
                 >
                   Avg
@@ -380,17 +356,17 @@ export function GradeEntryGrid({
                     <td
                       className={cn(
                         'sticky left-0 z-20 border-b border-r border-border',
-                        'bg-card group-hover:bg-sky-50/50 dark:group-hover:bg-sky-950/30',
-                        rowHot && 'bg-sky-50/80 dark:bg-sky-950/40',
+                        'bg-card group-hover:bg-muted/50',
+                        rowHot && 'bg-primary/5',
                         'px-2 py-1.5 sm:px-4'
                       )}
                     >
-                      <div className="font-semibold text-[12px] text-navy dark:text-sky-50 leading-tight sm:text-[13px]">
+                      <div className="text-[12px] font-semibold leading-tight sm:text-[13px]">
                         {student.last_name}, {student.first_name}
                       </div>
-                      {student.grade_level && (
+                      {student.grade_level ? (
                         <div className="text-[11px] text-muted-foreground">Gr. {student.grade_level}</div>
-                      )}
+                      ) : null}
                     </td>
                     {assignments.map((a, ci) => {
                       const g = getGrade(student.id, a.id)
@@ -403,8 +379,8 @@ export function GradeEntryGrid({
                           key={a.id}
                           className={cn(
                             'border-b border-border p-0.5',
-                            'bg-card group-hover:bg-sky-50/30 dark:group-hover:bg-sky-950/20',
-                            isFocus && 'bg-sky-50 dark:bg-sky-950/50'
+                            'bg-card group-hover:bg-muted/40',
+                            isFocus && 'bg-primary/5'
                           )}
                         >
                           <input
@@ -415,14 +391,12 @@ export function GradeEntryGrid({
                             data-row={ri}
                             data-col={ci}
                             className={cn(
-                              'grade-cell-input w-full min-h-[44px] rounded-lg border px-1 py-2 text-center text-[14px] tabular-nums font-medium sm:min-h-0 sm:px-1.5 sm:text-[13px]',
-                              'bg-transparent border-transparent hover:border-border hover:bg-white dark:hover:bg-slate-900',
-                              'focus:outline-none focus:ring-2 focus:ring-sky-400/70 focus:border-sky-300 focus:bg-white dark:focus:bg-slate-900',
+                              'grade-cell-input w-full min-h-[44px] rounded-lg border px-1 py-2 text-center text-[14px] font-medium tabular-nums sm:min-h-0 sm:px-1.5 sm:text-[13px]',
+                              'border-transparent bg-transparent hover:border-border hover:bg-background',
+                              'focus:border-primary/40 focus:bg-background focus:outline-none focus:ring-2 focus:ring-ring/70',
                               isMissing &&
-                                'bg-warning-soft/80 text-warning font-bold tracking-wide border-amber-200/60',
-                              !isMissing &&
-                                g?.score != null &&
-                                'text-navy dark:text-sky-100'
+                                'border-amber-200/60 bg-warning-soft/80 font-bold tracking-wide text-warning',
+                              !isMissing && g?.score != null && 'text-foreground'
                             )}
                             value={display === 0 || display ? String(display) : ''}
                             placeholder="—"
@@ -439,21 +413,17 @@ export function GradeEntryGrid({
                     <td
                       className={cn(
                         'sticky right-0 z-20 border-b border-l border-border',
-                        'bg-card group-hover:bg-sky-50/50 dark:group-hover:bg-sky-950/30',
-                        rowHot && 'bg-sky-50/80 dark:bg-sky-950/40',
+                        'bg-card group-hover:bg-muted/50',
+                        rowHot && 'bg-primary/5',
                         'px-1.5 py-2 text-center sm:px-3'
                       )}
                     >
                       {summary?.overall != null ? (
                         <div>
-                          <div className="text-sm font-bold tabular-nums text-navy dark:text-sky-50">
-                            {summary.overall}%
-                          </div>
-                          {summary.letter && (
-                            <div className="text-[10px] font-semibold text-sky-700 dark:text-sky-300">
-                              {summary.letter}
-                            </div>
-                          )}
+                          <div className="text-sm font-semibold tabular-nums">{summary.overall}%</div>
+                          {summary.letter ? (
+                            <div className="text-[10px] font-semibold text-primary">{summary.letter}</div>
+                          ) : null}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>

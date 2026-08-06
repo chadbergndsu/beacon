@@ -138,14 +138,14 @@ export function TeacherClassroomHub({
 
   return (
     <div className="space-y-8">
-      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-sky-50 to-white p-5 dark:border-emerald-900 dark:from-emerald-950/40 dark:via-sky-950/30 dark:to-slate-950">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
-          Your classroom · teacher ownership
+      <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+          Your classroom
         </p>
-        <h2 className="mt-1 text-xl font-bold text-navy dark:text-sky-50">
+        <h2 className="mt-1 text-xl font-semibold tracking-tight">
           {teacherName ? `Hi ${teacherName.split(' ')[0]}` : 'My classroom'}
         </h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Build your Abeka classes, add students, and run the year. Deleting a student or class
           goes to the principal for approval. Mistakes? Use <strong>History</strong> below to undo
           your own changes. Grade weights and gradebook links also live under{' '}
@@ -165,22 +165,22 @@ export function TeacherClassroomHub({
         </div>
       </div>
 
-      {msg && (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+      {msg ? (
+        <p className="rounded-xl border border-emerald-200 bg-success-soft px-4 py-3 text-sm font-medium text-success">
           {msg}
         </p>
-      )}
-      {err && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+      ) : null}
+      {err ? (
+        <p className="rounded-xl border border-red-200 bg-danger-soft px-4 py-3 text-sm font-medium text-danger">
           {err}
         </p>
-      )}
+      ) : null}
 
       {/* Abeka classes */}
-      <section className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] space-y-4">
+      <section className="space-y-4 rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]">
         <div className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-violet-600" />
-          <h3 className="text-lg font-bold text-navy dark:text-sky-50">
+          <BookOpen className="h-5 w-5 text-primary" />
+          <h3 className="text-lg font-semibold tracking-tight">
             1. Create Abeka classes (you teach them)
           </h3>
         </div>
@@ -198,10 +198,10 @@ export function TeacherClassroomHub({
                 onClick={() => onGradeChange(g.id)}
                 aria-pressed={gradeId === g.id}
                 className={cn(
-                  'rounded-full border-2 px-3 py-1.5 text-xs font-bold transition shadow-sm',
+                  'rounded-lg border px-3 py-1.5 text-xs font-semibold transition',
                   gradeId === g.id
-                    ? 'border-violet-700 bg-violet-700 text-white ring-2 ring-violet-300 ring-offset-2'
-                    : 'border-slate-300 bg-white text-slate-700 hover:border-violet-400 dark:bg-slate-900 dark:text-slate-100'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card text-foreground hover:bg-muted'
                 )}
               >
                 {g.label}
@@ -215,7 +215,7 @@ export function TeacherClassroomHub({
             <Label className="text-xs">
               Subjects for this grade{' '}
               <span className="font-normal text-muted-foreground">
-                ({selectedSubjects.length} selected — dark purple = on)
+                ({selectedSubjects.length} selected)
               </span>
             </Label>
             <div className="flex gap-1">
@@ -232,14 +232,14 @@ export function TeacherClassroomHub({
               </Button>
             </div>
           </div>
-          {selectedSubjects.length > 0 && (
-            <p className="mt-2 rounded-lg border-2 border-violet-600 bg-violet-700 px-3 py-2 text-xs font-bold text-white">
+          {selectedSubjects.length > 0 ? (
+            <p className="mt-2 rounded-lg border border-primary/25 bg-primary/10 px-3 py-2 text-xs font-semibold text-foreground">
               Selected ({selectedSubjects.length}):{' '}
               {selectedSubjects
                 .map((id) => availableSubjects.find((s) => s.id === id)?.short || id)
                 .join(' · ')}
             </p>
-          )}
+          ) : null}
           <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {availableSubjects.map((s: AbekaSubject) => {
               const on = selectedSubjects.includes(s.id)
@@ -250,20 +250,20 @@ export function TeacherClassroomHub({
                   onClick={() => toggleSubject(s.id)}
                   aria-pressed={on}
                   className={cn(
-                    'relative rounded-xl border-2 px-3 py-2.5 text-left text-sm transition',
+                    'relative rounded-xl border px-3 py-2.5 text-left text-sm transition',
                     on
-                      ? 'border-violet-700 bg-violet-700 text-white shadow-md shadow-violet-500/30 ring-2 ring-violet-300 ring-offset-1'
-                      : 'border-slate-300 bg-white text-slate-900 hover:border-violet-400 hover:bg-violet-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100'
+                      ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                      : 'border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5'
                   )}
                 >
                   <span className="flex items-start justify-between gap-2">
-                    <span className="font-bold leading-tight">{s.label}</span>
+                    <span className="font-semibold leading-tight">{s.label}</span>
                     <span
                       className={cn(
-                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 text-[10px]',
+                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-[10px]',
                         on
-                          ? 'border-white bg-white text-violet-700'
-                          : 'border-slate-400 bg-transparent text-transparent'
+                          ? 'border-primary-foreground/40 bg-primary-foreground text-primary'
+                          : 'border-border bg-transparent text-transparent'
                       )}
                     >
                       <Check className="h-3.5 w-3.5" strokeWidth={3} />
@@ -272,7 +272,7 @@ export function TeacherClassroomHub({
                   <span
                     className={cn(
                       'mt-1 block text-[11px] font-medium',
-                      on ? 'text-violet-100' : 'text-muted-foreground'
+                      on ? 'text-primary-foreground/80' : 'text-muted-foreground'
                     )}
                   >
                     {suggestClassName(gradeId, s)} · call {suggestCallCode(gradeId, s)}
@@ -286,7 +286,6 @@ export function TeacherClassroomHub({
         <Button
           type="button"
           disabled={pending || selectedSubjects.length === 0}
-          className="bg-violet-700 hover:bg-violet-800"
           onClick={() =>
             run(
               () =>
@@ -364,12 +363,12 @@ export function TeacherClassroomHub({
             {classes.map((c) => (
               <li
                 key={c.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/80 px-3 py-2.5 text-sm"
               >
                 <div className="min-w-0">
                   <Link
                     href={`/classes/${c.id}`}
-                    className="font-semibold text-sky-800 hover:underline dark:text-sky-300"
+                    className="font-semibold text-primary hover:underline"
                   >
                     {c.name}
                   </Link>
@@ -377,7 +376,7 @@ export function TeacherClassroomHub({
                     {[c.subject, c.grade_level].filter(Boolean).join(' · ')} ·{' '}
                     {c.enrollment_count} students
                     {c.call_number ? (
-                      <span className="ml-1 font-mono font-bold text-violet-800 dark:text-violet-300">
+                      <span className="ml-1 font-mono font-semibold text-foreground">
                         · #{c.call_number}
                       </span>
                     ) : null}
@@ -419,7 +418,7 @@ export function TeacherClassroomHub({
                   ) : (
                     <button
                       type="button"
-                      className="mt-0.5 text-[11px] font-semibold text-violet-700 underline"
+                      className="mt-0.5 text-[11px] font-semibold text-primary underline"
                       onClick={() => {
                         setEditCallId(c.id)
                         setEditCallVal(c.call_number || '')

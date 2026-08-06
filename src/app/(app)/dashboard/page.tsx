@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { ArrowUpRight, BookOpen } from 'lucide-react'
 import { getProfile } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateTransparentGrade } from '@/lib/grades'
@@ -15,6 +16,10 @@ import { TeacherTodayCard } from '@/components/insights/TeacherTodayCard'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
 import { ViewSection } from '@/components/view-prefs/ViewSection'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Card, CardContent } from '@/components/ui/card'
+import { buttonClassName } from '@/components/ui/button'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
 export default async function DashboardPage() {
@@ -27,7 +32,7 @@ export default async function DashboardPage() {
         <h1 className="text-xl font-bold">Profile not set up</h1>
         <p className="mt-2 text-sm">
           You are signed in as <strong>{user.email}</strong>, but there is no row in{' '}
-          <code className="text-xs bg-amber-100 px-1 rounded">profiles</code> for your user id.
+          <code className="rounded bg-amber-100 px-1 text-xs">profiles</code> for your user id.
         </p>
       </div>
     )
@@ -35,6 +40,7 @@ export default async function DashboardPage() {
 
   const role = profile.role
   const schoolId = profile.school_id
+  const firstName = profile.full_name?.trim().split(/\s+/)[0]
 
   let classes: {
     id: string
@@ -57,7 +63,6 @@ export default async function DashboardPage() {
     (role === 'admin' || role === 'staff' || role === 'principal') &&
     schoolId
   ) {
-    // Fail closed: no school_id → no class list (never all-tenants wildcard)
     const { data } = await admin
       .from('classes')
       .select('id, name, subject, grade_level, term, teacher_id')
@@ -67,7 +72,6 @@ export default async function DashboardPage() {
     classes = data ?? []
   }
 
-  // Roster counts per class
   const classIds = classes.map((c) => c.id)
   const rosterCount = new Map<string, number>()
   if (classIds.length) {
@@ -102,7 +106,6 @@ export default async function DashboardPage() {
     }
   }
 
-  // Recent announcements
   let announcements: {
     id: string
     title: string
@@ -128,7 +131,6 @@ export default async function DashboardPage() {
   const isPrincipal = role === 'principal'
   const showQuick = canPost
 
-  // Market: parents want missing-work clarity; teachers want a "today" focus list
   const parentMissing =
     role === 'parent' && children.length
       ? await loadMissingWorkForParentChildren(children)
@@ -142,7 +144,6 @@ export default async function DashboardPage() {
   const isStaffHome =
     role === 'teacher' || role === 'admin' || role === 'staff' || role === 'principal'
 
-  // Family billing balances (open + recent paid for this parent's email)
   let parentInvoices: Awaited<
     ReturnType<typeof import('@/lib/billing/invoice-email').listOpenInvoicesForParentEmail>
   > = []
@@ -161,7 +162,7 @@ export default async function DashboardPage() {
     ...(showQuick ? (['quick_mobile'] as const) : []),
     ...(isPrincipal ? (['principal_banner'] as const) : []),
     ...(teacherToday ? (['teacher_today'] as const) : []),
-    ...(isStaffHome ? (['classes', 'quick_tips'] as const) : []),
+    ...(isStaffHome ? (['classes'] as const) : []),
     ...(role === 'parent' && schoolId ? (['parent_billing'] as const) : []),
     ...(role === 'parent' && parentMissing.length > 0 ? (['parent_missing'] as const) : []),
     ...(role === 'parent' ? (['children'] as const) : []),
@@ -172,22 +173,29 @@ export default async function DashboardPage() {
 
   const viewLayout = await loadScreenLayout(user.id, 'dashboard', [...presentSectionIds])
 
+  const welcomeDescription =
+    role === 'parent'
+      ? 'Balances, Dinner Table Digest, grades, and Pulse — your family’s home.'
+      : isPrincipal
+        ? 'School-wide hub. Open Office for tuition, go-live, and climate.'
+        : 'Your classroom home. Use Edit view to show only what you need.'
+
   return (
     <ConfigurableView screenId="dashboard" initialLayout={viewLayout}>
       {showQuick ? (
         <ViewSection id="quick_mobile" title="Mobile quick mode">
           <Link
             href="/teacher/quick"
-            className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-600 to-sky-600 px-4 py-3.5 text-white shadow-[var(--shadow-lift)] sm:hidden"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-primary px-4 py-3.5 text-primary-foreground shadow-[var(--shadow-lift)] sm:hidden"
           >
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-100">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/80">
                 On your phone
               </p>
-              <p className="truncate font-bold">Teacher Quick Mode</p>
-              <p className="text-xs text-white/85">Attendance · scores · pulse</p>
+              <p className="truncate font-semibold">Teacher Quick Mode</p>
+              <p className="text-xs text-primary-foreground/85">Attendance · scores · pulse</p>
             </div>
-            <span className="shrink-0 rounded-xl bg-white/20 px-3 py-2 text-sm font-bold">
+            <span className="shrink-0 rounded-lg bg-white/15 px-3 py-2 text-sm font-semibold">
               Open →
             </span>
           </Link>
@@ -196,97 +204,55 @@ export default async function DashboardPage() {
 
       {isPrincipal ? (
         <ViewSection id="principal_banner" title="Principal welcome">
-          <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-navy via-slate-900 to-sky-900 px-5 py-5 text-white shadow-[var(--shadow-lift)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-300">
-              Principal access
-            </p>
-            <h2 className="mt-1 text-xl font-bold tracking-tight">
-              Welcome{profile.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''} — leadership
-              workspace
-            </h2>
-            <p className="mt-2 text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Full Beacon suite for your school: academics, families, communications, tuition, and
-              QuickBooks. Use Go-live to finish ops and trust before wider rollout.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Link
-                href="/principal"
-                className="rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-400"
-              >
-                Open principal office
-              </Link>
-              <Link
-                href="/principal/release"
-                className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-400"
-              >
-                Go-live checklist
-              </Link>
-              <Link
-                href="/principal/payments"
-                className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/15"
-              >
-                Payments & QuickBooks
-              </Link>
-            </div>
-          </div>
+          <Card className="overflow-hidden border-primary/15">
+            <CardContent className="flex flex-col gap-4 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  Principal
+                </p>
+                <p className="mt-0.5 text-lg font-semibold tracking-tight">
+                  Leadership workspace
+                </p>
+                <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                  Academics, families, tuition, and go-live — finish trust before wider rollout.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/principal" className={buttonClassName('primary', 'sm')}>
+                  Open office
+                </Link>
+                <Link href="/principal/release" className={buttonClassName('outline', 'sm')}>
+                  Go-live
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
         </ViewSection>
       ) : null}
 
       <ViewSection id="header" title="Welcome header" locked>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Welcome{profile.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              {role === 'parent'
-                ? 'Your family’s home — balances & pay, Dinner Table Digest, grades, and Pulse.'
-                : isPrincipal
-                  ? 'School-wide hub — Beacon Signal, tuition, go-live, and academics.'
-                  : 'Your home in the Beacon school suite. Use Edit view to show what you care about.'}
-            </p>
-          </div>
-          {canPost && (
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/teacher/classroom"
-                className="rounded-lg bg-violet-600 text-white px-3 py-2 text-sm font-semibold"
-              >
-                My classroom
-              </Link>
-              <Link
-                href="/teacher/settings"
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800"
-              >
-                Settings
-              </Link>
-              <Link
-                href="/teacher/quick"
-                className="hidden rounded-lg bg-emerald-600 text-white px-3 py-2 text-sm font-semibold sm:inline-flex"
-              >
-                Quick mode
-              </Link>
-              <Link
-                href="/teacher/lessons"
-                className="hidden rounded-lg border border-sky-300 bg-sky-50 text-sky-900 px-3 py-2 text-sm font-semibold sm:inline-flex dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
-              >
-                Lesson day/week
-              </Link>
-              <Link
-                href="/announcements/new"
-                className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold"
-              >
-                New announcement
-              </Link>
-              <Link
-                href="/admin/emails"
-                className="rounded-lg border bg-background px-3 py-2 text-sm font-medium"
-              >
-                Comms
-              </Link>
-            </div>
-          )}
-        </div>
+        <PageHeader
+          title={<>Welcome{firstName ? `, ${firstName}` : ''}</>}
+          description={welcomeDescription}
+          actions={
+            canPost ? (
+              <>
+                <Link href="/teacher/classroom" className={buttonClassName('primary', 'sm')}>
+                  Classroom
+                </Link>
+                <Link
+                  href="/teacher/quick"
+                  className={buttonClassName('outline', 'sm', 'hidden sm:inline-flex')}
+                >
+                  Quick mode
+                </Link>
+                <Link href="/announcements/new" className={buttonClassName('outline', 'sm')}>
+                  Announce
+                </Link>
+              </>
+            ) : undefined
+          }
+        />
       </ViewSection>
 
       {teacherToday ? (
@@ -301,69 +267,55 @@ export default async function DashboardPage() {
 
       {isStaffHome ? (
         <ViewSection id="classes" title="Classes">
-          <section>
-            <h2 className="text-lg font-semibold mb-3">Classes</h2>
-            {classes.length === 0 ? (
-              <div className="rounded-xl border border-violet-200 bg-violet-50/80 p-4 text-sm text-violet-950 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-100">
-                <p className="font-semibold">No classes yet — claim your classroom</p>
-                <p className="mt-1 text-xs leading-relaxed opacity-90">
-                  Create Abeka subjects, add students, and run grades. Deletions need principal
-                  approval; history lets you undo mistakes.
-                </p>
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <h2 className="text-lg font-semibold tracking-tight">Classes</h2>
+              {classes.length > 0 ? (
                 <Link
                   href="/teacher/classroom"
-                  className="mt-3 inline-flex rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white"
+                  className="text-sm font-medium text-primary hover:underline"
                 >
-                  Open My classroom →
+                  Manage classroom
                 </Link>
-              </div>
+              ) : null}
+            </div>
+            {classes.length === 0 ? (
+              <EmptyState
+                tone="primary"
+                title="No classes yet"
+                description="Create subjects, add students, and run grades. Deletions need principal approval."
+                action={
+                  <Link href="/teacher/classroom" className={buttonClassName('primary', 'sm')}>
+                    Open classroom
+                  </Link>
+                }
+              />
             ) : (
-              <>
-                <div className="mb-3 flex flex-wrap gap-2 text-xs">
-                  <Link
-                    href="/teacher/settings"
-                    className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1 font-semibold text-slate-800"
-                  >
-                    Settings · weights
-                  </Link>
-                  <Link
-                    href="/teacher/classroom"
-                    className="rounded-lg border border-violet-300 bg-violet-50 px-2.5 py-1 font-semibold text-violet-900"
-                  >
-                    My classroom
-                  </Link>
-                </div>
-                <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {classes.map((c) => (
-                    <li
-                      key={c.id}
-                      className="rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]"
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {classes.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      href={`/classes/${c.id}`}
+                      className="card-interactive group flex h-full flex-col rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]"
                     >
-                      <p className="font-semibold">{c.name}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <BookOpen className="h-4 w-4" />
+                        </div>
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
+                      </div>
+                      <p className="mt-3 font-semibold tracking-tight">{c.name}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {[c.subject, c.grade_level, c.term].filter(Boolean).join(' · ') || 'Class'}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className="mt-3 text-xs text-muted-foreground">
                         {rosterCount.get(c.id) || 0} students
                       </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Link
-                          href={`/classes/${c.id}`}
-                          className="rounded-lg bg-sky-600 px-2.5 py-1 text-xs font-bold text-white"
-                        >
-                          Gradebook
-                        </Link>
-                        <Link
-                          href={`/classes/${c.id}?tab=setup`}
-                          className="rounded-lg border border-violet-300 bg-violet-50 px-2.5 py-1 text-xs font-bold text-violet-900"
-                        >
-                          Weights
-                        </Link>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </>
+                      <span className="mt-3 text-xs font-semibold text-primary">Open gradebook</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             )}
           </section>
         </ViewSection>
@@ -371,8 +323,8 @@ export default async function DashboardPage() {
 
       {role === 'parent' && schoolId ? (
         <ViewSection id="parent_billing" title="Balances & pay">
-          <section id="billing" className="max-w-2xl">
-            <h2 className="text-lg font-semibold mb-3">Balances &amp; pay</h2>
+          <section id="billing" className="max-w-2xl space-y-3">
+            <h2 className="text-lg font-semibold tracking-tight">Balances &amp; pay</h2>
             <ParentBillingCard invoices={parentInvoices} />
           </section>
         </ViewSection>
@@ -386,44 +338,43 @@ export default async function DashboardPage() {
 
       {role === 'parent' ? (
         <ViewSection id="children" title="Your children">
-          <section>
-            <h2 className="text-lg font-semibold mb-3">Your children</h2>
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold tracking-tight">Your children</h2>
             {children.length === 0 ? (
-              <p className="text-sm text-muted-foreground rounded-xl border bg-background p-4">
-                No students linked.
-              </p>
+              <EmptyState title="No students linked" description="Ask the school to link your children to this account." />
             ) : (
               <ul className="space-y-3">
                 {children.map((child) => (
-                  <li
-                    key={child.id}
-                    className="rounded-2xl border bg-card p-4 shadow-[var(--shadow-soft)]"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <p className="font-semibold">
-                          {child.last_name}, {child.first_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {child.grade_level || 'Student'}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Link
-                          href={`/students/${child.id}`}
-                          className="text-sm font-medium text-sky-700 hover:underline"
-                        >
-                          Overview →
-                        </Link>
-                        <Link
-                          href={`/students/${child.id}/report-card`}
-                          className="text-sm font-medium text-sky-700 hover:underline"
-                        >
-                          Report card →
-                        </Link>
-                      </div>
-                    </div>
-                    <ParentClassLinksWithGrades studentId={child.id} />
+                  <li key={child.id}>
+                    <Card>
+                      <CardContent className="pt-4">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className="font-semibold">
+                              {child.last_name}, {child.first_name}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {child.grade_level || 'Student'}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-3">
+                            <Link
+                              href={`/students/${child.id}`}
+                              className="text-sm font-medium text-primary hover:underline"
+                            >
+                              Overview
+                            </Link>
+                            <Link
+                              href={`/students/${child.id}/report-card`}
+                              className="text-sm font-medium text-primary hover:underline"
+                            >
+                              Report card
+                            </Link>
+                          </div>
+                        </div>
+                        <ParentClassLinksWithGrades studentId={child.id} />
+                      </CardContent>
+                    </Card>
                   </li>
                 ))}
               </ul>
@@ -439,58 +390,36 @@ export default async function DashboardPage() {
       ) : null}
 
       <ViewSection id="announcements" title="Announcements">
-        <section className="rounded-xl border bg-background p-4 max-w-2xl">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold">Announcements</h2>
-            <Link
-              href="/announcements"
-              className="text-xs font-medium text-sky-700 hover:underline"
-            >
-              View all
-            </Link>
-          </div>
-          {announcements.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No announcements yet.</p>
-          ) : (
-            <ul className="space-y-3">
-              {announcements.map((a) => (
-                <li key={a.id}>
-                  <Link href={`/announcements/${a.id}`} className="block group">
-                    <p className="font-medium text-sm group-hover:text-sky-700">{a.title}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{a.body}</p>
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      {a.published_at ? format(new Date(a.published_at), 'MMM d') : ''}
-                      {' · '}
-                      {a.audience}
-                    </p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <Card className="max-w-2xl">
+          <CardContent className="pt-5">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="font-semibold tracking-tight">Announcements</h2>
+              <Link href="/announcements" className="text-xs font-medium text-primary hover:underline">
+                View all
+              </Link>
+            </div>
+            {announcements.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No announcements yet.</p>
+            ) : (
+              <ul className="divide-y divide-border/70">
+                {announcements.map((a) => (
+                  <li key={a.id} className="py-3 first:pt-0 last:pb-0">
+                    <Link href={`/announcements/${a.id}`} className="block group">
+                      <p className="text-sm font-medium group-hover:text-primary">{a.title}</p>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{a.body}</p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {a.published_at ? format(new Date(a.published_at), 'MMM d') : ''}
+                        {' · '}
+                        {a.audience}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </ViewSection>
-
-      {canPost ? (
-        <ViewSection id="quick_tips" title="Quick tips">
-          <section className="rounded-xl border border-sky-100 bg-sky-50 p-4 text-sm text-sky-950 max-w-2xl">
-            <p className="font-semibold">Quick tips</p>
-            <ul className="mt-2 space-y-1 text-sky-900/90 list-disc ml-4">
-              <li>
-                <Link href="/teacher/quick" className="font-semibold underline">
-                  Quick mode
-                </Link>{' '}
-                on phone — attendance &amp; scores
-              </li>
-              <li>Classes · setup · transparent grades</li>
-              <li>Announcements &amp; family email</li>
-              <li>
-                Use <strong>Edit view</strong> (top right) to hide sections you do not use
-              </li>
-            </ul>
-          </section>
-        </ViewSection>
-      ) : null}
     </ConfigurableView>
   )
 }
@@ -517,12 +446,12 @@ async function ParentClassLinksWithGrades({ studentId }: { studentId: string }) 
 
   const classIds = (enrollments ?? []).map((e) => e.class_id)
   if (!classIds.length) {
-    return <p className="text-xs text-muted-foreground mt-2">No class enrollments.</p>
+    return <p className="mt-2 text-xs text-muted-foreground">No class enrollments.</p>
   }
 
   const { data: classes } = await admin.from('classes').select('id, name').in('id', classIds)
   if (!classes?.length) {
-    return <p className="text-xs text-muted-foreground mt-2">No class enrollments.</p>
+    return <p className="mt-2 text-xs text-muted-foreground">No class enrollments.</p>
   }
 
   const cards = await Promise.all(
@@ -554,10 +483,10 @@ async function ParentClassLinksWithGrades({ studentId }: { studentId: string }) 
         <li key={c.id}>
           <Link
             href={`/classes/${c.id}/students/${studentId}`}
-            className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 text-sky-950 border border-sky-100 px-3 py-2 text-sm hover:bg-sky-100"
+            className="flex items-center justify-between gap-2 rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-sm transition hover:border-primary/30 hover:bg-primary/5"
           >
             <span className="font-medium">{c.name}</span>
-            <span className="tabular-nums font-semibold">
+            <span className="tabular-nums font-semibold text-foreground">
               {c.overall != null ? `${c.overall}%` : '—'}
               {c.letter ? ` ${c.letter}` : ''}
             </span>

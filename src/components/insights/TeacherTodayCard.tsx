@@ -20,16 +20,16 @@ export function TeacherTodayCard({
   if (!rollups.length) return null
 
   return (
-    <Card className="overflow-hidden border-sky-200/80 dark:border-sky-900/40">
-      <div className="border-b border-border bg-gradient-to-r from-sky-50 to-white px-5 py-4 dark:from-sky-950/40 dark:to-slate-900">
+    <Card className="overflow-hidden">
+      <div className="border-b border-border/70 bg-muted/40 px-5 py-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Sunrise className="h-5 w-5 text-sky-600" />
+            <Sunrise className="h-5 w-5 text-primary" />
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-sky-700">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
                 Teacher Today
               </p>
-              <h2 className="font-bold text-navy dark:text-sky-50">Where to focus</h2>
+              <h2 className="font-semibold tracking-tight">Where to focus</h2>
             </div>
           </div>
           <div className="flex gap-1.5">
@@ -51,7 +51,7 @@ export function TeacherTodayCard({
                 <div>
                   <Link
                     href={`/classes/${r.classId}`}
-                    className="font-semibold text-sky-800 hover:underline dark:text-sky-300"
+                    className="font-semibold text-primary hover:underline"
                   >
                     {r.className}
                   </Link>
@@ -63,13 +63,13 @@ export function TeacherTodayCard({
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href="/teacher/quick"
-                    className="text-xs font-semibold text-emerald-700 hover:underline"
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground hover:underline"
                   >
                     Quick mode
                   </Link>
                   <Link
                     href={`/classes/${r.classId}`}
-                    className="text-xs font-semibold text-sky-700 hover:underline"
+                    className="text-xs font-semibold text-primary hover:underline"
                   >
                     Gradebook →
                   </Link>

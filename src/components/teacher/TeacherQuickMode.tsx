@@ -22,7 +22,8 @@ import {
   PULSE_LEVEL_LABEL,
   type PulseLevel,
 } from '@/lib/school-modules/types'
-import { Button } from '@/components/ui/button'
+import { Button, buttonClassName } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
 import { cn } from '@/lib/utils'
 
 type Mode = 'score' | 'attendance' | 'pulse'
@@ -225,54 +226,52 @@ export function TeacherQuickMode({
 
   if (!classes.length) {
     return (
-      <div className="rounded-2xl border bg-card p-8 text-center">
-        <Zap className="mx-auto h-8 w-8 text-sky-500" />
-        <h1 className="mt-3 text-xl font-bold">No classes yet</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Once you have a class roster, Quick Mode is the fastest way to mark attendance and scores
-          on your phone.
-        </p>
-        <Link href="/dashboard" className="mt-4 inline-block text-sm font-semibold text-sky-700">
-          ← Back home
-        </Link>
-      </div>
+      <EmptyState
+        tone="primary"
+        title="No classes yet"
+        description="Once you have a class roster, Quick Mode is the fastest way to mark attendance and scores on your phone."
+        action={
+          <Link href="/teacher/classroom" className={buttonClassName('primary', 'sm')}>
+            Open classroom
+          </Link>
+        }
+      />
     )
   }
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-4 pb-safe">
-      {/* Header */}
-      <div className="rounded-2xl border border-sky-100/80 bg-gradient-to-br from-navy via-slate-900 to-sky-900 px-4 py-4 text-white shadow-[var(--shadow-lift)]">
+      <div className="rounded-2xl border border-border/80 bg-card px-4 py-4 shadow-[var(--shadow-soft)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-300">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
               <Zap className="h-3.5 w-3.5" />
-              Teacher quick mode
+              Quick mode
             </p>
-            <h1 className="mt-1 text-xl font-bold tracking-tight">Phone-first class tools</h1>
-            <p className="mt-1 text-sm text-slate-300">
+            <h1 className="mt-1 text-xl font-semibold tracking-tight">Phone-first tools</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
               Big buttons. One hand. Attendance · scores · pulse.
             </p>
           </div>
           <Link
             href={classId ? `/classes/${classId}` : '/dashboard'}
-            className="shrink-0 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold"
+            className={buttonClassName('outline', 'sm')}
           >
             Full class
           </Link>
         </div>
 
         <label className="mt-4 block">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-300/90">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Class
           </span>
           <select
             value={classId}
             onChange={(e) => switchClass(e.target.value)}
-            className="mt-1.5 flex h-12 w-full rounded-xl border border-white/15 bg-white/10 px-3 text-base font-semibold text-white outline-none focus:ring-2 focus:ring-sky-400"
+            className="mt-1.5 flex h-12 w-full rounded-xl border border-border bg-background px-3 text-base font-semibold outline-none focus:ring-2 focus:ring-ring"
           >
             {classes.map((c) => (
-              <option key={c.id} value={c.id} className="text-slate-900">
+              <option key={c.id} value={c.id}>
                 {c.name}
                 {c.subject ? ` · ${c.subject}` : ''} ({c.studentCount})
               </option>
@@ -281,7 +280,6 @@ export function TeacherQuickMode({
         </label>
       </div>
 
-      {/* Mode tabs */}
       <div className="grid grid-cols-3 gap-2">
         {(
           [
@@ -299,11 +297,9 @@ export function TeacherQuickMode({
               setError(null)
             }}
             className={cn(
-              'flex flex-col items-center gap-1 rounded-2xl border px-2 py-3 text-sm font-semibold transition',
+              'flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-sm font-semibold transition',
               mode === t.id
-                ? t.id === 'pulse'
-                  ? 'border-violet-500 bg-violet-600 text-white shadow-md'
-                  : 'border-sky-500 bg-sky-600 text-white shadow-md'
+                ? 'border-primary bg-primary text-primary-foreground shadow-sm'
                 : 'border-border bg-card text-foreground'
             )}
           >
@@ -337,7 +333,7 @@ export function TeacherQuickMode({
             <button
               type="button"
               onClick={setAllPresent}
-              className="rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-sky-700"
+              className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-primary"
             >
               All present
             </button>
@@ -361,7 +357,7 @@ export function TeacherQuickMode({
                   key={s.id}
                   className="rounded-2xl border border-border/80 bg-card p-3 shadow-[var(--shadow-soft)]"
                 >
-                  <p className="mb-2 font-semibold text-navy dark:text-sky-50">
+                  <p className="mb-2 font-semibold">
                     {s.last_name}, {s.first_name}
                   </p>
                   <div className="grid grid-cols-4 gap-1.5">
@@ -410,12 +406,18 @@ export function TeacherQuickMode({
       {mode === 'score' && (
         <div className="space-y-3">
           {!assignments.length ? (
-            <div className="rounded-2xl border bg-card p-6 text-center text-sm text-muted-foreground">
-              No assignments yet.{' '}
-              <Link href={`/classes/${classId}?tab=setup`} className="font-semibold text-sky-700">
-                Add in class setup →
-              </Link>
-            </div>
+            <EmptyState
+              title="No assignments yet"
+              description="Add categories and assignments under Setup."
+              action={
+                <Link
+                  href={`/classes/${classId}?tab=setup`}
+                  className={buttonClassName('primary', 'sm')}
+                >
+                  Open setup
+                </Link>
+              }
+            />
           ) : (
             <>
               <div>
@@ -431,7 +433,7 @@ export function TeacherQuickMode({
                       className={cn(
                         'shrink-0 rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition',
                         (activeAssignment?.id ?? assignmentId) === a.id
-                          ? 'border-sky-500 bg-sky-600 text-white'
+                          ? 'border-primary bg-primary text-primary-foreground'
                           : 'border-border bg-card'
                       )}
                     >
@@ -455,7 +457,7 @@ export function TeacherQuickMode({
                         className="rounded-2xl border border-border/80 bg-card p-3 shadow-[var(--shadow-soft)]"
                       >
                         <div className="mb-2 flex items-center justify-between gap-2">
-                          <p className="min-w-0 truncate font-semibold text-navy dark:text-sky-50">
+                          <p className="min-w-0 truncate font-semibold">
                             {s.last_name}, {s.first_name}
                           </p>
                           <input
@@ -471,8 +473,9 @@ export function TeacherQuickMode({
                             aria-label={`Score for ${s.last_name}`}
                             className={cn(
                               'h-12 w-20 rounded-xl border border-border bg-muted/30 text-center text-lg font-bold tabular-nums',
-                              'focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/50',
-                              val.toLowerCase() === 'm' && 'bg-amber-50 text-amber-700 border-amber-200'
+                              'focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/60',
+                              val.toLowerCase() === 'm' &&
+                                'border-amber-200 bg-warning-soft text-warning'
                             )}
                           />
                         </div>
@@ -487,7 +490,7 @@ export function TeacherQuickMode({
                               className={cn(
                                 'min-w-[2.75rem] rounded-lg border px-2 py-2 text-xs font-bold',
                                 val === String(n)
-                                  ? 'border-sky-500 bg-sky-500 text-white'
+                                  ? 'border-primary bg-primary text-primary-foreground'
                                   : 'border-border bg-muted/40'
                               )}
                             >
@@ -547,8 +550,8 @@ export function TeacherQuickMode({
             </div>
           ) : (
             <>
-              <div className="rounded-2xl border border-violet-200/70 bg-card p-4 shadow-[var(--shadow-soft)]">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-violet-700">
+              <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-[var(--shadow-soft)]">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
                   Beacon Pulse · 15 seconds
                 </p>
                 <label className="mt-3 block">
@@ -591,14 +594,14 @@ export function TeacherQuickMode({
                     onChange={(e) => setPulseNote(e.target.value)}
                     rows={2}
                     placeholder="What stood out today…"
-                    className="mt-1.5 w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-400/50"
+                    className="mt-1.5 w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring/60"
                   />
                 </label>
               </div>
 
               <Button
                 size="lg"
-                className="w-full bg-violet-600 shadow-lg hover:from-violet-500 hover:to-violet-600"
+                className="w-full shadow-lg"
                 disabled={pending || !pulseStudentId}
                 onClick={handleSavePulse}
               >
@@ -614,7 +617,7 @@ export function TeacherQuickMode({
         Need the full gradebook?
         <Link
           href={classId ? `/classes/${classId}` : '/dashboard'}
-          className="inline-flex items-center font-semibold text-sky-700"
+          className="inline-flex items-center font-semibold text-primary"
         >
           Open class <ChevronRight className="h-3.5 w-3.5" />
         </Link>

@@ -25,6 +25,9 @@ import { loadTeacherClassMissing } from '@/lib/insights/load-missing-work'
 import { EmailClassDigestButton } from '@/components/insights/EmailClassDigestButton'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
 import { Badge } from '@/components/ui/badge'
+import { PageHeader } from '@/components/ui/page-header'
+import { buttonClassName } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
 
 export default async function ClassGradebookPage({
   params,
@@ -100,51 +103,40 @@ export default async function ClassGradebookPage({
   return (
     <ConfigurableView screenId="class_gradebook" initialLayout={viewLayout}>
       <ViewSection id="header" title="Class header" locked>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+        <PageHeader
+          eyebrow={
+            <>
               <Link href="/dashboard" className="hover:underline">
                 Home
               </Link>
               {' · '}
-              <Link href="/teacher/settings" className="hover:underline">
-                Settings
-              </Link>
-              {' · '}
               <Link href="/teacher/classroom" className="hover:underline">
-                My classroom
+                Classroom
               </Link>
               {' · '}
-              Gradebook
-            </p>
-            <h1 className="text-2xl font-bold tracking-tight mt-1">{classRow.name}</h1>
-            <p className="text-sm text-muted-foreground">
-              {[classRow.subject, classRow.grade_level, classRow.term].filter(Boolean).join(' · ')}
-            </p>
-          </div>
-          {canEnter && (
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/classes/${classId}`}
-                className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-bold text-white"
-              >
-                Gradebook
-              </Link>
-              <Link
-                href={`/classes/${classId}?tab=setup`}
-                className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-900"
-              >
-                Weights &amp; setup
-              </Link>
-              <Link
-                href="/teacher/settings"
-                className="rounded-lg border px-3 py-1.5 text-xs font-semibold"
-              >
-                All classes
-              </Link>
-            </div>
-          )}
-        </div>
+              Class
+            </>
+          }
+          title={classRow.name}
+          description={[classRow.subject, classRow.grade_level, classRow.term]
+            .filter(Boolean)
+            .join(' · ')}
+          actions={
+            canEnter ? (
+              <>
+                <Link href="/teacher/quick" className={buttonClassName('primary', 'sm')}>
+                  Quick mode
+                </Link>
+                <Link
+                  href={`/classes/${classId}?tab=setup`}
+                  className={buttonClassName('outline', 'sm')}
+                >
+                  Setup
+                </Link>
+              </>
+            ) : undefined
+          }
+        />
       </ViewSection>
 
       {canEnter ? (
@@ -172,13 +164,13 @@ export default async function ClassGradebookPage({
 
       {canEnter ? (
         <ViewSection id="class_family_email" title="Family email">
-          <div className="rounded-2xl border border-amber-200/80 bg-amber-50/40 px-4 py-3 dark:border-amber-900 dark:bg-amber-950/20">
-            <p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+          <div className="rounded-2xl border border-border/80 bg-card px-4 py-4 shadow-[var(--shadow-soft)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
               Dinner Table Digest
             </p>
-            <p className="mt-1 text-sm text-muted-foreground leading-relaxed max-w-xl">
+            <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
               Email each family a 60-second plain-English week story for every student in this
-              class. Teachers can only email their own classes.
+              class.
             </p>
             <div className="mt-3">
               <EmailClassDigestButton classId={classId} />
@@ -189,47 +181,49 @@ export default async function ClassGradebookPage({
 
       {showMissing && missingRollup ? (
         <ViewSection id="missing_work" title="Missing work radar">
-          <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950/20">
+          <div className="rounded-2xl border border-warning/30 bg-warning-soft/60 px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">
-                  Missing work radar
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-warning">
+                  Missing work
                 </p>
-                <p className="text-sm text-amber-950 dark:text-amber-100 mt-0.5">
+                <p className="mt-0.5 text-sm text-foreground">
                   {missingRollup.studentsWithMissing} student(s) ·{' '}
                   {missingRollup.totalMissingItems} past-due / unscored item(s)
                 </p>
               </div>
               <Badge variant="warning">Focus</Badge>
             </div>
-            {missingRollup.topStudents.length > 0 && (
+            {missingRollup.topStudents.length > 0 ? (
               <ul className="mt-2 flex flex-wrap gap-1.5">
                 {missingRollup.topStudents.map((s) => (
                   <li key={s.studentId}>
                     <Link
                       href={`/students/${s.studentId}`}
-                      className="inline-flex rounded-full border border-amber-300 bg-white px-2.5 py-0.5 text-xs font-medium text-amber-950 hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-100 dark:border-amber-800"
+                      className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs font-medium hover:border-primary/40"
                     >
                       {s.studentName} ×{s.count}
                     </Link>
                   </li>
                 ))}
               </ul>
-            )}
+            ) : null}
           </div>
         </ViewSection>
       ) : null}
 
       {showRoster ? (
         <ViewSection id="roster_chips" title="Student quick links">
-          <div className="rounded-2xl border bg-card p-4 shadow-[var(--shadow-soft)]">
-            <h2 className="text-sm font-semibold mb-2">Students ({students.length})</h2>
+          <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-[var(--shadow-soft)]">
+            <h2 className="mb-2 text-sm font-semibold tracking-tight">
+              Students ({students.length})
+            </h2>
             <ul className="flex flex-wrap gap-2">
               {students.map((s) => (
                 <li key={s.id}>
                   <Link
                     href={`/classes/${classId}/students/${s.id}`}
-                    className="inline-flex rounded-xl border px-3 py-1.5 text-sm hover:border-sky-400 hover:bg-sky-50 transition"
+                    className="inline-flex rounded-lg border border-border/80 px-3 py-1.5 text-sm transition hover:border-primary/40 hover:bg-primary/5"
                   >
                     {s.last_name}, {s.first_name}
                   </Link>
@@ -248,27 +242,31 @@ export default async function ClassGradebookPage({
               to the class teacher and school leadership.
             </p>
           ) : students.length === 0 || assignments.length === 0 ? (
-            <div className="rounded-2xl border bg-card p-6 space-y-3">
-              <p className="text-sm text-muted-foreground">
-                {students.length === 0
-                  ? 'No students enrolled yet.'
-                  : 'No assignments yet — add categories and assignments to start grading.'}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href={`/classes/${classId}?tab=setup`}
-                  className="inline-flex rounded-xl bg-sky-600 text-white px-4 py-2 text-sm font-semibold"
-                >
-                  Open class setup
-                </Link>
-                <Link
-                  href={`/classes/${classId}?tab=lessons`}
-                  className="inline-flex rounded-xl border px-4 py-2 text-sm font-semibold"
-                >
-                  Lesson plans
-                </Link>
-              </div>
-            </div>
+            <EmptyState
+              tone="primary"
+              title={students.length === 0 ? 'No students enrolled yet' : 'No assignments yet'}
+              description={
+                students.length === 0
+                  ? 'Add students from Classroom, then return to enter grades.'
+                  : 'Add categories and assignments under Setup to start grading.'
+              }
+              action={
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Link
+                    href={`/classes/${classId}?tab=setup`}
+                    className={buttonClassName('primary', 'sm')}
+                  >
+                    Open setup
+                  </Link>
+                  <Link
+                    href={`/classes/${classId}?tab=lessons`}
+                    className={buttonClassName('outline', 'sm')}
+                  >
+                    Lessons
+                  </Link>
+                </div>
+              }
+            />
           ) : (
             <ClassGradebookClient
               classId={classId}

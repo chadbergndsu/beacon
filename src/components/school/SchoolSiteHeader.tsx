@@ -66,13 +66,13 @@ export function SchoolSiteHeader({
             href={tourUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+            className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            Virtual tour
+            Campus tour
           </a>
           <Link
             href="/login"
-            className="ml-1 rounded-xl bg-navy px-3.5 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+            className="ml-1 rounded-xl bg-navy px-3.5 py-2 text-sm font-semibold text-white hover:brightness-110"
           >
             Sign in
           </Link>
@@ -119,10 +119,10 @@ export function SchoolSiteHeader({
             href={tourUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg px-3 py-2.5 text-sm font-semibold text-emerald-700"
+            className="rounded-lg px-3 py-2.5 text-sm font-medium"
             onClick={() => setOpen(false)}
           >
-            Virtual campus tour
+            Campus tour
           </a>
           <Link
             href="/login"
