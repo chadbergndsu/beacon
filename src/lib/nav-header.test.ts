@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildNav } from '@/components/layout/AppHeader'
+import { buildNav, buildStaffNavGroups } from '@/components/layout/AppHeader'
 
 describe('buildNav role separation', () => {
   it('principal nav is slim — office tools live under Principal office', () => {
@@ -18,12 +18,20 @@ describe('buildNav role separation', () => {
     expect(labels).not.toContain('Principal office')
   })
 
-  it('teacher nav includes classroom tools, not principal office', () => {
-    const labels = buildNav('teacher').map((n) => n.label)
-    expect(labels).toContain('Classroom')
-    expect(labels).toContain('Quick')
-    expect(labels).not.toContain('Office')
-    expect(labels).not.toContain('Approvals')
+  it('teacher primary bar is slim with secondary tools in More', () => {
+    const { primary, more } = buildStaffNavGroups('teacher')
+    expect(primary.map((n) => n.label)).toEqual([
+      'Home',
+      'Classroom',
+      'Quick',
+      'News',
+      'Settings',
+    ])
+    expect(more.map((n) => n.label)).toEqual(
+      expect.arrayContaining(['Lessons', 'Calendar', 'Printables', 'Scan', 'School site'])
+    )
+    expect(primary.map((n) => n.label)).not.toContain('Office')
+    expect(buildNav('teacher').map((n) => n.label)).not.toContain('Approvals')
   })
 
   it('parent nav is minimal', () => {

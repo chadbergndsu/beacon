@@ -16,6 +16,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 
 export default async function CommunicationsPage() {
   const { profile, user } = await getProfile()
@@ -244,83 +245,81 @@ export default async function CommunicationsPage() {
             recipients”, email a Dinner Table Digest from a student page, or send a test above.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border bg-background">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/40 text-left">
-                  <th className="px-3 py-2 font-medium">When</th>
-                  <th className="px-3 py-2 font-medium">To</th>
-                  <th className="px-3 py-2 font-medium">Subject</th>
-                  <th className="px-3 py-2 font-medium">Kind</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium" />
-                </tr>
-              </thead>
-              <tbody>
+          <Table>
+              <THead>
+                <TR className="hover:bg-transparent">
+                  <TH>When</TH>
+                  <TH>To</TH>
+                  <TH>Subject</TH>
+                  <TH>Kind</TH>
+                  <TH>Status</TH>
+                  <TH />
+                </TR>
+              </THead>
+              <TBody>
                 {emails.map((e) => (
-                  <tr key={e.id} className="border-b last:border-0 align-top">
-                    <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
+                  <TR key={e.id} className="align-top">
+                    <TD className="whitespace-nowrap text-muted-foreground">
                       {e.created_at ? format(new Date(e.created_at), 'MMM d · h:mm a') : '—'}
-                    </td>
-                    <td className="px-3 py-2">
+                    </TD>
+                    <TD>
                       <div className="font-medium">{e.to_email}</div>
-                      {e.to_name && (
+                      {e.to_name ? (
                         <div className="text-xs text-muted-foreground">{e.to_name}</div>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 max-w-[240px]">
+                      ) : null}
+                    </TD>
+                    <TD className="max-w-[240px]">
                       <div className="truncate" title={e.subject}>
                         {e.subject}
                       </div>
-                      {e.related_id && e.related_table === 'announcements' && (
+                      {e.related_id && e.related_table === 'announcements' ? (
                         <Link
                           href={`/announcements/${e.related_id}`}
-                          className="text-xs text-sky-700 hover:underline"
+                          className="text-xs text-primary hover:underline"
                         >
                           View announcement
                         </Link>
-                      )}
-                      {e.related_id && e.related_table === 'students' && (
+                      ) : null}
+                      {e.related_id && e.related_table === 'students' ? (
                         <Link
                           href={`/students/${e.related_id}`}
-                          className="text-xs text-sky-700 hover:underline"
+                          className="text-xs text-primary hover:underline"
                         >
                           View student
                         </Link>
-                      )}
-                      {e.error && (
-                        <div className="mt-1 text-xs text-amber-700 line-clamp-2">{e.error}</div>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
+                      ) : null}
+                      {e.error ? (
+                        <div className="mt-1 line-clamp-2 text-xs text-warning">{e.error}</div>
+                      ) : null}
+                    </TD>
+                    <TD className="whitespace-nowrap text-muted-foreground">
                       {e.kind.replace(/_/g, ' ')}
-                    </td>
-                    <td className="px-3 py-2">
+                    </TD>
+                    <TD>
                       <span
                         className={
                           e.status === 'sent'
-                            ? 'font-medium text-emerald-700'
+                            ? 'font-medium text-success'
                             : e.status === 'failed'
-                              ? 'font-medium text-red-700'
-                              : 'font-medium text-amber-700'
+                              ? 'font-medium text-danger'
+                              : 'font-medium text-warning'
                         }
                       >
                         {e.status}
                       </span>
-                      {e.provider && (
+                      {e.provider ? (
                         <div className="text-[11px] text-muted-foreground">{e.provider}</div>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {canManual && (e.status === 'failed' || e.status === 'skipped') && (
+                      ) : null}
+                    </TD>
+                    <TD>
+                      {canManual && (e.status === 'failed' || e.status === 'skipped') ? (
                         <ResendEmailButton outboxId={e.id} />
-                      )}
-                    </td>
-                  </tr>
+                      ) : null}
+                    </TD>
+                  </TR>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TBody>
+          </Table>
         )}
       </section>
       </ViewSection>

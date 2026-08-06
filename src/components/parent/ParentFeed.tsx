@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import type { FeedItem } from '@/lib/parent-feed'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { cn } from '@/lib/utils'
 
 const TYPE_LABEL: Record<FeedItem['type'], string> = {
@@ -15,41 +16,34 @@ const TYPE_LABEL: Record<FeedItem['type'], string> = {
 }
 
 function toneClasses(tone?: FeedItem['tone']) {
-  if (tone === 'warning') return 'border-amber-200/80 bg-amber-50/40 dark:bg-amber-950/20'
-  if (tone === 'success') return 'border-emerald-200/80 bg-emerald-50/30 dark:bg-emerald-950/20'
-  if (tone === 'info') return 'border-sky-200/80 bg-sky-50/40 dark:bg-sky-950/20'
-  return 'border-border bg-card'
+  if (tone === 'warning') return 'border-warning/30 bg-warning-soft/40'
+  if (tone === 'success') return 'border-success/25 bg-success-soft/50'
+  if (tone === 'info') return 'border-primary/20 bg-primary/5'
+  return 'border-border/80 bg-card'
 }
 
 export function ParentFeed({ items }: { items: FeedItem[] }) {
   if (!items.length) {
     return (
-      <Card className="border-dashed">
-        <CardContent className="py-10 text-center text-sm text-muted-foreground">
-          Your family feed is quiet. Grades, Beacon Pulse, attendance, and announcements will show
-          up here.
-        </CardContent>
-      </Card>
+      <EmptyState
+        title="Family feed is quiet"
+        description="Grades, Beacon Pulse, attendance, and announcements will show up here."
+      />
     )
   }
 
   return (
     <div className="space-y-3 animate-beacon-in">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold text-navy dark:text-sky-50">Family feed</h2>
-        <Badge variant="sky">{items.length} updates</Badge>
+        <h2 className="text-lg font-semibold tracking-tight">Family feed</h2>
+        <Badge variant="muted">{items.length} updates</Badge>
       </div>
       <ul className="space-y-2">
         {items.map((item) => (
           <li key={item.id}>
-            <Link href={item.href}>
-              <Card
-                className={cn(
-                  'card-interactive transition',
-                  toneClasses(item.tone)
-                )}
-              >
-                <CardContent className="flex flex-wrap items-start justify-between gap-3 py-4">
+            <Link href={item.href} className="block">
+              <Card className={cn('card-interactive transition', toneClasses(item.tone))}>
+                <CardContent className="flex flex-wrap items-start justify-between gap-3 pt-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="muted" className="text-[10px]">
@@ -59,16 +53,14 @@ export function ParentFeed({ items }: { items: FeedItem[] }) {
                         {safeFormat(item.at)}
                       </span>
                     </div>
-                    <p className="mt-1.5 font-semibold text-sm text-navy dark:text-sky-50">
-                      {item.title}
-                    </p>
-                    {item.body && (
-                      <p className="mt-0.5 text-sm text-muted-foreground line-clamp-2">
+                    <p className="mt-1.5 text-sm font-semibold">{item.title}</p>
+                    {item.body ? (
+                      <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
                         {item.body}
                       </p>
-                    )}
+                    ) : null}
                   </div>
-                  <span className="text-xs font-semibold text-sky-700 shrink-0">View →</span>
+                  <span className="shrink-0 text-xs font-semibold text-primary">View →</span>
                 </CardContent>
               </Card>
             </Link>

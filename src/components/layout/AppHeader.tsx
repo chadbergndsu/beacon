@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { ChevronDown } from 'lucide-react'
 import { logout } from '@/app/actions/auth'
 import { resolveActiveNavHref } from '@/lib/nav-active'
 import { canAccessEmailOutbox, isSchoolStaff, roleLabel } from '@/lib/roles'
@@ -10,11 +12,33 @@ import { cn } from '@/lib/utils'
 
 type NavItem = { href: string; label: string }
 
+export function buildStaffNavGroups(role: Profile['role'] | null): {
+  primary: NavItem[]
+  more: NavItem[]
+} {
+  const staffComms = canAccessEmailOutbox(role)
+  return {
+    primary: [
+      { href: '/dashboard', label: 'Home' },
+      { href: '/teacher/classroom', label: 'Classroom' },
+      { href: '/teacher/quick', label: 'Quick' },
+      { href: '/announcements', label: 'News' },
+      { href: '/settings', label: 'Settings' },
+    ],
+    more: [
+      { href: '/teacher/lessons', label: 'Lessons' },
+      { href: '/teacher/calendar', label: 'Calendar' },
+      { href: '/teacher/printables', label: 'Printables' },
+      { href: '/teacher/scan', label: 'Scan' },
+      ...(staffComms ? [{ href: '/admin/emails', label: 'Comms' }] : []),
+      { href: '/school', label: 'School site' },
+    ],
+  }
+}
+
 /**
  * Role-aware primary nav — short labels, no duplicate office tools in the global bar.
- * Principals: Home + Office entry; roster/billing/ops live under Principal office.
- * Teachers: classroom tools.
- * Parents: family links only.
+ * Teachers: primary bar + More overflow for secondary tools.
  */
 export function buildNav(role: Profile['role'] | null): NavItem[] {
   const isPrincipal = role === 'principal' || role === 'admin'
@@ -32,19 +56,8 @@ export function buildNav(role: Profile['role'] | null): NavItem[] {
   }
 
   if (isSchoolStaff(role)) {
-    return [
-      { href: '/dashboard', label: 'Home' },
-      { href: '/teacher/classroom', label: 'Classroom' },
-      { href: '/teacher/quick', label: 'Quick' },
-      { href: '/teacher/lessons', label: 'Lessons' },
-      { href: '/teacher/calendar', label: 'Calendar' },
-      { href: '/teacher/printables', label: 'Printables' },
-      { href: '/teacher/scan', label: 'Scan' },
-      { href: '/announcements', label: 'News' },
-      ...(staffComms ? [{ href: '/admin/emails', label: 'Comms' }] : []),
-      { href: '/settings', label: 'Settings' },
-      { href: '/school', label: 'School site' },
-    ]
+    const { primary, more } = buildStaffNavGroups(role)
+    return [...primary, ...more]
   }
 
   return [
@@ -56,6 +69,106 @@ export function buildNav(role: Profile['role'] | null): NavItem[] {
   ]
 }
 
+function NavLink({
+  item,
+  active,
+  className,
+}: {
+  item: NavItem
+  active: boolean
+  className?: string
+}) {
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition whitespace-nowrap',
+        active
+          ? 'bg-chrome-active text-primary-foreground'
+          : 'text-chrome-muted hover:bg-chrome-hover hover:text-chrome-foreground',
+        className
+      )}
+    >
+      {item.label}
+    </Link>
+  )
+}
+
+function MoreMenu({
+  items,
+  activeHref,
+}: {
+  items: NavItem[]
+  activeHref: string | null
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const moreActive = items.some((i) => i.href === activeHref)
+
+  useEffect(() => {
+    if (!open) return
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          'inline-flex shrink-0 items-center gap-0.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition whitespace-nowrap',
+          moreActive || open
+            ? 'bg-chrome-active text-primary-foreground'
+            : 'text-chrome-muted hover:bg-chrome-hover hover:text-chrome-foreground'
+        )}
+      >
+        More
+        <ChevronDown className={cn('h-3.5 w-3.5 transition', open && 'rotate-180')} />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute left-0 top-full z-50 mt-1 min-w-[10.5rem] rounded-xl border border-chrome-border bg-chrome-elevated py-1 shadow-lg"
+        >
+          {items.map((item) => {
+            const active = item.href === activeHref
+            return (
+              <Link
+                key={item.href}
+                role="menuitem"
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  'block px-3 py-2 text-sm font-medium transition',
+                  active
+                    ? 'bg-chrome-active/20 text-chrome-foreground'
+                    : 'text-chrome-muted hover:bg-chrome-hover hover:text-chrome-foreground'
+                )}
+              >
+                {item.label}
+              </Link>
+            )
+          })}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function AppHeader({
   profile,
   schoolShortName = 'School',
@@ -65,7 +178,12 @@ export function AppHeader({
 }) {
   const pathname = usePathname() || '/'
   const role = profile?.role ?? null
+  // Teachers (and non-leadership staff) get a slim bar + More; principals keep Office nav.
+  const staffGroups =
+    role === 'teacher' || role === 'staff' ? buildStaffNavGroups(role) : null
   const nav = buildNav(role)
+  const primary = staffGroups?.primary ?? nav
+  const more = staffGroups?.more ?? []
   const activeHref = resolveActiveNavHref(
     pathname,
     nav.map((item) => item.href)
@@ -73,6 +191,11 @@ export function AppHeader({
   const displayName = profile?.full_name?.trim() || profile?.email || 'Account'
   const roleText = roleLabel(role)
   const initial = displayName.charAt(0).toUpperCase()
+
+  // Mobile: keep a short primary rail; secondary tools stay in More on desktop
+  const mobileNav = staffGroups
+    ? [...staffGroups.primary, ...staffGroups.more]
+    : nav
 
   return (
     <header className="sticky top-0 z-50 border-b border-chrome-border bg-chrome/95 text-chrome-foreground backdrop-blur-xl pt-safe">
@@ -93,24 +216,10 @@ export function AppHeader({
           className="hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto md:flex [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           aria-label="Main navigation"
         >
-          {nav.map((item) => {
-            const active = item.href === activeHref
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition whitespace-nowrap',
-                  active
-                    ? 'bg-chrome-active text-primary-foreground'
-                    : 'text-chrome-muted hover:bg-chrome-hover hover:text-chrome-foreground'
-                )}
-              >
-                {item.label}
-              </Link>
-            )
-          })}
+          {primary.map((item) => (
+            <NavLink key={item.href} item={item} active={item.href === activeHref} />
+          ))}
+          {more.length > 0 ? <MoreMenu items={more} activeHref={activeHref} /> : null}
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -151,29 +260,18 @@ export function AppHeader({
         </div>
       </div>
 
-      {/* Mobile nav rail */}
       <nav
         className="flex gap-0.5 overflow-x-auto border-t border-chrome-border px-2 py-1.5 md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         aria-label="Main navigation"
       >
-        {nav.map((item) => {
-          const active = item.href === activeHref
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? 'page' : undefined}
-              className={cn(
-                'shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition whitespace-nowrap',
-                active
-                  ? 'bg-chrome-active text-primary-foreground'
-                  : 'text-chrome-muted hover:bg-chrome-hover hover:text-chrome-foreground'
-              )}
-            >
-              {item.label}
-            </Link>
-          )
-        })}
+        {mobileNav.map((item) => (
+          <NavLink
+            key={item.href}
+            item={item}
+            active={item.href === activeHref}
+            className="text-xs"
+          />
+        ))}
       </nav>
     </header>
   )

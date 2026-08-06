@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { Heart, School, Shield, Sparkles, HandHeart } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { loadSchoolBrand } from '@/lib/school-brand'
 
 export default async function AboutPage() {
@@ -70,11 +69,11 @@ export default async function AboutPage() {
             </div>
 
             <div className="flex gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <School className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-semibold text-navy dark:text-sky-50">Your school’s brand</h2>
+                <h2 className="font-semibold tracking-tight">Your school’s brand</h2>
                 <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
                   School name, mission, contact, and website come from your school record — so Beacon
                   looks like <strong className="text-foreground">{brand.name}</strong>, not a demo
@@ -128,16 +127,11 @@ export default async function AboutPage() {
                   grade entry; parents get transparent calculations; the principal gets operations,
                   tuition, and QuickBooks — one Beacon, not five logins.
                 </p>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  <Badge variant="sky">Transparent grades</Badge>
-                  <Badge variant="sky">Beacon Pulse</Badge>
-                  <Badge variant="warning">Dinner Table Digest</Badge>
-                  <Badge variant="warning">Conference Brief</Badge>
-                  <Badge variant="warning">Beacon Signal</Badge>
-                  <Badge variant="sky">Teacher Quick Mode</Badge>
-                  <Badge variant="sky">QuickBooks tuition</Badge>
-                  <Badge variant="sky">Any school</Badge>
-                </div>
+                <ul className="space-y-1 pt-1 text-sm text-muted-foreground">
+                  <li>Transparent grades · Dinner Table Digest · Conference Brief</li>
+                  <li>Beacon Pulse · Beacon Signal · Teacher Quick Mode</li>
+                  <li>School-owned tuition · QuickBooks when you connect it</li>
+                </ul>
               </div>
             </div>
           </CardContent>

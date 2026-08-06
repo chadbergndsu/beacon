@@ -46,42 +46,40 @@ export function TeacherSettingsHub({
 
   return (
     <div className="space-y-8">
-      <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-sky-50 to-violet-50 p-5 dark:border-slate-800 dark:from-slate-950 dark:via-sky-950/40 dark:to-violet-950/30">
+      <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy text-white">
             <Settings2 className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-600 dark:text-slate-300">
-              Teacher preferences · one place
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+              Teacher preferences
             </p>
-            <h2 className="mt-1 text-xl font-bold text-navy dark:text-sky-50">
+            <h2 className="mt-1 text-xl font-semibold tracking-tight">
               {teacherName ? `${teacherName.split(' ')[0]}'s settings` : 'Teacher settings'}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-              Add students and classes, set weighted grade categories, and jump into the gradebook.
-              Same tools appear in My classroom and on each class page — multiple doors, one house.
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              Students, weighted grades, and the gradebook — same tools as Classroom, one calm place.
             </p>
           </div>
         </div>
       </div>
 
-      {msg && (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+      {msg ? (
+        <p className="rounded-xl border border-success/25 bg-success-soft px-4 py-3 text-sm text-success">
           {msg}
         </p>
-      )}
-      {err && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+      ) : null}
+      {err ? (
+        <p className="rounded-xl border border-red-200 bg-danger-soft px-4 py-3 text-sm text-danger">
           {err}
         </p>
-      )}
+      ) : null}
 
       <div id="skins">
         <SkinPicker currentSkin={currentSkin} />
       </div>
 
-      {/* Quick paths */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
@@ -89,75 +87,66 @@ export function TeacherSettingsHub({
             label: 'Students & classes',
             desc: 'Abeka subjects, roster, CSV',
             icon: Users,
-            color: 'violet',
           },
           {
             href: '/dashboard',
             label: 'Home · class list',
             desc: 'Open any gradebook',
             icon: LayoutGrid,
-            color: 'sky',
           },
           {
             href: '/teacher/quick',
             label: 'Quick mode',
             desc: 'Attendance · scores · pulse',
             icon: GraduationCap,
-            color: 'emerald',
           },
           {
             href: '/teacher/printables',
             label: 'Printables',
             desc: 'Score sheets · coupons',
             icon: BookOpen,
-            color: 'amber',
           },
         ].map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="rounded-2xl border bg-card p-4 shadow-[var(--shadow-soft)] transition hover:border-sky-300 hover:shadow-md"
+            className="card-interactive rounded-2xl border border-border/80 bg-card p-4 shadow-[var(--shadow-soft)]"
           >
-            <item.icon className="h-5 w-5 text-sky-600" />
-            <p className="mt-2 font-semibold text-navy dark:text-sky-50">{item.label}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+            <item.icon className="h-5 w-5 text-primary" />
+            <p className="mt-2 font-semibold tracking-tight">{item.label}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{item.desc}</p>
           </Link>
         ))}
       </section>
 
-      {/* Per-class gradebook + weights */}
-      <section className="rounded-2xl border bg-card p-5 space-y-4 shadow-[var(--shadow-soft)]">
+      <section className="space-y-4 rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Scale className="h-5 w-5 text-violet-600" />
-            <h3 className="text-lg font-bold text-navy dark:text-sky-50">
+            <Scale className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold tracking-tight">
               Gradebook &amp; weighted grades
             </h3>
           </div>
-          <Link
-            href="/teacher/classroom"
-            className="text-xs font-semibold text-sky-700 underline"
-          >
+          <Link href="/teacher/classroom" className="text-xs font-semibold text-primary hover:underline">
             + Add class or students
           </Link>
         </div>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Each class has a gradebook (scores) and Class setup (category weights that must total
-          ~100%). Use the buttons below — or open the class and use the <strong>Gradebook</strong> /{' '}
-          <strong>Weights &amp; setup</strong> tabs.
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Each class has a gradebook and Setup (weights ~100%). Open the class tabs or use the
+          buttons below.
         </p>
 
         {classes.length === 0 ? (
-          <div className="rounded-xl border border-violet-200 bg-violet-50/80 p-4 text-sm">
-            <p className="font-semibold text-violet-950">No classes yet</p>
-            <p className="mt-1 text-xs text-violet-900/80">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm">
+            <p className="font-semibold">No classes yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">
               Create Abeka classes first, then set weights and open the gradebook.
             </p>
             <Link
               href="/teacher/classroom"
-              className="mt-3 inline-flex rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white"
+              className="mt-3 inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
             >
-              Open My classroom →
+              Open classroom →
             </Link>
           </div>
         ) : (
@@ -173,7 +162,7 @@ export function TeacherSettingsHub({
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-semibold text-navy dark:text-sky-50">{c.name}</p>
+                      <p className="font-semibold tracking-tight">{c.name}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {[c.subject, c.grade_level].filter(Boolean).join(' · ') || 'Class'} ·{' '}
                         {c.studentCount} students
@@ -183,7 +172,7 @@ export function TeacherSettingsHub({
                           <Badge variant="warning">No weights yet</Badge>
                         ) : (
                           c.categories.map((cat) => (
-                            <Badge key={cat.id} variant="sky">
+                            <Badge key={cat.id} variant="default">
                               {cat.name} {cat.weight}%
                             </Badge>
                           ))
@@ -212,7 +201,6 @@ export function TeacherSettingsHub({
                           size="sm"
                           variant="outline"
                           disabled={pending}
-                          className="border-violet-300 text-violet-800"
                           onClick={() => {
                             setMsg(null)
                             setErr(null)
