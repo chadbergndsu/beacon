@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { login, type AuthState } from '@/app/actions/auth'
+import { PasswordInput } from '@/components/auth/PasswordInput'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -40,14 +41,7 @@ export function LoginForm({
       </Field>
       <Field>
         <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          placeholder="••••••••"
-        />
+        <PasswordInput id="password" name="password" required />
       </Field>
       <FieldError>{state?.error}</FieldError>
       <Button
