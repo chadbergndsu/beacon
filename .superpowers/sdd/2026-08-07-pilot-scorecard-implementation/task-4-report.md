@@ -234,3 +234,102 @@ exit 0
 
 - No blocking functional concern remains in the three reported findings.
 - Real DOM interaction coverage required adding test-only `@testing-library/react`, `@testing-library/user-event`, and `jsdom` dependencies. `npm install` reports seven high-severity audit findings in the repository dependency tree; dependency remediation is outside this narrowly scoped fix round.
+
+## Fix Round 2
+
+### Compatibility finding and selected version
+
+Beacon declares `node: >=22`, but the initially locked `jsdom@30.0.1` publishes this narrower engine requirement:
+
+```text
+npm view jsdom@30.0.1 version engines --json
+{
+  "version": "30.0.1",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  }
+}
+```
+
+Published metadata for newer candidate majors remained incompatible with early supported Node 22 releases:
+
+```text
+jsdom@29.0.0  ^20.19.0 || ^22.13.0 || >=24.0.0
+jsdom@28.1.0  ^20.19.0 || ^22.12.0 || >=24.0.0
+jsdom@27.4.0  ^20.19.0 || ^22.12.0 || >=24.0.0
+```
+
+`jsdom@26.1.0` is the newest inspected release whose published engine covers Beacon's full Node contract:
+
+```text
+npm view jsdom@26.1.0 version engines --json
+{
+  "version": "26.1.0",
+  "engines": {
+    "node": ">=18"
+  }
+}
+```
+
+The fix pins `jsdom` exactly to `26.1.0` under `devDependencies`. Beacon's root `node: >=22` contract is unchanged. `@testing-library/react` and `@testing-library/user-event` remain test-only dev dependencies and retain the repository's caret convention.
+
+### Dependency resolution evidence
+
+Commands:
+
+```text
+npm install --save-dev --save-exact jsdom@26.1.0
+npm pkg get engines.node devDependencies.jsdom devDependencies."@testing-library/react" devDependencies."@testing-library/user-event"
+npm ls jsdom --depth=0
+npm view jsdom@26.1.0 engines --json
+npm ci
+```
+
+Resolved metadata and clean-install output:
+
+```text
+"engines.node": ">=22"
+"devDependencies.jsdom": "26.1.0"
+"devDependencies.@testing-library/react": "^16.3.2"
+"devDependencies.@testing-library/user-event": "^14.6.3"
+
+beacon@0.1.0
+└── jsdom@26.1.0
+
+{ "node": ">=18" }
+
+npm ci
+added 721 packages, and audited 722 packages
+exit 0
+```
+
+### Verification
+
+Parent interaction test:
+
+```text
+npm test -- src/components/parent/ParentExperienceFeedback.test.tsx
+Test Files  1 passed (1)
+Tests       5 passed (5)
+exit 0
+```
+
+Static verification:
+
+```text
+npm run typecheck
+> tsc --noEmit
+exit 0
+
+npm run lint
+> eslint .
+exit 0
+
+git diff --check
+exit 0
+```
+
+### Fix-round concerns
+
+- No blocking compatibility concern remains: exact `jsdom@26.1.0` supports every Node version allowed by Beacon's `>=22` declaration.
+- The clean install continues to report seven high-severity audit findings and deprecation warnings for transitive `whatwg-encoding` and `glob`; dependency remediation is outside this compatibility-only round.
