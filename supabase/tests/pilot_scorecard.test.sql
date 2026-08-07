@@ -2,7 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
-SELECT plan(37);
+SELECT plan(40);
 
 INSERT INTO public.schools (id, name, slug) VALUES
   ('00000000-0000-0000-0000-000000000001', 'Pilot Test School', 'pilot-test-school'),
@@ -36,6 +36,31 @@ SELECT ok(
 SELECT ok(
   (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.parent_experience_feedback'::regclass),
   'the weekly parent feedback table has RLS enabled'
+);
+
+SELECT has_index(
+  'public',
+  'pilot_activity_daily',
+  'pilot_activity_daily_user_id_idx',
+  'the daily activity user foreign key is indexed'
+);
+SELECT has_index(
+  'public',
+  'parent_experience_feedback',
+  'parent_experience_feedback_parent_id_idx',
+  'the parent feedback parent foreign key is indexed'
+);
+SELECT is(
+  (
+    SELECT count(*)::int
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'parent_experience_feedback'
+      AND cmd = 'SELECT'
+      AND roles && ARRAY['authenticated']::name[]
+  ),
+  1,
+  'parent and leadership reads share one authenticated SELECT policy'
 );
 
 SELECT is(

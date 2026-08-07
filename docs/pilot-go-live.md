@@ -65,7 +65,17 @@ Open `/principal/release`:
 - Parent login sees only linked children  
 - Tick **Parent login** + FERPA access review  
 
-## 7. Soft launch
+## 7. Pilot evidence
+
+1. Apply every migration currently in `supabase/migrations/`, including the CLI-generated pilot scorecard migrations.
+2. Sign in with a real parent account linked to an active student and verify the weekly prompt appears immediately after Family Feed.
+3. Sign in as a teacher and complete one successful grade or attendance save.
+4. On the next Principal overview render, verify **Pilot evidence** reflects the captured activity.
+5. Investigate every **Temporarily unavailable** state; never report an unavailable source as zero.
+6. Review parent comments for sensitive details and follow the school’s approved handling process.
+7. Treat the first 28 days as baseline evidence, not a performance target.
+
+## 8. Soft launch
 
 - Phone smoke: login + dashboard + Quick Mode  
 - Leadership okays teachers/parents  

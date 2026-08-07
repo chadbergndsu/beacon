@@ -45,6 +45,14 @@ const dataCategories = [
   ['Learning records', 'Classes, enrollment, assignments, grades, attendance, report cards and teacher notes.'],
   ['Student support', 'Allergies, medical notes, discipline records and whole-child check-ins when a school uses them.'],
   ['School operations', 'Announcements, communications, aftercare, badge scans and room events when enabled.'],
+  [
+    'Product activity',
+    'Coarse authenticated product activity by school, person, role, workflow category and UTC date. The pilot activity ledger does not include student identity, URL, IP address, user agent or arbitrary payload.',
+  ],
+  [
+    'Parent feedback',
+    'Weekly parent helpfulness responses and optional comments.',
+  ],
   ['Billing', 'Products, invoices, payment records and accounting connection status when enabled.'],
 ] as const
 
@@ -164,7 +172,8 @@ export default async function PrivacyPage({
           </Card>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             Database row-level policies enforce these role and school boundaries. Parent links also
-            require the parent profile and student to belong to the same school.
+            require the parent profile and student to belong to the same school. School leadership
+            can see aggregated pilot evidence and parent feedback for its school.
           </p>
         </section>
 

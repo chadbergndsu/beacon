@@ -55,6 +55,15 @@ describe('Trust & Data Practices page', () => {
     }
   })
 
+  it('discloses the pilot evidence data inventory and its payload boundary', () => {
+    expect(page).toContain('Product activity')
+    expect(page).toContain('Parent feedback')
+    expect(page).toContain('Coarse authenticated product activity')
+    expect(page).toContain('Weekly parent helpfulness responses and optional comments')
+    expect(page).toContain('does not include student identity, URL, IP address, user agent or arbitrary payload')
+    expect(page).toContain('aggregated pilot evidence and parent feedback for its school')
+  })
+
   it('does not make unsupported compliance or assurance claims', () => {
     for (const prohibitedClaim of [
       /\bferpa[- ]?(?:compliant|ready|certified)\b/,
