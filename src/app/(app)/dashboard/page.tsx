@@ -10,6 +10,7 @@ import {
 } from '@/lib/insights/load-missing-work'
 import { ParentFeed } from '@/components/parent/ParentFeed'
 import { ParentBillingCard } from '@/components/parent/ParentBillingCard'
+import { ParentExperienceFeedback } from '@/components/parent/ParentExperienceFeedback'
 import { MissingWorkRadar } from '@/components/insights/MissingWorkRadar'
 import { TeacherTodayCard } from '@/components/insights/TeacherTodayCard'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
@@ -22,10 +23,12 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 import { buttonClassName } from '@/components/ui/button'
 import { recordPilotActivity } from '@/lib/pilot-analytics/activity'
+import { isoWeekStart } from '@/lib/pilot-analytics/windows'
+import type { ParentExperienceRating } from '@/lib/pilot-analytics/parent-feedback'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
 export default async function DashboardPage() {
-  const { profile, user } = await getProfile()
+  const { profile, user, supabase } = await getProfile()
   const admin = createAdminClient()
 
   if (!profile) {
@@ -51,6 +54,31 @@ export default async function DashboardPage() {
       actorRole: role,
       eventType: 'parent_portal',
     })
+  }
+
+  let initialParentFeedback: {
+    rating: ParentExperienceRating
+    comment: string | null
+  } | null = null
+  let parentFeedbackUnavailable = false
+  if (role === 'parent' && schoolId) {
+    const { data, error } = await supabase
+      .from('parent_experience_feedback')
+      .select('rating, comment')
+      .eq('parent_id', user.id)
+      .eq('school_id', schoolId)
+      .eq('surface', 'parent_dashboard')
+      .eq('week_start', isoWeekStart(new Date()))
+      .maybeSingle()
+
+    if (error) {
+      parentFeedbackUnavailable = true
+    } else if (data && (data.rating === 'helpful' || data.rating === 'not_yet')) {
+      initialParentFeedback = {
+        rating: data.rating,
+        comment: typeof data.comment === 'string' ? data.comment : null,
+      }
+    }
   }
 
   let classes: {
@@ -180,6 +208,7 @@ export default async function DashboardPage() {
     ...(role === 'parent' && schoolId && children.length > 0
       ? (['parent_feed'] as const)
       : []),
+    ...(role === 'parent' && schoolId ? (['parent_feedback'] as const) : []),
   ]
 
   const viewLayout = await loadScreenLayout(user.id, 'dashboard', [...presentSectionIds])
@@ -418,6 +447,15 @@ export default async function DashboardPage() {
       {role === 'parent' && schoolId && children.length > 0 ? (
         <ViewSection id="parent_feed" title="Family feed">
           <ParentFeedSection parentId={user.id} schoolId={schoolId} students={children} />
+        </ViewSection>
+      ) : null}
+
+      {role === 'parent' && schoolId ? (
+        <ViewSection id="parent_feedback" title="Weekly parent feedback">
+          <ParentExperienceFeedback
+            initialResponse={initialParentFeedback}
+            unavailable={parentFeedbackUnavailable}
+          />
         </ViewSection>
       ) : null}
 

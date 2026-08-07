@@ -55,6 +55,11 @@ export const SCREEN_CATALOG: Record<ScreenId, { title: string; sections: Section
         label: 'Family feed',
       },
       {
+        id: 'parent_feedback',
+        label: 'Weekly parent feedback',
+        description: 'One-tap helpfulness check with an optional note',
+      },
+      {
         id: 'announcements',
         label: 'Announcements',
       },

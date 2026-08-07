@@ -1,10 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Children, type ReactElement, type ReactNode } from 'react'
 import { createMockAdmin } from '@/lib/test/mock-supabase'
 
 const mocks = vi.hoisted(() => ({
   getProfile: vi.fn(),
   recordPilotActivity: vi.fn(),
   loadScreenLayout: vi.fn(),
+  feedbackQueries: [] as Array<{ columns: string; filters: Record<string, unknown> }>,
+  feedbackResult: {
+    data: { rating: 'helpful', comment: 'A useful week.' },
+    error: null,
+  } as { data: unknown; error: unknown },
   admin: null as ReturnType<typeof createMockAdmin> | null,
 }))
 
@@ -27,9 +33,37 @@ const user = {
   email: null,
 }
 
+function sessionClient() {
+  return {
+    from(table: string) {
+      const query = { columns: '', filters: {} as Record<string, unknown> }
+      return {
+        select(columns: string) {
+          expect(table).toBe('parent_experience_feedback')
+          query.columns = columns
+          return this
+        },
+        eq(column: string, value: unknown) {
+          query.filters[column] = value
+          return this
+        },
+        async maybeSingle() {
+          mocks.feedbackQueries.push(query)
+          return mocks.feedbackResult
+        },
+      }
+    },
+  }
+}
+
 describe('parent dashboard pilot activity', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.feedbackQueries = []
+    mocks.feedbackResult = {
+      data: { rating: 'helpful', comment: 'A useful week.' },
+      error: null,
+    }
     mocks.admin = createMockAdmin({
       parent_students: () => ({ data: [], error: null }),
       announcements: () => ({ data: [], error: null }),
@@ -44,7 +78,7 @@ describe('parent dashboard pilot activity', () => {
         email: null,
         phone: null,
       },
-      supabase: {},
+      supabase: sessionClient(),
     })
     mocks.recordPilotActivity.mockResolvedValue({ recorded: true })
     mocks.loadScreenLayout.mockResolvedValue([])
@@ -60,6 +94,41 @@ describe('parent dashboard pilot activity', () => {
       actorRole: 'parent',
       eventType: 'parent_portal',
     })
+  })
+
+  it('loads only the signed-in parent current-week response and registers the card', async () => {
+    await DashboardPage()
+
+    expect(mocks.feedbackQueries).toEqual([
+      {
+        columns: 'rating, comment',
+        filters: {
+          parent_id: user.id,
+          school_id: 'school-1',
+          surface: 'parent_dashboard',
+          week_start: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        },
+      },
+    ])
+    expect(mocks.loadScreenLayout).toHaveBeenCalledWith(
+      user.id,
+      'dashboard',
+      expect.arrayContaining(['parent_feedback'])
+    )
+  })
+
+  it('keeps the dashboard and exposes an unavailable card when the response query fails', async () => {
+    mocks.feedbackResult = { data: null, error: { message: 'offline' } }
+
+    const page = (await DashboardPage()) as ReactElement<{ children: ReactNode }>
+    const sections = Children.toArray(page.props.children) as ReactElement<{
+      id?: string
+      children?: ReactElement<{ unavailable?: boolean }>
+    }>[]
+    const feedbackSection = sections.find((section) => section.props.id === 'parent_feedback')
+
+    expect(feedbackSection?.props.children?.props.unavailable).toBe(true)
+    expect(mocks.recordPilotActivity).toHaveBeenCalledTimes(1)
   })
 
   it('still renders the parent dashboard when activity recording reports failure', async () => {
