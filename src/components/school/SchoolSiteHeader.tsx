@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import { beaconCraftTourUrl } from '@/lib/beaconcraft-url'
+import { CraftHref } from '@/components/craft/CraftHref'
 import { buttonClassName } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -59,14 +60,12 @@ export function SchoolSiteHeader({
               Official site
             </a>
           )}
-          <a
+          <CraftHref
             href={tourUrl}
-            target="_blank"
-            rel="noopener noreferrer"
             className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             Campus tour
-          </a>
+          </CraftHref>
           <Link href="/login" className={cn(buttonClassName('primary', 'sm'), 'ml-1')}>
             Sign in
           </Link>
@@ -109,15 +108,13 @@ export function SchoolSiteHeader({
               Official website
             </a>
           )}
-          <a
+          <CraftHref
             href={tourUrl}
-            target="_blank"
-            rel="noopener noreferrer"
             className="rounded-md px-3 py-2.5 text-sm font-medium"
             onClick={() => setOpen(false)}
           >
             Campus tour
-          </a>
+          </CraftHref>
           <Link
             href="/login"
             className={cn(buttonClassName('primary', 'sm'), 'mt-1 text-center')}

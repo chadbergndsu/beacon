@@ -87,3 +87,22 @@ export async function saveCraftLayoutAction(
     return { ok: false, error: e instanceof Error ? e.message : 'Save failed.' }
   }
 }
+
+export async function saveCraftRoomMapAction(
+  roomIdMap: Record<string, string>
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const auth = await requireCraftLeadership()
+  if (!auth.ok) return auth
+
+  try {
+    const { loadCraftLayoutForSchool, saveCraftRoomMap } = await import('@/lib/craft/settings')
+    const layout = await loadCraftLayoutForSchool(auth.schoolId)
+    await saveCraftRoomMap(auth.schoolId, roomIdMap, layout.id)
+    revalidatePath('/principal/release')
+    revalidatePath('/principal/badges')
+    revalidatePath('/craft')
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Save failed.' }
+  }
+}

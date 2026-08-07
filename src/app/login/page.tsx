@@ -4,7 +4,8 @@ import { LoginForm } from '@/components/auth/LoginForm'
 import { demoPrincipalEmail } from '@/lib/roles'
 import { safeInternalPath } from '@/lib/safe-redirect'
 import { loadSchoolBrand } from '@/lib/school-brand'
-import { beaconCraftBaseUrl, beaconCraftTourUrl } from '@/lib/beaconcraft-url'
+import { beaconCraftAppHref, beaconCraftTourUrl } from '@/lib/beaconcraft-url'
+import { CraftHref } from '@/components/craft/CraftHref'
 
 /**
  * Critical CSS keeps the login usable even if the Tailwind chunk fails.
@@ -317,8 +318,8 @@ export default async function LoginPage({
   const asPrincipal = params.as === 'principal'
   const brand = await loadSchoolBrand(null)
   const principalEmail = demoPrincipalEmail() || PILOT_PRINCIPAL_EMAIL
-  const craftUrl = beaconCraftBaseUrl()
-  const tourUrl = beaconCraftTourUrl()
+  const craftHref = beaconCraftAppHref()
+  const tourHref = beaconCraftTourUrl()
 
   return (
     <>
@@ -410,13 +411,9 @@ export default async function LoginPage({
                       </>
                     ) : null}
                     <span aria-hidden>·</span>
-                    <a href={tourUrl} target="_blank" rel="noopener noreferrer">
-                      Campus tour
-                    </a>
+                    <CraftHref href={tourHref}>Campus tour</CraftHref>
                     <span aria-hidden>·</span>
-                    <a href={craftUrl} target="_blank" rel="noopener noreferrer">
-                      Campus twin
-                    </a>
+                    <CraftHref href={craftHref}>Campus twin</CraftHref>
                     <span aria-hidden>·</span>
                     <Link href="/craft" className="font-semibold">
                       Staff Craft

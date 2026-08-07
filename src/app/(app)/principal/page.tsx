@@ -206,6 +206,9 @@ export default async function PrincipalOverviewPage() {
           <Link href="/principal/release" className={buttonClassName('outline', 'sm')}>
             Go-live
           </Link>
+          <Link href="/craft" className={buttonClassName('outline', 'sm')}>
+            Craft
+          </Link>
           <Link href="/principal/roster" className={buttonClassName('outline', 'sm')}>
             Roster
           </Link>

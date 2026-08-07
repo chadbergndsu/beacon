@@ -76,7 +76,7 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 
 **Production:** https://beacon.commoncentsip.com  
 **School site:** https://beacon.commoncentsip.com/school  
-**Campus twin:** https://beaconcraft.vercel.app · tour `/?tour=1`  
+**Campus twin:** `/craft` (staff) · public tour `/craft/tour` · optional external override via `NEXT_PUBLIC_BEACONCRAFT_URL`  
 **Go-live (principal):** https://beacon.commoncentsip.com/principal/release  
 **Health (liveness):** https://beacon.commoncentsip.com/api/health  
 
