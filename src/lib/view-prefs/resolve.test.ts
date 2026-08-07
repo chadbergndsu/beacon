@@ -71,6 +71,35 @@ describe('resolveScreenLayout', () => {
       isSectionVisible('header', layout, new Set(['header']))
     ).toBe(true)
   })
+
+  it('registers pilot evidence and inserts it after Beacon Signal in legacy principal layouts', () => {
+    const principalCatalog = getScreenCatalog('principal_overview').sections
+    const pilotSection = principalCatalog.find((section) => section.id === 'pilot_evidence')
+    const present = [
+      'beacon_signal',
+      'pilot_evidence',
+      'stats',
+      'quickbooks',
+      'announcements',
+      'shortcuts',
+    ]
+    const layout = resolveScreenLayout(
+      'principal_overview',
+      present,
+      {
+        order: ['beacon_signal', 'stats', 'quickbooks', 'announcements', 'shortcuts'],
+        hidden: [],
+      },
+      principalCatalog
+    )
+
+    expect(pilotSection).toEqual({
+      id: 'pilot_evidence',
+      label: 'Pilot evidence',
+      description: 'Seven-day activity, delivery, and parent feedback signals',
+    })
+    expect(layout.order).toEqual(present)
+  })
 })
 
 describe('toggle + move', () => {

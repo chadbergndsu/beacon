@@ -5,7 +5,9 @@ import { requirePrincipal } from '@/lib/principal'
 import { loadBillingState, formatMoney } from '@/lib/billing/store'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadSchoolBeaconSignal } from '@/lib/insights/load-beacon-signal'
+import { loadPilotScorecard } from '@/lib/pilot-analytics/scorecard'
 import { BeaconSignalCard } from '@/components/insights/BeaconSignalCard'
+import { PilotScorecard } from '@/components/principal/PilotScorecard'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonClassName } from '@/components/ui/button'
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
@@ -56,13 +58,29 @@ export default async function PrincipalOverviewPage() {
   const { schoolId, user, profile } = await requirePrincipal()
   const officeAdmin = isOfficeAdmin(profile.role)
   const admin = createAdminClient()
-  const [billing, signal] = await Promise.all([
-    loadBillingState(schoolId),
-    loadSchoolBeaconSignal(schoolId),
-  ])
+  const defaultLayout = officeAdmin
+    ? [
+        'daily_tasks',
+        'beacon_signal',
+        'pilot_evidence',
+        'stats',
+        'quickbooks',
+        'announcements',
+        'shortcuts',
+      ]
+    : [
+        'beacon_signal',
+        'pilot_evidence',
+        'stats',
+        'quickbooks',
+        'announcements',
+        'shortcuts',
+      ]
 
-  const [{ count: classCount }, { count: studentCount }, { data: announcements }] =
-    await Promise.all([
+  const billingPromise = loadBillingState(schoolId)
+  const signalPromise = loadSchoolBeaconSignal(schoolId)
+  const scorecardPromise = loadPilotScorecard(schoolId)
+  const schoolSummaryPromise = Promise.all([
       admin
         .from('classes')
         .select('*', { count: 'exact', head: true })
@@ -79,7 +97,22 @@ export default async function PrincipalOverviewPage() {
         .eq('school_id', schoolId)
         .order('published_at', { ascending: false })
         .limit(3),
-    ])
+  ])
+  const viewLayoutPromise = loadScreenLayout(user.id, 'principal_overview', defaultLayout)
+
+  const [
+    billing,
+    signal,
+    scorecard,
+    [{ count: classCount }, { count: studentCount }, { data: announcements }],
+    viewLayout,
+  ] = await Promise.all([
+    billingPromise,
+    signalPromise,
+    scorecardPromise,
+    schoolSummaryPromise,
+    viewLayoutPromise,
+  ])
 
   const openInvoices = billing.invoices.filter((i) => i.status === 'open' || i.status === 'overdue')
   const paidCents = billing.payments
@@ -88,11 +121,6 @@ export default async function PrincipalOverviewPage() {
   const openCents = openInvoices.reduce((s, i) => s + i.amountCents, 0)
 
   const qb = billing.quickbooks
-  const defaultLayout = officeAdmin
-    ? ['daily_tasks', 'beacon_signal', 'stats', 'quickbooks', 'announcements', 'shortcuts']
-    : ['beacon_signal', 'stats', 'quickbooks', 'announcements', 'shortcuts']
-  const viewLayout = await loadScreenLayout(user.id, 'principal_overview', defaultLayout)
-
   return (
     <ConfigurableView screenId="principal_overview" initialLayout={viewLayout}>
       {officeAdmin ? (
@@ -113,6 +141,14 @@ export default async function PrincipalOverviewPage() {
       ) : null}
       <ViewSection id="beacon_signal" title="Beacon Signal">
         <BeaconSignalCard signal={signal} />
+      </ViewSection>
+
+      <ViewSection
+        id="pilot_evidence"
+        title="Pilot evidence"
+        description="Seven-day activity, delivery, and parent feedback signals"
+      >
+        <PilotScorecard scorecard={scorecard} />
       </ViewSection>
 
       <ViewSection id="stats" title="School stats">
