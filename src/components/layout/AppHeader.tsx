@@ -30,6 +30,7 @@ export function buildStaffNavGroups(role: Profile['role'] | null): {
       { href: '/teacher/calendar', label: 'Calendar' },
       { href: '/teacher/printables', label: 'Printables' },
       { href: '/teacher/scan', label: 'Scan' },
+      { href: '/craft', label: 'Craft' },
       ...(staffComms ? [{ href: '/admin/emails', label: 'Comms' }] : []),
       { href: '/school', label: 'School site' },
     ],

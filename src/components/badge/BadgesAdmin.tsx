@@ -92,6 +92,17 @@ export function BadgesAdmin({
             Open <strong className="text-foreground">kiosk</strong> on a tablet → USB scan, camera QR, or name search
           </li>
           <li>
+            Open <strong>BeaconCraft</strong> at{' '}
+            <Link href="/craft" className="font-semibold underline">
+              /craft
+            </Link>{' '}
+            for the voxel campus twin (sync rooms on{' '}
+            <Link href="/principal/release" className="font-semibold underline">
+              Go-live
+            </Link>
+            )
+          </li>
+          <li>
             Classroom IN marks <strong className="text-foreground">attendance present</strong>; aftercare tracks time →{' '}
             <strong className="text-foreground">bill for payments</strong>
           </li>

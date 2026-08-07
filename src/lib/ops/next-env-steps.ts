@@ -57,6 +57,9 @@ export function buildLaunchSuggestions(input: {
 
   const qbOk = Boolean(checklist.qb_push) || health.qbLiveConfigured
 
+  const craftCheck = health.checks.find((c) => c.id === 'craft_twin')
+  const craftOk = Boolean(checklist.craft_smoke) || craftCheck?.status === 'ok'
+
   const envSteps: LaunchSuggestion[] = [
     {
       id: 'env_migrations',
@@ -123,6 +126,15 @@ export function buildLaunchSuggestions(input: {
       detail: 'BEACON_PRINCIPAL_EMAIL=you@yourschool.org on Vercel if you use env-pinned principal.',
       done: Boolean(checklist.principal_login),
       optional: true,
+    },
+    {
+      id: 'env_craft',
+      group: 'env',
+      label: 'BeaconCraft digital twin',
+      detail: 'Go-live → sync twin rooms, smoke-test /craft with a badge scan or mock scan.',
+      done: craftOk,
+      optional: true,
+      href: '/craft',
     },
   ]
 

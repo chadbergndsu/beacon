@@ -46,6 +46,7 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 | **Dinner Table Digest** | 60-second plain-English parent story + conversation starters (unique) |
 | **Conference Brief** | One-page PTC sheet from grades + pulse + attendance (unique) |
 | **Beacon Signal** | Principal school climate heart-rate + pastoral watch list (unique) |
+| **BeaconCraft** | Voxel digital twin at `/craft` — multi-floor campus, live badge presence (Realtime + poll), layout editor on Go-live |
 | **Communications** | Compose to families, announcements, Dinner Table Digest email, grade/attendance notices, outbox + resend |
 | **Principal office** | Tuition, family billing portal, QuickBooks, videos, **cameras**, pulse, **Go-live** |
 | **Family billing** | Pay portal `/pay/[token]`, email reminders, payment plans, recurring schedules, optional Stripe + QBO push — **school-owned** (not BillerGenie/third-party biller) |
@@ -102,7 +103,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth + client |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server actions / admin client (never expose to browser) |
 
-Then apply **migrations 001–021** (see below) and:
+Then apply **migrations 001–022** (see below) and:
 
 ```bash
 npm run dev
@@ -136,7 +137,7 @@ Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, securit
 
 ### Database migrations
 
-**Source of truth:** `supabase/migrations/` files **001–021** in filename order.
+**Source of truth:** `supabase/migrations/` files **001–022** in filename order.
 
 ```bash
 # Preferred
@@ -164,6 +165,7 @@ POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate -- 017
 | **019** | family billing: portal tokens, payment plans, recurring schedules |
 | **020** | Stripe payment columns (`stripe_checkout_session_id`, payment intent) |
 | **021** | P0 money settle: one succeeded payment per invoice |
+| **022** | BeaconCraft Realtime: `badge_scans` on `supabase_realtime` publication |
 
 **Billing money path** uses tables only. Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`.
 
@@ -336,6 +338,32 @@ Platform-provided (do not put secrets in git): `VERCEL_URL`, `VERCEL_ENV`, `VERC
 | HTTPS only | Vercel |
 | Health check | `/api/health` + Go-live |
 | Branch protection + required reviews | Configure in GitHub org settings (not in-repo) |
+
+## BeaconCraft (digital twin)
+
+**Route:** `/craft` (staff/principal nav link **Craft**)
+
+Minecraft-style voxel campus driven by badge presence. Not the same product as **Beacon Signal** (climate analytics).
+
+| Piece | Location |
+|-------|----------|
+| Campus layout (multi-floor v2) | `src/lib/craft/layout.ts`, `campus.ts` |
+| Role-filtered presence | `src/lib/craft/presence.ts` |
+| Realtime + fallback poll | `src/lib/craft/realtime-client.ts` · migration **022** |
+| Poll presence API | `GET /api/craft/presence` |
+| Mock door scan (admin) | `POST /api/craft/mock-scan` `{ studentId, roomId, studentName?, timestamp? }` |
+| Layout editor (Go-live) | `CraftLayoutEditor` on Principal → Go-live — drag rooms, floor tabs, JSON/SVG import |
+| Real badge path | Merges `listRoomPresence()` when layout room **names** match `school_rooms` |
+
+**Controls:** click world for pointer lock · WASD move · sprint · floor switcher + stairs/elevator portals · admin fly (Space up / Shift down) · room search teleports · rotating mini-map + compass · mobile move/look pads.
+
+**Privacy defaults:** teachers see their classroom rooms only; parents see linked children by name and optional anonymized “Guest” markers elsewhere; leadership sees full campus.
+
+**Extend:** edit layout on Go-live or import JSON/SVG (`src/lib/craft/svg-import.ts`); custom layout stored in `schools.settings.craft.customLayout`. Wire hardware scans via existing `POST /api/kiosk/device-scan` — presence API merges DB scans when room names align.
+
+**Go-live:** Principal → **Go-live** → layout editor (optional) → **Sync twin rooms** (creates `school_rooms` matching layout names) → smoke-test `/craft` → **Mark smoke test** (checklist item `craft_smoke`). Onboarding and automated health show mapping progress.
+
+**Visuals:** instanced voxel geometry (walls, ceilings, windows, doors), per-room lighting, bloom + N8AO post-processing, fog + contact shadows, wall collision, capsule presence avatars. Two-floor demo with portal transitions.
 
 ## Repo
 

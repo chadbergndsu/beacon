@@ -57,6 +57,12 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
     group: 'ops',
   },
   {
+    id: 'craft_smoke',
+    label: 'BeaconCraft twin smoke test',
+    help: 'Go-live → sync twin rooms, open /craft, trigger a test scan, confirm marker appears in the correct room.',
+    group: 'launch',
+  },
+  {
     id: 'principal_login',
     label: 'Principal can sign in',
     help: 'Profile role is principal (or admin) for your school.',
