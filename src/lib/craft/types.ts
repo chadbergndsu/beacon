@@ -68,6 +68,8 @@ export type CraftVisibleMarker = {
   roomId: string
   since: string
   anonymized: boolean
+  /** Student presence vs staff NPC / teacher-in-room */
+  kind?: 'student' | 'teacher'
 }
 
 export type CraftTrailPoint = {

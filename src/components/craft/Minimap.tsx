@@ -54,7 +54,9 @@ export function Minimap() {
               cx={toX(cx)}
               cy={toY(cz)}
               r={1.1}
-              fill={m.anonymized ? '#94a3b8' : '#4ade80'}
+              fill={
+                m.anonymized ? '#94a3b8' : m.kind === 'teacher' ? '#38bdf8' : '#4ade80'
+              }
             />
           )
         })}

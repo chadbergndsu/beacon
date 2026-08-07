@@ -93,3 +93,14 @@ SCAN_API_KEY=<long random>
 
 - Beacon: `src/lib/badge/store.ts` (`processBadgeScan`), `src/components/badge/KioskScanner.tsx`, `src/lib/badge/campus-twin.ts`
 - Craft: `src/app/api/scans/route.ts`, `src/lib/presence-store.ts`, `src/lib/school.ts`
+
+## Family feedback (Olivia Berg · 2026-08)
+
+Kid review of the School Digital Twin asked for:
+
+1. **Two floors** — already in demo layout (`Floor 1` / `Floor 2` + stairs/elevator)
+2. **Walk with arrow keys** — WASD **and** arrows in in-app `/craft` (`PlayerController`)
+3. **Teachers in rooms** — demo staff markers in every classroom/office/gym (`staffMarkersForLayout`)
+4. **People not creepy** — low-poly block people with faces (no glowing capsules / blank spheres)
+
+In-app BeaconCraft at `/craft` is the primary surface for this feedback; external `beaconcraft.vercel.app` remains the marketing tour host.

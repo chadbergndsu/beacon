@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { filterPresenceForViewer, canUseFlyMode, pickTeacherFocusRoom } from './presence'
+import {
+  filterPresenceForViewer,
+  canUseFlyMode,
+  pickTeacherFocusRoom,
+  staffMarkersForLayout,
+  mergePresenceWithStaff,
+} from './presence'
+import { DEMO_SCHOOL_LAYOUT } from './layout'
 import type { CraftPresenceRecord } from './types'
 
 const records: CraftPresenceRecord[] = [
@@ -29,6 +36,7 @@ describe('filterPresenceForViewer', () => {
     })
     expect(markers).toHaveLength(2)
     expect(markers.map((m) => m.label).sort()).toEqual(['Alex Rivera', 'Blake Chen'])
+    expect(markers.every((m) => m.kind === 'student')).toBe(true)
   })
 
   it('limits teacher to assigned rooms', () => {
@@ -69,6 +77,30 @@ describe('filterPresenceForViewer', () => {
   })
 })
 
+describe('staffMarkersForLayout', () => {
+  it('places a teacher in each classroom, office, and gym', () => {
+    const staff = staffMarkersForLayout(DEMO_SCHOOL_LAYOUT)
+    expect(staff.length).toBeGreaterThanOrEqual(6)
+    expect(staff.every((m) => m.kind === 'teacher')).toBe(true)
+    expect(staff.some((m) => m.roomId.includes('101'))).toBe(true)
+    expect(staff.some((m) => m.roomId.includes('201'))).toBe(true)
+  })
+})
+
+describe('mergePresenceWithStaff', () => {
+  it('keeps students and adds teachers', () => {
+    const students = filterPresenceForViewer(records, {
+      role: 'admin',
+      teacherRoomIds: [],
+      parentStudentIds: [],
+      anonymizeOthers: false,
+    })
+    const merged = mergePresenceWithStaff(students, DEMO_SCHOOL_LAYOUT)
+    expect(merged.filter((m) => m.kind === 'student')).toHaveLength(2)
+    expect(merged.filter((m) => m.kind === 'teacher').length).toBeGreaterThan(0)
+  })
+})
+
 describe('canUseFlyMode', () => {
   it('allows leadership roles', () => {
     expect(canUseFlyMode('principal')).toBe(true)
@@ -79,7 +111,7 @@ describe('canUseFlyMode', () => {
 describe('pickTeacherFocusRoom', () => {
   it('prefers a layout room from teacher assignments', () => {
     expect(
-      pickTeacherFocusRoom(['craft-demo-room-101'], ['craft-demo-hall', 'craft-demo-room-101'])
+      pickTeacherFocusRoom(['craft-demo-room-101'], ['craft-demo-room-101', 'craft-demo-room-102'])
     ).toBe('craft-demo-room-101')
   })
 })

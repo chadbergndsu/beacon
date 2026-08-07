@@ -355,7 +355,7 @@ Minecraft-style voxel campus driven by badge presence. Not the same product as *
 | Layout editor (Go-live) | `CraftLayoutEditor` on Principal → Go-live — drag rooms, floor tabs, JSON/SVG import |
 | Real badge path | Merges `listRoomPresence()` when layout room **names** match `school_rooms` |
 
-**Controls:** click world for pointer lock · WASD move · sprint · floor switcher + stairs/elevator portals · admin fly (Space up / Shift down) · room search teleports · rotating mini-map + compass · mobile move/look pads.
+**Controls:** click world for pointer lock · WASD **or arrow keys** move · sprint · floor switcher (Floor 1 & 2) + stairs/elevator portals · teachers shown in classrooms · admin fly (Space up / Shift down) · room search teleports · rotating mini-map + compass · mobile move/look pads.
 
 **Privacy defaults:** teachers see their classroom rooms only; parents see linked children by name and optional anonymized “Guest” markers elsewhere; leadership sees full campus.
 

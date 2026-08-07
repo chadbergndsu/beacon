@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireCraftProfile } from '@/lib/craft/auth-api'
 import { allRooms } from '@/lib/craft/campus'
 import { loadCampusPresence } from '@/lib/craft/presence-store'
-import { filterPresenceForViewer, defaultAnonymizeForRole } from '@/lib/craft/presence'
+import { filterPresenceForViewer, defaultAnonymizeForRole, mergePresenceWithStaff } from '@/lib/craft/presence'
 import { isLeadership } from '@/lib/roles'
 import { loadCraftRoomMapping } from '@/lib/craft/rooms'
 import { loadCraftLayoutForSchool } from '@/lib/craft/settings'
@@ -80,12 +80,15 @@ export async function GET() {
     parentStudentIds = (links ?? []).map((l) => l.student_id as string)
   }
 
-  const markers = filterPresenceForViewer(records, {
-    role: profile.role,
-    teacherRoomIds,
-    parentStudentIds,
-    anonymizeOthers: defaultAnonymizeForRole(profile.role),
-  })
+  const markers = mergePresenceWithStaff(
+    filterPresenceForViewer(records, {
+      role: profile.role,
+      teacherRoomIds,
+      parentStudentIds,
+      anonymizeOthers: defaultAnonymizeForRole(profile.role),
+    }),
+    layout
+  )
 
   let trails: Awaited<ReturnType<typeof loadPresenceTrails>> = []
   if (isLeadership(profile.role)) {

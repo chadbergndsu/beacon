@@ -69,7 +69,8 @@ export function CraftHud({
         {!pointerLocked ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="rounded-lg bg-black/50 px-4 py-2 text-sm text-white shadow-lg backdrop-blur-sm">
-              Click to capture mouse · WASD · Shift sprint · Space/Shift fly (admin) · Mobile pads
+              Click to capture mouse · WASD / arrows · Shift sprint · Space/Shift fly (admin) · Mobile
+              pads · Floor switcher for Floor 1 & 2
             </div>
           </div>
         ) : null}
@@ -94,7 +95,12 @@ export function MarkerLegend({ markers }: { markers: CraftVisibleMarker[] }) {
     <ul className="mt-2 max-h-24 space-y-1 overflow-y-auto text-xs">
       {markers.map((m) => (
         <li key={m.id} className="flex justify-between gap-2">
-          <span>{m.label}</span>
+          <span>
+            {m.label}
+            {m.kind === 'teacher' ? (
+              <span className="ml-1 text-[10px] text-sky-700">teacher</span>
+            ) : null}
+          </span>
           <span className="text-muted-foreground">{new Date(m.since).toLocaleTimeString()}</span>
         </li>
       ))}
