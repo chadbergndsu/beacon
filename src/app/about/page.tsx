@@ -94,7 +94,7 @@ export default async function AboutPage({
   searchParams: Promise<{ school?: string; slug?: string }>
 }) {
   const sp = await searchParams
-  const { schoolHref, beaconHref, trustHref } = buildSchoolContextLinks(sp)
+  const { schoolHref, beaconHref, trustHref, loginHref } = buildSchoolContextLinks(sp)
   const inquiryReady = await isDesignPartnerInquiryReady()
   const tourHref = beaconCraftTourUrl()
 
@@ -136,7 +136,7 @@ export default async function AboutPage({
             >
               Trust
             </Link>
-            <Link href="/login" className={buttonClassName('primary', 'sm', 'ml-1')}>
+            <Link href={loginHref} className={buttonClassName('primary', 'sm', 'ml-1')}>
               Sign in
             </Link>
           </nav>
@@ -379,7 +379,7 @@ export default async function AboutPage({
           <p className="flex flex-wrap justify-center gap-x-4 gap-y-2 sm:justify-end">
             <Link href={schoolHref} className="hover:text-primary hover:underline">School site</Link>
             <Link href={trustHref} className="hover:text-primary hover:underline">Trust &amp; data practices</Link>
-            <Link href="/login" className="hover:text-primary hover:underline">Sign in</Link>
+            <Link href={loginHref} className="hover:text-primary hover:underline">Sign in</Link>
           </p>
         </div>
       </footer>

@@ -64,7 +64,7 @@ export default async function PrivacyPage({
 }: {
   searchParams: Promise<{ school?: string; slug?: string }>
 }) {
-  const { schoolHref, beaconHref } = buildSchoolContextLinks(await searchParams)
+  const { schoolHref, beaconHref, loginHref } = buildSchoolContextLinks(await searchParams)
   return (
     <div className="min-h-screen beacon-shell">
       <header className="border-b border-border/80 bg-navy text-navy-foreground">
@@ -76,7 +76,7 @@ export default async function PrivacyPage({
             Beacon
           </Link>
           <Link
-            href="/login"
+            href={loginHref}
             className="text-sm font-medium text-navy-foreground/70 transition hover:text-navy-foreground"
           >
             Sign in →
@@ -292,7 +292,7 @@ export default async function PrivacyPage({
             <Link href={schoolHref} className={buttonClassName('ghost', 'sm', 'text-primary')}>
               School site
             </Link>
-            <Link href="/login" className={buttonClassName('primary', 'sm')}>
+            <Link href={loginHref} className={buttonClassName('primary', 'sm')}>
               Sign in →
             </Link>
           </p>

@@ -22,7 +22,7 @@ function safeSchoolKey(value: string | undefined): string | null {
 export function buildSchoolContextLinks(input: {
   school?: string
   slug?: string
-}): { schoolHref: string; beaconHref: string; trustHref: string } {
+}): { schoolHref: string; beaconHref: string; trustHref: string; loginHref: string } {
   const school = safeSchoolKey(input.school)
   if (school) {
     const query = `school=${encodeURIComponent(school)}`
@@ -30,6 +30,7 @@ export function buildSchoolContextLinks(input: {
       schoolHref: `/school?${query}`,
       beaconHref: `/about?${query}`,
       trustHref: `/privacy?${query}`,
+      loginHref: `/login?${query}`,
     }
   }
 
@@ -40,8 +41,14 @@ export function buildSchoolContextLinks(input: {
       schoolHref: `/school?${query}`,
       beaconHref: `/about?${query}`,
       trustHref: `/privacy?${query}`,
+      loginHref: `/login?${query}`,
     }
   }
 
-  return { schoolHref: '/school', beaconHref: '/about', trustHref: '/privacy' }
+  return {
+    schoolHref: '/school',
+    beaconHref: '/about',
+    trustHref: '/privacy',
+    loginHref: '/login',
+  }
 }
