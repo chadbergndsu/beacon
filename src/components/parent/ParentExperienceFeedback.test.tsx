@@ -33,7 +33,7 @@ describe('ParentExperienceFeedback', () => {
     expect(html).toContain('>Yes</button>')
     expect(html).toContain('>Not yet</button>')
     expect(html).toContain('type="submit"')
-    expect(html).toContain('min-h-11')
+    expect(html).toContain('min-h-12')
     expect(html).not.toContain('Anything you want us to know?')
   })
 
@@ -87,6 +87,26 @@ describe('ParentExperienceFeedback', () => {
       'We could not save your feedback. Please try again.'
     )
     expect(comment.value).toBe('Keep this draft after failure.')
+  })
+
+  it('announces that a one-tap rating is saving while the action is pending', async () => {
+    let finish!: (value: { ok: true; rating: 'helpful' }) => void
+    mocks.submitParentExperienceFeedback.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      })
+    )
+    const user = userEvent.setup()
+    render(<ParentExperienceFeedback initialResponse={null} />)
+
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+
+    try {
+      expect((await screen.findByRole('status')).textContent).toContain('Saving your feedback')
+    } finally {
+      finish({ ok: true, rating: 'helpful' })
+    }
+    expect((await screen.findByRole('status')).textContent).toContain('Thank you')
   })
 
   it('keeps the edited comment and selected rating after a successful update', async () => {

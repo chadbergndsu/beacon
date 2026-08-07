@@ -149,6 +149,7 @@ test.describe('pilot scorecard journey', () => {
       )
     ).toBeVisible()
 
+    await expect(yes).toBeEnabled()
     await yes.focus()
     await expect(yes).toBeFocused()
     await page.keyboard.press('Tab')

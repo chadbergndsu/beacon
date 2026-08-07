@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation'
+import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { effectiveRole } from '@/lib/roles'
 import type { Profile } from '@/lib/types'
 
-export async function requireUser() {
+export const requireUser = cache(async function requireUser() {
   const supabase = await createClient()
   const {
     data: { user },
@@ -16,14 +17,14 @@ export async function requireUser() {
   }
 
   return { supabase, user }
-}
+})
 
 /**
  * Load profile after session verification.
  * Uses service role for the profile row so broken RLS never blanks the app shell,
  * but only after getUser() confirms a real session.
  */
-export async function getProfile(): Promise<{
+export const getProfile = cache(async function getProfile(): Promise<{
   supabase: Awaited<ReturnType<typeof createClient>>
   user: NonNullable<Awaited<ReturnType<typeof requireUser>>['user']>
   profile: Profile | null
@@ -57,4 +58,4 @@ export async function getProfile(): Promise<{
   }
 
   return { supabase, user, profile }
-}
+})

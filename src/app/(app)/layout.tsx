@@ -13,21 +13,28 @@ import {
   parseSkinId,
   type SkinId,
 } from '@/lib/skins/catalog'
+import { measureServerOperation } from '@/lib/ops/server-performance'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { profile, user } = await getProfile()
-  const brand = await loadSchoolBrand(profile?.school_id)
-  const { isEmailHonestLive } = await import('@/lib/email/transport')
+  const jarPromise = cookies()
+  const emailTransportPromise = import('@/lib/email/transport')
+  const { profile, user } = await measureServerOperation('app.auth_profile', getProfile)
+  const [brand, jar, prefs, { isEmailHonestLive }] = await measureServerOperation(
+    'app.shell',
+    () =>
+      Promise.all([
+        loadSchoolBrand(profile?.school_id),
+        jarPromise,
+        loadUserPreferences(user.id),
+        emailTransportPromise,
+      ])
+  )
   const emailLive = isEmailHonestLive()
   const qbLive = isQuickBooksConfigured()
   const firstName = profile?.full_name?.trim().split(/\s+/)[0] || null
 
-  const jar = await cookies()
   let skin: SkinId = parseSkinId(jar.get(SKIN_COOKIE)?.value || DEFAULT_SKIN)
-  if (user?.id) {
-    const prefs = await loadUserPreferences(user.id)
-    if (prefs.skin) skin = parseSkinId(prefs.skin)
-  }
+  if (prefs.skin) skin = parseSkinId(prefs.skin)
 
   return (
     <SkinProvider initialSkin={skin}>

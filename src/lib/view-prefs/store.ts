@@ -1,9 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { cache } from 'react'
 import { defaultLayoutForScreen, getScreenCatalog } from './registry'
 import { resolveScreenLayout } from './resolve'
 import type { ScreenId, ScreenLayout, UserPreferences, ViewLayoutsMap } from './types'
 
-export async function loadUserPreferences(userId: string): Promise<UserPreferences> {
+export const loadUserPreferences = cache(async function loadUserPreferences(
+  userId: string
+): Promise<UserPreferences> {
   try {
     const admin = createAdminClient()
     const { data, error } = await admin
@@ -18,7 +21,7 @@ export async function loadUserPreferences(userId: string): Promise<UserPreferenc
   } catch {
     return {}
   }
-}
+})
 
 export async function loadScreenLayout(
   userId: string,

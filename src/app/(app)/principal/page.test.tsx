@@ -1,4 +1,3 @@
-import { Children, type ReactElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultBillingState } from '@/lib/billing/types'
@@ -33,7 +32,7 @@ vi.mock('@/lib/supabase/admin', () => ({
   },
 }))
 
-import PrincipalOverviewPage from './page'
+import PrincipalOverviewPage, { PrincipalPilotEvidence } from './page'
 
 const scorecard: PilotEvidenceScorecard = {
   windowStart: '2026-08-01',
@@ -151,6 +150,28 @@ describe('PrincipalOverviewPage pilot evidence', () => {
     await expect(pagePromise).resolves.toBeTruthy()
   })
 
+  it('returns the principal shell before heavy dashboard cards finish loading', async () => {
+    const billing = deferred<ReturnType<typeof defaultBillingState>>()
+    const beaconSignal = deferred<typeof signal>()
+    const evidence = deferred<PilotEvidenceScorecard>()
+    mocks.loadBillingState.mockReturnValue(billing.promise)
+    mocks.loadSchoolBeaconSignal.mockReturnValue(beaconSignal.promise)
+    mocks.loadPilotScorecard.mockReturnValue(evidence.promise)
+
+    const pagePromise = PrincipalOverviewPage()
+    const outcome = await Promise.race([
+      pagePromise.then(() => 'shell'),
+      new Promise<'blocked'>((resolve) => setTimeout(() => resolve('blocked'), 25)),
+    ])
+
+    billing.resolve(defaultBillingState())
+    beaconSignal.resolve(signal)
+    evidence.resolve(scorecard)
+
+    expect(outcome).toBe('shell')
+    await expect(pagePromise).resolves.toBeTruthy()
+  })
+
   it('places pilot evidence after Beacon Signal in the principal default layout', async () => {
     await PrincipalOverviewPage()
 
@@ -183,15 +204,11 @@ describe('PrincipalOverviewPage pilot evidence', () => {
   it('keeps the principal overview rendered when every evidence source is unavailable', async () => {
     mocks.loadPilotScorecard.mockResolvedValue(unavailableScorecard)
 
-    const page = (await PrincipalOverviewPage()) as ReactElement<{ children: ReactNode }>
-    const sections = Children.toArray(page.props.children) as ReactElement<{
-      id?: string
-      children?: ReactElement
-    }>[]
-    const pilotSection = sections.find((section) => section.props.id === 'pilot_evidence')
-    const html = renderToStaticMarkup(pilotSection?.props.children ?? <></>)
+    const card = await PrincipalPilotEvidence({
+      scorecardPromise: Promise.resolve(unavailableScorecard),
+    })
+    const html = renderToStaticMarkup(card)
 
-    expect(pilotSection).toBeTruthy()
     expect(html).toContain('Pilot evidence')
     expect(html).toContain('Baseline temporarily unavailable')
     expect(html.match(/Temporarily unavailable/g)).toHaveLength(7)

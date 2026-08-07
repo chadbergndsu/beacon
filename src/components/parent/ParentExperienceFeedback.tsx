@@ -53,7 +53,7 @@ export function ParentExperienceFeedback({
               name="rating"
               value="helpful"
               variant={activeRating === 'helpful' ? 'primary' : 'outline'}
-              className="h-11 min-h-11 px-5"
+              className="h-12 min-h-12 px-5"
               aria-pressed={activeRating === 'helpful'}
               disabled={pending || unavailable}
               onClick={() => setSelectedRating('helpful')}
@@ -65,7 +65,7 @@ export function ParentExperienceFeedback({
               name="rating"
               value="not_yet"
               variant={activeRating === 'not_yet' ? 'primary' : 'outline'}
-              className="h-11 min-h-11 px-5"
+              className="h-12 min-h-12 px-5"
               aria-pressed={activeRating === 'not_yet'}
               disabled={pending || unavailable}
               onClick={() => setSelectedRating('not_yet')}
@@ -94,7 +94,11 @@ export function ParentExperienceFeedback({
           </Field>
         ) : null}
 
-        {state.ok ? (
+        {pending ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            Saving your feedback…
+          </p>
+        ) : state.ok ? (
           <p role="status" className="text-sm text-emerald-800">
             Thank you - your school and the Beacon team can use this to improve the pilot.
           </p>

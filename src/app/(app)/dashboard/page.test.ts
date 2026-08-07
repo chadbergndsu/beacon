@@ -28,7 +28,7 @@ vi.mock('@/lib/pilot-analytics/activity', () => ({
 }))
 vi.mock('@/lib/view-prefs/store', () => ({ loadScreenLayout: mocks.loadScreenLayout }))
 
-import DashboardPage from './page'
+import DashboardPage, * as DashboardModule from './page'
 
 const user = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -193,5 +193,71 @@ describe('parent dashboard pilot activity', () => {
 
     await expect(DashboardPage()).resolves.toBeTruthy()
     expect(mocks.recordPilotActivity).not.toHaveBeenCalled()
+  })
+
+  it('bulk-loads the parent grades table instead of querying each child and class', async () => {
+    const calls: Record<string, number> = {
+      enrollments: 0,
+      classes: 0,
+      grade_categories: 0,
+      assignments: 0,
+      grades: 0,
+    }
+    mocks.admin = createMockAdmin({
+      enrollments: () => {
+        calls.enrollments += 1
+        return {
+          data: [
+            { student_id: 'student-1', class_id: 'class-1' },
+            { student_id: 'student-2', class_id: 'class-1' },
+          ],
+          error: null,
+        }
+      },
+      classes: () => {
+        calls.classes += 1
+        return { data: [{ id: 'class-1', name: 'Math' }], error: null }
+      },
+      grade_categories: () => {
+        calls.grade_categories += 1
+        return { data: [], error: null }
+      },
+      assignments: () => {
+        calls.assignments += 1
+        return { data: [], error: null }
+      },
+      grades: () => {
+        calls.grades += 1
+        return { data: [], error: null }
+      },
+    })
+
+    const ParentGradesTable = (
+      DashboardModule as unknown as {
+        ParentGradesTable?: (props: {
+          linkedChildren: Array<{ id: string; first_name: string; last_name: string }>
+          schoolId: string
+        }) => Promise<unknown>
+      }
+    ).ParentGradesTable
+
+    expect(ParentGradesTable).toBeTypeOf('function')
+    if (!ParentGradesTable) return
+
+    await ParentGradesTable({
+      schoolId: 'school-1',
+      linkedChildren: [
+        { id: 'student-1', first_name: 'Ava', last_name: 'Able' },
+        { id: 'student-2', first_name: 'Ben', last_name: 'Baker' },
+      ],
+    })
+
+    expect(calls).toEqual({
+      enrollments: 1,
+      classes: 1,
+      grade_categories: 1,
+      assignments: 1,
+      grades: 0,
+    })
   })
 })
