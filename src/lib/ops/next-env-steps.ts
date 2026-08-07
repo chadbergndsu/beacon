@@ -136,6 +136,17 @@ export function buildLaunchSuggestions(input: {
       optional: true,
       href: '/craft',
     },
+    {
+      id: 'env_slack',
+      group: 'env',
+      label: 'Slack office channel (or N/A)',
+      detail:
+        'BEACON_SLACK_WEBHOOK_URL (or bot token + channel). Test from Comms → Slack.',
+      done:
+        Boolean(checklist.slack) || checkStatus(health, 'slack_office') === 'ok',
+      optional: true,
+      href: '/admin/emails',
+    },
   ]
 
   const checklistSteps: LaunchSuggestion[] = checklistItems.map((item) => ({

@@ -154,6 +154,30 @@ export async function createAnnouncement(input: {
     }
   }
 
+  // Soft-notify office Slack when configured (never blocks announcement create)
+  try {
+    const { isSlackConfigured, publishSlack } = await import('@/lib/notify/slack')
+    if (isSlackConfigured()) {
+      const brand = await loadSchoolBrand(access.profile.school_id)
+      const base = appBaseUrl()
+      const author = access.profile.full_name || 'Staff'
+      await publishSlack({
+        title: `${brand.shortName} · New announcement`,
+        text: `*${title}*\n${body.slice(0, 500)}${body.length > 500 ? '…' : ''}`,
+        fields: [
+          { label: 'Audience', value: audience },
+          { label: 'Author', value: author },
+        ],
+        link: {
+          label: 'Open in Beacon',
+          url: `${base}/announcements/${announcement.id}`,
+        },
+      })
+    }
+  } catch {
+    // ignore — Slack is best-effort
+  }
+
   revalidatePath('/announcements')
   revalidatePath('/admin/emails')
   return { ok: true, id: announcement.id, emailed, emailNote }

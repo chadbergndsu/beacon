@@ -33,6 +33,7 @@ export function PilotSuggestionButton({
   const [doneNote, setDoneNote] = useState<string | null>(null)
   const [emailed, setEmailed] = useState(false)
   const [pushed, setPushed] = useState(false)
+  const [slacked, setSlacked] = useState(false)
   const [pending, startTransition] = useTransition()
 
   // Close on escape
@@ -51,6 +52,7 @@ export function PilotSuggestionButton({
     setDoneNote(null)
     setEmailed(false)
     setPushed(false)
+    setSlacked(false)
     setOpen(true)
   }
 
@@ -74,6 +76,7 @@ export function PilotSuggestionButton({
         setDone(true)
         setEmailed(Boolean(result.emailed))
         setPushed(Boolean(result.pushed))
+        setSlacked(Boolean(result.slacked))
         setDoneNote(result.note)
         setMessage('')
         setCategory('idea')
@@ -153,7 +156,7 @@ export function PilotSuggestionButton({
             {done ? (
               <div
                 className={
-                  emailed || pushed
+                  emailed || pushed || slacked
                     ? 'mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
                     : 'mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100'
                 }
@@ -161,14 +164,14 @@ export function PilotSuggestionButton({
                 <div className="flex items-start gap-2">
                   <CheckCircle2
                     className={
-                      emailed || pushed
+                      emailed || pushed || slacked
                         ? 'mt-0.5 h-5 w-5 shrink-0 text-emerald-600'
                         : 'mt-0.5 h-5 w-5 shrink-0 text-amber-600'
                     }
                   />
                   <div>
                     <p className="font-semibold">
-                      {emailed || pushed
+                      {emailed || pushed || slacked
                         ? 'Got it — thank you!'
                         : 'Saved — owner may not have been notified yet'}
                     </p>

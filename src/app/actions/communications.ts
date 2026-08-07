@@ -289,6 +289,47 @@ export async function sendTestEmail(): Promise<CommsResult> {
   }
 }
 
+/** Prove Slack webhook/bot delivery from Comms (leadership / office admin). */
+export async function sendTestSlack(): Promise<CommsResult> {
+  const access = await requireStaff()
+  if (!access.ok) return access
+  if (!canSendSystemEmail(access.profile.role)) {
+    return { ok: false, error: 'Only leadership can send Slack tests.' }
+  }
+
+  const { isSlackConfigured, publishSlack, slackConfigMode } = await import(
+    '@/lib/notify/slack'
+  )
+  if (!isSlackConfigured()) {
+    return {
+      ok: false,
+      error:
+        'Slack is not configured. Set BEACON_SLACK_WEBHOOK_URL (or BEACON_SLACK_BOT_TOKEN + BEACON_SLACK_CHANNEL) on Vercel.',
+    }
+  }
+
+  const brand = await loadSchoolBrand(access.profile.school_id)
+  const mode = slackConfigMode()
+  const who = access.profile.full_name || access.profile.email || 'Staff'
+  const result = await publishSlack({
+    title: `${brand.shortName} · Slack delivery test`,
+    text: `Beacon Slack is working for *${brand.name}*.\nSent by ${who}.`,
+    fields: [
+      { label: 'Mode', value: mode || 'unknown' },
+      { label: 'School', value: brand.name },
+    ],
+  })
+
+  if (!result.ok) {
+    return { ok: false, error: result.error || 'Slack test failed.' }
+  }
+
+  return {
+    ok: true,
+    emailNote: `Posted to Slack (${mode}). Check your office channel.`,
+  }
+}
+
 export async function resendFailedEmail(outboxId: string): Promise<CommsResult> {
   const access = await requireStaff()
   if (!access.ok) return access

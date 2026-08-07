@@ -19,6 +19,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 | Billing | QuickBooks OAuth (optional) | Tokens on `quickbooks_connections`; **Push to QuickBooks** posts customers/invoices/payments via Accounting API when connected |
 | Cameras | hls.js + go2rtc/MediaMTX URLs | Stored in `schools.settings` modules JSON (no dedicated camera table) |
 | SMS | Twilio (optional) | Aftercare parent notify |
+| Slack | Incoming webhook / bot (optional) | Office channel alerts |
 | Rate limits | In-memory; Upstash optional | Kiosk / device / login |
 
 ## Architecture (short)
@@ -260,6 +261,7 @@ Full list of names lives in **`.env.example`**. Summary:
 |-------------|-----|---------|
 | Pilot owner email | `BEACON_FEEDBACK_TO` / `BEACON_OWNER_EMAIL` | Suggestion button inbox (**not** the principal) |
 | ntfy push | `BEACON_NTFY_*` | Owner phone alerts |
+| Slack | `BEACON_SLACK_WEBHOOK_URL` (or `BEACON_SLACK_BOT_TOKEN` + `BEACON_SLACK_CHANNEL`) | Office channel: announcement posts, pilot alerts, Comms test |
 | Twilio SMS | `TWILIO_*` | Aftercare parent SMS |
 | Stripe (family pay) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Card Checkout on `/pay/[token]`; webhook `/api/stripe/webhook`; success-page confirm; migration **020** |
 | Cron | `CRON_SECRET` | Daily recurring tuition (`/api/cron/billing-schedules`) |

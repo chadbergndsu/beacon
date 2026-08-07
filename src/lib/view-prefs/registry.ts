@@ -135,6 +135,7 @@ export const SCREEN_CATALOG: Record<ScreenId, { title: string; sections: Section
       { id: 'header', label: 'Comms header', locked: true },
       { id: 'compose', label: 'Compose message' },
       { id: 'test_email', label: 'Test email' },
+      { id: 'test_slack', label: 'Slack test' },
       { id: 'outbox', label: 'Email outbox' },
       { id: 'tips', label: 'Delivery tips' },
     ],

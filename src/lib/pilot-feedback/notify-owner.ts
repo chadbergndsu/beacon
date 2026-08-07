@@ -1,6 +1,7 @@
 import { queueAndSendEmail } from '@/lib/email/send'
 import { isEmailLive } from '@/lib/email/transport'
 import { isNtfyConfigured, publishNtfy } from '@/lib/notify/ntfy'
+import { isSlackConfigured, publishSlack } from '@/lib/notify/slack'
 import { FEEDBACK_CATEGORY_LABEL, type FeedbackCategory } from './types'
 import { resolveFeedbackOwnerEmail } from './owner'
 
@@ -19,9 +20,11 @@ export type OwnerNotifyInput = {
 export type OwnerNotifyResult = {
   emailed: boolean
   pushed: boolean
+  slacked: boolean
   emailTo: string | null
   emailError?: string
   pushError?: string
+  slackError?: string
   /** Human-readable multi-channel status */
   note: string
 }
@@ -40,9 +43,10 @@ export async function notifyOwnerOfPilotFeedback(
       .join(' · ') || 'Signed-in pilot user'
   const page = input.pagePath || '(unknown page)'
 
-  const [emailResult, pushResult] = await Promise.all([
+  const [emailResult, pushResult, slackResult] = await Promise.all([
     deliverOwnerEmail(input, cat, who, page),
     deliverOwnerPush(input, cat, who, page),
+    deliverOwnerSlack(input, cat, who, page),
   ])
 
   const parts: string[] = []
@@ -52,30 +56,39 @@ export async function notifyOwnerOfPilotFeedback(
   else if (pushResult.pushError && !pushResult.pushError.includes('not configured')) {
     parts.push(`push: ${pushResult.pushError}`)
   }
+  if (slackResult.slacked) parts.push('posted to Slack')
+  else if (slackResult.slackError && !slackResult.slackError.includes('not configured')) {
+    parts.push(`slack: ${slackResult.slackError}`)
+  }
 
   let note: string
-  if (emailResult.emailed && pushResult.pushed) {
-    note = 'Saved, emailed to product owner, and pushed to your phone.'
-  } else if (emailResult.emailed) {
-    note = pushResult.pushed
-      ? 'Saved and emailed to product owner.'
-      : 'Saved and emailed to product owner.' +
-        (isNtfyConfigured() ? '' : ' (Tip: set BEACON_NTFY_URL for instant phone push.)')
-  } else if (pushResult.pushed) {
-    note = `Saved and pushed to phone. Email not delivered: ${emailResult.emailError || 'unknown'}`
+  if (emailResult.emailed || pushResult.pushed || slackResult.slacked) {
+    const delivered: string[] = []
+    if (emailResult.emailed) delivered.push('emailed owner')
+    if (pushResult.pushed) delivered.push('pushed to phone')
+    if (slackResult.slacked) delivered.push('posted to Slack')
+    note = `Saved · ${delivered.join(' · ')}.`
+    if (emailResult.emailed && !pushResult.pushed && !isNtfyConfigured()) {
+      note += ' Tip: set BEACON_NTFY_URL for phone push.'
+    }
+    if (!slackResult.slacked && !isSlackConfigured()) {
+      note += ' Tip: set BEACON_SLACK_WEBHOOK_URL for office Slack.'
+    }
   } else {
     note =
       parts.length > 0
         ? `Saved in Beacon. Delivery: ${parts.join(' · ')}`
-        : 'Saved in Beacon. Configure BEACON_FEEDBACK_TO and/or BEACON_NTFY_URL for owner alerts.'
+        : 'Saved in Beacon. Configure BEACON_FEEDBACK_TO, BEACON_NTFY_URL, and/or BEACON_SLACK_WEBHOOK_URL for owner alerts.'
   }
 
   return {
     emailed: emailResult.emailed,
     pushed: pushResult.pushed,
+    slacked: slackResult.slacked,
     emailTo: emailResult.emailTo,
     emailError: emailResult.emailError,
     pushError: pushResult.pushError,
+    slackError: slackResult.slackError,
     note,
   }
 }
@@ -202,6 +215,41 @@ async function deliverOwnerPush(
   return {
     pushed: result.ok,
     pushError: result.ok ? undefined : result.error,
+  }
+}
+
+async function deliverOwnerSlack(
+  input: OwnerNotifyInput,
+  cat: string,
+  who: string,
+  page: string
+): Promise<Pick<OwnerNotifyResult, 'slacked' | 'slackError'>> {
+  if (!isSlackConfigured()) {
+    return { slacked: false, slackError: 'Slack not configured' }
+  }
+
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : 'https://beacon.commoncentsip.com')
+
+  const result = await publishSlack({
+    title: `Beacon pilot · ${cat}`,
+    text: input.message.slice(0, 1500),
+    fields: [
+      { label: 'From', value: who },
+      { label: 'Page', value: page },
+    ],
+    link: {
+      label: 'Open pilot feedback',
+      url: `${appUrl.replace(/\/$/, '')}/principal/feedback`,
+    },
+  })
+
+  return {
+    slacked: result.ok,
+    slackError: result.ok ? undefined : result.error,
   }
 }
 

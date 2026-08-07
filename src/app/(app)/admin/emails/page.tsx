@@ -5,6 +5,7 @@ import { Mail, Radio, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { SystemEmailForm } from '@/components/announcements/SystemEmailForm'
 import { ComposeMessageForm } from '@/components/comms/ComposeMessageForm'
 import { TestEmailButton } from '@/components/comms/TestEmailButton'
+import { TestSlackButton } from '@/components/comms/TestSlackButton'
 import { ResendEmailButton } from '@/components/comms/ResendEmailButton'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
 import { ViewSection } from '@/components/view-prefs/ViewSection'
@@ -12,6 +13,7 @@ import { getProfile } from '@/lib/auth'
 import { getEmailDeliveryStats, isEmailLive, listEmailOutbox } from '@/lib/email/send'
 import { loadSchoolBrand } from '@/lib/school-brand'
 import { canSendSystemEmail } from '@/lib/roles'
+import { isSlackConfigured, slackConfigMode } from '@/lib/notify/slack'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
 import { Badge } from '@/components/ui/badge'
@@ -58,10 +60,13 @@ export default async function CommunicationsPage() {
   const canManual = canSendSystemEmail(profile.role)
   const live = isEmailLive()
   const replyTo = brand.email || process.env.EMAIL_REPLY_TO || null
+  const slackOn = isSlackConfigured()
+  const slackMode = slackConfigMode()
 
   const viewLayout = await loadScreenLayout(user.id, 'admin_comms', [
     'header',
     'test_email',
+    ...(canManual ? (['test_slack'] as const) : []),
     'compose',
     ...(canManual ? (['tips'] as const) : []),
     'outbox',
@@ -185,6 +190,37 @@ export default async function CommunicationsPage() {
           ))}
         </div>
       </ViewSection>
+
+      {canManual ? (
+        <ViewSection id="test_slack" title="Slack">
+          <div
+            className={
+              slackOn
+                ? 'rounded-lg border border-violet-200 bg-violet-50/80 p-4 text-sm text-violet-950 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-100'
+                : 'rounded-lg border border-border bg-muted/40 p-4 text-sm text-foreground'
+            }
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-semibold">
+                  {slackOn
+                    ? `Slack connected (${slackMode === 'bot' ? 'bot API' : 'incoming webhook'})`
+                    : 'Slack office channel (optional)'}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed opacity-90">
+                  {slackOn
+                    ? 'New announcements and pilot suggestions can post to your office Slack. Use the test button to confirm delivery.'
+                    : 'Set BEACON_SLACK_WEBHOOK_URL on Vercel (Incoming Webhook from a Slack channel), or BEACON_SLACK_BOT_TOKEN + BEACON_SLACK_CHANNEL.'}
+                </p>
+              </div>
+              <TestSlackButton
+                slackConfigured={slackOn}
+                modeHint={slackMode}
+              />
+            </div>
+          </div>
+        </ViewSection>
+      ) : null}
 
       <ViewSection id="compose" title="Compose message">
         <Card>

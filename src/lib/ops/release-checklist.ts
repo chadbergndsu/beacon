@@ -63,6 +63,12 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
     group: 'launch',
   },
   {
+    id: 'slack',
+    label: 'Slack office channel configured (or N/A)',
+    help: 'BEACON_SLACK_WEBHOOK_URL on Vercel (Incoming Webhook), or bot token + channel. Test from Comms → Slack.',
+    group: 'launch',
+  },
+  {
     id: 'principal_login',
     label: 'Principal can sign in',
     help: 'Profile role is principal (or admin) for your school.',
