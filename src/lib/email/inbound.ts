@@ -53,7 +53,9 @@ export async function ingestInboundEmail(
   const admin = createAdminClient()
 
   let outboxId: string | null = null
-  let schoolId: string | null = input.schoolId || null
+  // Never trust client-supplied schoolId — only outbox token or parent profile email.
+  let schoolId: string | null = null
+  let fromMismatch = false
 
   if (token) {
     const { data: outbox } = await admin
@@ -62,19 +64,61 @@ export async function ingestInboundEmail(
       .eq('reply_token', token)
       .maybeSingle()
 
-    if (outbox?.id) {
-      outboxId = outbox.id
-      schoolId = outbox.school_id
+    if (outbox?.id && outbox.school_id) {
+      const expectedTo = String(outbox.to_email || '')
+        .trim()
+        .toLowerCase()
+      let fromOk = !expectedTo || fromEmail === expectedTo
+      if (!fromOk) {
+        // Spouse / second guardian at same school may reply from another address
+        const { data: parentAtSchool } = await admin
+          .from('profiles')
+          .select('id')
+          .eq('role', 'parent')
+          .eq('school_id', outbox.school_id)
+          .eq('email', fromEmail)
+          .maybeSingle()
+        fromOk = Boolean(parentAtSchool?.id)
+        if (fromOk) fromMismatch = expectedTo !== fromEmail
+      }
+      if (fromOk) {
+        outboxId = outbox.id
+        schoolId = outbox.school_id
+      } else {
+        // Token known but From is not the recipient or a parent at that school — spoof risk
+        const { error: spoofAuditErr } = await admin.from('audit_logs').insert({
+          school_id: outbox.school_id,
+          user_id: null,
+          action: 'email.inbound_from_mismatch',
+          table_name: 'email_inbox',
+          record_id: outbox.id,
+          details: {
+            from_email: fromEmail,
+            expected_to: expectedTo,
+            to_email: toEmail,
+            subject,
+            reply_token: token,
+            provider: input.provider,
+            provider_message_id: input.providerMessageId,
+            body_text: bodyText.slice(0, 4000),
+          },
+        })
+        if (spoofAuditErr) {
+          reportError(spoofAuditErr, { surface: 'email_inbound', step: 'from_mismatch_audit' })
+          return { ok: false, error: 'Unable to record inbound', status: 500 }
+        }
+        return { ok: true, id: 'from_mismatch', unmatched: true }
+      }
     }
   }
 
   if (!schoolId) {
-    // Unmatched replies: try parent profile email → school
+    // Exact match only — never ilike ( '_' / '%' are wildcards )
     const { data: profile } = await admin
       .from('profiles')
       .select('school_id')
       .eq('role', 'parent')
-      .ilike('email', fromEmail)
+      .eq('email', fromEmail)
       .not('school_id', 'is', null)
       .limit(1)
       .maybeSingle()
@@ -83,7 +127,7 @@ export async function ingestInboundEmail(
 
   if (!schoolId) {
     // Still log under null school is not allowed — store via audit only
-    await admin.from('audit_logs').insert({
+    const { error: unmatchedErr } = await admin.from('audit_logs').insert({
       school_id: null,
       user_id: null,
       action: 'email.inbound_unmatched',
@@ -96,10 +140,14 @@ export async function ingestInboundEmail(
         reply_token: token,
         provider: input.provider,
         provider_message_id: input.providerMessageId,
-        body_text: (input.bodyText || '').slice(0, 4000),
-        body_html: input.bodyHtml ? String(input.bodyHtml).slice(0, 8000) : null,
+        body_text: bodyText.slice(0, 4000),
+        body_html: bodyHtml ? bodyHtml.slice(0, 8000) : null,
       },
     })
+    if (unmatchedErr) {
+      reportError(unmatchedErr, { surface: 'email_inbound', step: 'unmatched_audit' })
+      return { ok: false, error: 'Unable to record unmatched inbound', status: 500 }
+    }
     return { ok: true, id: 'unmatched', unmatched: true }
   }
 
@@ -137,6 +185,7 @@ export async function ingestInboundEmail(
     meta: {
       ...(input.meta || {}),
       ...(token ? { expected_reply_to: buildInboundReplyTo(token) } : {}),
+      ...(fromMismatch ? { from_mismatch: true } : {}),
     },
   }
 
@@ -235,14 +284,14 @@ export async function listFamilyThreadForEmail(
       .from('email_outbox')
       .select('id, subject, body_text, created_at, status, kind')
       .eq('school_id', schoolId)
-      .ilike('to_email', email)
+      .eq('to_email', email)
       .order('created_at', { ascending: false })
       .limit(limit),
     admin
       .from('email_inbox')
       .select('id, subject, body_text, created_at, status')
       .eq('school_id', schoolId)
-      .ilike('from_email', email)
+      .eq('from_email', email)
       .order('created_at', { ascending: false })
       .limit(limit),
   ])

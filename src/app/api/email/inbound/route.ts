@@ -101,10 +101,7 @@ export async function POST(request: Request) {
     })
   } catch (e) {
     reportError(e, { surface: 'email-inbound-webhook' })
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'Webhook failed' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'Webhook failed' }, { status: 400 })
   }
 }
 
@@ -181,6 +178,6 @@ function parseBeaconDirect(body: string): InboundEmailPayload | null {
     provider: String(data.provider || 'beacon'),
     providerMessageId: data.message_id ? String(data.message_id) : null,
     replyToken: data.reply_token ? String(data.reply_token) : null,
-    schoolId: data.school_id ? String(data.school_id) : null,
+    schoolId: data.school_id ? String(data.school_id) : null, // ignored by ingest — attribution via token/profile only
   }
 }

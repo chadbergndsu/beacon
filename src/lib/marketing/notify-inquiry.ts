@@ -122,9 +122,12 @@ ${escapeHtml(input.message)}
     })
   } catch (e) {
     reportError(e, { surface: 'school_inquiry', step: 'send' })
+    if (audit?.id) {
+      return { ok: true, note: THANKS_LOGGED }
+    }
     return {
-      ok: true,
-      note: audit?.id ? THANKS_LOGGED : THANKS,
+      ok: false,
+      error: 'We could not save your note right now. Email office@commoncentsip.com.',
     }
   }
 
@@ -148,7 +151,13 @@ ${escapeHtml(input.message)}
       step: 'send_failed',
       provider: result.provider,
     })
-    return { ok: true, note: THANKS_LOGGED }
+    if (audit?.id) {
+      return { ok: true, note: THANKS_LOGGED }
+    }
+    return {
+      ok: false,
+      error: 'We could not deliver your note right now. Email office@commoncentsip.com.',
+    }
   }
 
   return {
