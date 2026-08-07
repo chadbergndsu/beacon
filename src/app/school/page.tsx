@@ -198,7 +198,11 @@ export default async function SchoolWebsitePage({
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Opens in a new tab · works on laptop and phone · privacy-first public tour mode
+                  Public tour opens in a new tab. Staff signed into Beacon: use{' '}
+                  <Link href="/craft" className="font-semibold text-primary hover:underline">
+                    Craft
+                  </Link>{' '}
+                  in the app for live badge presence and person search.
                 </p>
               </CardContent>
             </Card>

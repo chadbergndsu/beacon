@@ -418,6 +418,10 @@ export default async function LoginPage({
                       Campus twin
                     </a>
                     <span aria-hidden>·</span>
+                    <Link href="/craft" className="font-semibold">
+                      Staff Craft
+                    </Link>
+                    <span aria-hidden>·</span>
                     <Link href="/about">About</Link>
                     <span aria-hidden>·</span>
                     <Link href="/privacy">Privacy</Link>

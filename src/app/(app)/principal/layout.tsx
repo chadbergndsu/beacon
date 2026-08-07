@@ -22,7 +22,10 @@ export default async function PrincipalLayout({ children }: { children: React.Re
               Tuition, climate, campus, and go-live — one calm workspace for your school.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Link href="/craft" className={buttonClassName('outline', 'sm')}>
+              Craft
+            </Link>
             <Link href="/principal/release" className={buttonClassName('primary', 'sm')}>
               Go-live
             </Link>

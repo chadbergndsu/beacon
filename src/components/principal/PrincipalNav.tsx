@@ -25,6 +25,7 @@ const groups: { label: string; links: { href: string; label: string }[] }[] = [
   {
     label: 'Campus',
     links: [
+      { href: '/craft', label: 'Craft' },
       { href: '/principal/badges', label: 'Badges' },
       { href: '/principal/cameras', label: 'Cameras' },
       { href: '/principal/videos', label: 'Videos' },
@@ -47,10 +48,10 @@ export function PrincipalNav() {
     <nav className="space-y-3" aria-label="Principal office">
       {groups.map((group) => (
         <div key={group.label} className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
-          <p className="w-14 shrink-0 text-[10px] font-medium text-muted-foreground">
+          <p className="w-16 shrink-0 text-[11px] font-semibold text-foreground/75 sm:w-14 sm:text-[10px] sm:font-medium sm:text-muted-foreground">
             {group.label}
           </p>
-          <div className="mobile-scroll-x gap-1 sm:flex-wrap sm:overflow-visible">
+          <div className="nav-scroll-mask mobile-scroll-x gap-1 sm:flex-wrap sm:overflow-visible sm:pl-0 sm:pr-0">
             {group.links.map((l) => {
               const active =
                 l.href === '/principal'

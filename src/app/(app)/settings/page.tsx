@@ -41,12 +41,21 @@ export default async function SettingsPage() {
       </div>
 
       {staff && (
-        <p className="text-sm text-muted-foreground">
-          Teachers &amp; staff:{' '}
-          <Link href="/teacher/settings" className="font-medium text-primary hover:underline">
-            Class weights, gradebook shortcuts →
-          </Link>
-        </p>
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p>
+            Teachers &amp; staff:{' '}
+            <Link href="/teacher/settings" className="font-medium text-primary hover:underline">
+              Class weights, gradebook shortcuts →
+            </Link>
+          </p>
+          <p>
+            Campus twin:{' '}
+            <Link href="/craft" className="font-medium text-primary hover:underline">
+              Open Craft →
+            </Link>{' '}
+            (More menu on mobile)
+          </p>
+        </div>
       )}
     </div>
   )

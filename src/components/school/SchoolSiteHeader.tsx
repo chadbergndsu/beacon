@@ -84,7 +84,7 @@ export function SchoolSiteHeader({
 
       <div
         className={cn(
-          'border-t border-border bg-card px-4 pb-4 md:hidden',
+          'border-t border-border bg-card px-4 pb-4 pb-safe md:hidden',
           open ? 'block' : 'hidden'
         )}
       >
