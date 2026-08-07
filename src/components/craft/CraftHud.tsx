@@ -7,6 +7,7 @@ import { roleLabel } from '@/lib/roles'
 import { useCraftUi } from './CraftUiContext'
 import { Minimap } from './Minimap'
 import { MockScanPanel, RoomSearch } from './CraftPanels'
+import { TouchMovePad } from './TouchMovePad'
 import { VoxelScene } from './VoxelScene'
 
 export function CraftHud({
@@ -67,6 +68,7 @@ export function CraftHud({
           </div>
         ) : null}
         <Minimap />
+        <TouchMovePad />
       </div>
 
       <div className="z-10 grid gap-3 border-t border-border/80 bg-white/95 p-3 sm:grid-cols-2">

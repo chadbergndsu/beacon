@@ -20,6 +20,7 @@ export function PlayerController() {
     requestTeleport,
     layout,
     setPointerLocked,
+    touchMove,
   } = useCraftUi()
   const controlsRef = useRef<ComponentRef<typeof PointerLockControls>>(null)
   const keys = useRef<Record<string, boolean>>({})
@@ -65,6 +66,11 @@ export function PlayerController() {
     if (keys.current.KeyS) move.sub(forward)
     if (keys.current.KeyA) move.sub(right)
     if (keys.current.KeyD) move.add(right)
+
+    if (touchMove.x || touchMove.y) {
+      move.add(right.clone().multiplyScalar(touchMove.x))
+      move.add(forward.clone().multiplyScalar(-touchMove.y))
+    }
 
     if (flyMode) {
       if (keys.current.Space) move.y += 1

@@ -7,6 +7,7 @@ import type { CraftFloorLayout } from '@/lib/craft/types'
 import { VoxelSchool } from './VoxelSchool'
 import { PlayerController } from './PlayerController'
 import { OccupancyParticles, PresenceMarkers, RoomLabels } from './PresenceLayer'
+import { TrailMarkers } from './CraftSidePanels'
 
 export function VoxelScene({ layout }: { layout: CraftFloorLayout }) {
   return (
@@ -24,6 +25,7 @@ export function VoxelScene({ layout }: { layout: CraftFloorLayout }) {
         <RoomLabels />
         <PresenceMarkers />
         <OccupancyParticles />
+        <TrailMarkers />
       </Suspense>
       <PlayerController />
     </Canvas>

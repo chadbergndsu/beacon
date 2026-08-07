@@ -39,6 +39,19 @@ export type CraftVisibleMarker = {
   anonymized: boolean
 }
 
+export type CraftTrailPoint = {
+  studentId: string
+  studentName: string
+  roomId: string
+  since: string
+}
+
+export type CraftStudentOption = {
+  id: string
+  name: string
+  gradeLevel: string | null
+}
+
 export type CraftViewerContext = {
   role: Role
   userId: string

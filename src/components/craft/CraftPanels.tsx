@@ -1,15 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import type { CraftFloorLayout } from '@/lib/craft/types'
+import { useEffect, useState } from 'react'
+import type { CraftFloorLayout, CraftStudentOption } from '@/lib/craft/types'
 import { getRoomByName } from '@/lib/craft/layout'
-
-const DEMO_STUDENTS = [
-  { id: 'demo-stu-1', name: 'Alex Rivera' },
-  { id: 'demo-stu-2', name: 'Blake Chen' },
-  { id: 'demo-stu-3', name: 'Casey Morgan' },
-  { id: 'demo-stu-4', name: 'Dana Patel' },
-]
 
 export function MockScanPanel({
   layout,
@@ -18,15 +11,37 @@ export function MockScanPanel({
   layout: CraftFloorLayout
   onScan: () => void
 }) {
-  const [studentId, setStudentId] = useState(DEMO_STUDENTS[0]?.id ?? '')
+  const [students, setStudents] = useState<CraftStudentOption[]>([])
+  const [studentId, setStudentId] = useState('')
   const [roomId, setRoomId] = useState(layout.rooms[2]?.roomId ?? '')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
+  useEffect(() => {
+    let cancelled = false
+    void fetch('/api/craft/students')
+      .then((r) => r.json())
+      .then((data: { ok?: boolean; students?: CraftStudentOption[] }) => {
+        if (cancelled || !data.ok || !data.students?.length) return
+        setStudents(data.students)
+        setStudentId(data.students[0]?.id ?? '')
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const fallbackStudents: CraftStudentOption[] = [
+    { id: 'demo-stu-1', name: 'Alex Rivera', gradeLevel: '3' },
+    { id: 'demo-stu-2', name: 'Blake Chen', gradeLevel: '4' },
+  ]
+  const options = students.length ? students : fallbackStudents
+
   async function submit() {
     setBusy(true)
     setMessage(null)
-    const student = DEMO_STUDENTS.find((s) => s.id === studentId)
+    const student = options.find((s) => s.id === studentId)
     try {
       const res = await fetch('/api/craft/mock-scan', {
         method: 'POST',
@@ -62,12 +77,13 @@ export function MockScanPanel({
           Student
           <select
             className="rounded border border-violet-200 bg-white px-2 py-1.5"
-            value={studentId}
+            value={studentId || options[0]?.id || ''}
             onChange={(e) => setStudentId(e.target.value)}
           >
-            {DEMO_STUDENTS.map((s) => (
+            {options.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
+                {s.gradeLevel ? ` (${s.gradeLevel})` : ''}
               </option>
             ))}
           </select>

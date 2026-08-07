@@ -201,6 +201,26 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
         detail: `${classes ?? 0} classes`,
         category: 'trust',
       })
+
+      try {
+        const { probeCraftReadiness } = await import('@/lib/craft/go-live')
+        const craft = await probeCraftReadiness(schoolId)
+        checks.push({
+          id: 'craft_twin',
+          label: 'BeaconCraft room mapping',
+          status: craft.ready ? 'ok' : craft.roomsMapped > 0 ? 'warn' : 'info',
+          detail: craft.detail,
+          category: 'trust',
+        })
+      } catch {
+        checks.push({
+          id: 'craft_twin',
+          label: 'BeaconCraft room mapping',
+          status: 'info',
+          detail: 'Open Go-live to sync twin rooms for /craft',
+          category: 'trust',
+        })
+      }
     } catch (e) {
       checks.push({
         id: 'roster_error',

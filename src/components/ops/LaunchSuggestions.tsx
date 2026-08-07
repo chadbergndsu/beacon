@@ -125,6 +125,12 @@ export function LaunchSuggestions({ items }: { items: LaunchSuggestion[] }) {
         >
           QuickBooks →
         </Link>
+        <Link
+          href="/craft"
+          className="font-semibold text-sky-800 hover:underline dark:text-sky-200"
+        >
+          BeaconCraft →
+        </Link>
         <Link href="/school" className="font-semibold text-sky-800 hover:underline dark:text-sky-200">
           Public school site →
         </Link>

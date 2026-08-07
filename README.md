@@ -352,7 +352,9 @@ Minecraft-style voxel campus driven by badge presence. Not the same product as *
 
 **Privacy defaults:** teachers see their classroom rooms only; parents see linked children by name and optional anonymized “Guest” markers elsewhere; leadership sees full campus.
 
-**Extend:** replace `DEMO_SCHOOL_LAYOUT` with imported JSON using the `CraftFloorLayout` type; wire hardware scans via existing `POST /api/kiosk/device-scan` — presence API already merges DB scans when room names align.
+**Extend:** replace `DEMO_SCHOOL_LAYOUT` with imported JSON using the `CraftFloorLayout` type; wire hardware scans via existing `POST /api/kiosk/device-scan` — presence API merges DB scans when room names align.
+
+**Go-live:** Principal → **Go-live** → **Sync twin rooms** (creates `school_rooms` matching layout names) → smoke-test `/craft` → **Mark smoke test** (checklist item `craft_smoke`). Onboarding and automated health show mapping progress.
 
 ## Repo
 

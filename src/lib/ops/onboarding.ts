@@ -171,6 +171,25 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
       : 'Apply migration 011 + open Principal → Badges'
   }
 
+  let craftReady = false
+  try {
+    const { probeCraftReadiness } = await import('@/lib/craft/go-live')
+    const craft = await probeCraftReadiness(schoolId)
+    craftReady = craft.ready
+  } catch {
+    craftReady = false
+  }
+
+  steps.push({
+    id: 'craft',
+    label: 'BeaconCraft digital twin',
+    done: craftReady,
+    href: '/principal/release',
+    detail: craftReady
+      ? 'Twin rooms linked and smoke-tested'
+      : 'Go-live → sync twin rooms and smoke-test /craft',
+  })
+
   // silence unused
   void parents
   void assignments

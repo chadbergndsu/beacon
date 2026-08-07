@@ -79,7 +79,12 @@ export function BadgesAdmin({
             Add <strong>rooms</strong> (classroom vs aftercare with hourly rate)
           </li>
           <li>
-            Open <strong>kiosk</strong> on a tablet → USB scan, camera QR, or name search
+            Open <strong>BeaconCraft</strong> at <Link href="/craft" className="font-semibold underline">/craft</Link>{' '}
+            for the voxel campus twin (sync rooms on{' '}
+            <Link href="/principal/release" className="font-semibold underline">
+              Go-live
+            </Link>
+            )
           </li>
           <li>
             Classroom IN marks <strong>attendance present</strong>; aftercare tracks time →{' '}
