@@ -3,6 +3,7 @@ import { isNtfyConfigured, publishNtfy } from '@/lib/notify/ntfy'
 import { resolveFeedbackOwnerEmail } from '@/lib/pilot-feedback/owner'
 import { safeReplyTo } from '@/lib/pilot-feedback/notify-owner'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { reportError } from '@/lib/ops/report-error'
 
 export type SchoolInquiryInput = {
   schoolName: string
@@ -13,14 +14,35 @@ export type SchoolInquiryInput = {
   phone?: string
 }
 
+const THANKS =
+  'Thanks — we received your note and will reply by email.'
+const THANKS_LOGGED =
+  'Thanks — your note is saved. We’ll follow up by email shortly.'
+
 export async function deliverSchoolInquiry(
   input: SchoolInquiryInput
 ): Promise<{ ok: true; note: string } | { ok: false; error: string }> {
   const to = resolveFeedbackOwnerEmail()
-  const admin = createAdminClient()
+  if (!to) {
+    return {
+      ok: false,
+      error: 'Inquiry inbox is not configured. Email office@commoncentsip.com directly.',
+    }
+  }
+
+  let admin
+  try {
+    admin = createAdminClient()
+  } catch (e) {
+    reportError(e, { surface: 'school_inquiry', step: 'admin_client' })
+    return {
+      ok: false,
+      error: 'We could not save your note right now. Email office@commoncentsip.com.',
+    }
+  }
 
   // Always audit so leads are never silently lost
-  const { data: audit } = await admin
+  const { data: audit, error: auditError } = await admin
     .from('audit_logs')
     .insert({
       school_id: null,
@@ -40,11 +62,8 @@ export async function deliverSchoolInquiry(
     .select('id')
     .maybeSingle()
 
-  if (!to) {
-    return {
-      ok: false,
-      error: 'Inquiry inbox is not configured. Email office@commoncentsip.com directly.',
-    }
+  if (auditError) {
+    reportError(auditError, { surface: 'school_inquiry', step: 'audit' })
   }
 
   const subject = `[Beacon school inquiry] ${input.schoolName.slice(0, 80)}`
@@ -82,23 +101,32 @@ ${escapeHtml(input.message)}
     </div>
   `
 
-  const result = await queueAndSendEmail({
-    school_id: null,
-    kind: 'school_inquiry',
-    to_email: to,
-    to_name: 'Beacon product owner',
-    subject,
-    body_text,
-    body_html,
-    reply_to: safeReplyTo(input.email),
-    related_table: 'audit_logs',
-    related_id: audit?.id ?? null,
-    meta: {
-      school_name: input.schoolName,
-      inquiry_email: input.email,
-      role: input.role,
-    },
-  })
+  let result
+  try {
+    result = await queueAndSendEmail({
+      school_id: null,
+      kind: 'school_inquiry',
+      to_email: to,
+      to_name: 'Beacon product owner',
+      subject,
+      body_text,
+      body_html,
+      reply_to: safeReplyTo(input.email),
+      related_table: 'audit_logs',
+      related_id: audit?.id ?? null,
+      meta: {
+        school_name: input.schoolName,
+        inquiry_email: input.email,
+        role: input.role,
+      },
+    })
+  } catch (e) {
+    reportError(e, { surface: 'school_inquiry', step: 'send' })
+    return {
+      ok: true,
+      note: audit?.id ? THANKS_LOGGED : THANKS,
+    }
+  }
 
   if (isNtfyConfigured()) {
     await publishNtfy({
@@ -115,18 +143,17 @@ ${escapeHtml(input.message)}
   }
 
   if (result.status === 'failed') {
-    return {
-      ok: true,
-      note: `Saved. Email to owner failed (${result.error || 'unknown'}) — check outbox / BEACON_FEEDBACK_TO.`,
-    }
+    reportError(new Error(result.error || 'school_inquiry_send_failed'), {
+      surface: 'school_inquiry',
+      step: 'send_failed',
+      provider: result.provider,
+    })
+    return { ok: true, note: THANKS_LOGGED }
   }
 
   return {
     ok: true,
-    note:
-      result.status === 'sent'
-        ? 'Thanks — we received your note and will reply by email.'
-        : 'Thanks — your note is logged. Owner email is in log-only mode until Resend/SMTP is live.',
+    note: result.status === 'sent' ? THANKS : THANKS_LOGGED,
   }
 }
 

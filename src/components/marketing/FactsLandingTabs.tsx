@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import Link from 'next/link'
 import { FUN_FACTS } from '@/lib/marketing/fun-facts'
 import { cn } from '@/lib/utils'
@@ -12,6 +12,33 @@ type TabId = 'case' | 'fun'
  */
 export function FactsLandingTabs() {
   const [tab, setTab] = useState<TabId>('fun')
+  const baseId = useId()
+  const caseTabId = `${baseId}-tab-case`
+  const funTabId = `${baseId}-tab-fun`
+  const casePanelId = `${baseId}-panel-case`
+  const funPanelId = `${baseId}-panel-fun`
+
+  function onTabListKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End') {
+      e.preventDefault()
+      const next: TabId =
+        e.key === 'Home'
+          ? 'case'
+          : e.key === 'End'
+            ? 'fun'
+            : e.key === 'ArrowRight'
+              ? tab === 'case'
+                ? 'fun'
+                : 'case'
+              : tab === 'fun'
+                ? 'case'
+                : 'fun'
+      setTab(next)
+      queueMicrotask(() => {
+        document.getElementById(next === 'case' ? caseTabId : funTabId)?.focus()
+      })
+    }
+  }
 
   return (
     <section id="fun-facts" className="border-y border-border bg-navy text-navy-foreground">
@@ -20,17 +47,33 @@ export function FactsLandingTabs() {
           role="tablist"
           aria-label="FACTS messaging"
           className="flex flex-wrap gap-2 border-b border-white/15 pb-4"
+          onKeyDown={onTabListKeyDown}
         >
-          <TabButton active={tab === 'case'} onClick={() => setTab('case')} id="tab-case">
+          <TabButton
+            active={tab === 'case'}
+            onClick={() => setTab('case')}
+            id={caseTabId}
+            controls={casePanelId}
+          >
             The case
           </TabButton>
-          <TabButton active={tab === 'fun'} onClick={() => setTab('fun')} id="tab-fun">
+          <TabButton
+            active={tab === 'fun'}
+            onClick={() => setTab('fun')}
+            id={funTabId}
+            controls={funPanelId}
+          >
             Fun Facts
           </TabButton>
         </div>
 
         {tab === 'case' ? (
-          <div role="tabpanel" aria-labelledby="tab-case" className="animate-beacon-in pt-10">
+          <div
+            role="tabpanel"
+            id={casePanelId}
+            aria-labelledby={caseTabId}
+            className="animate-beacon-in pt-10"
+          >
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-300/90">
               Going after FACTS
             </p>
@@ -59,7 +102,12 @@ export function FactsLandingTabs() {
             </div>
           </div>
         ) : (
-          <div role="tabpanel" aria-labelledby="tab-fun" className="animate-beacon-in pt-10">
+          <div
+            role="tabpanel"
+            id={funPanelId}
+            aria-labelledby={funTabId}
+            className="animate-beacon-in pt-10"
+          >
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-300/90">
               Fun Facts
             </p>
@@ -94,11 +142,13 @@ function TabButton({
   active,
   onClick,
   id,
+  controls,
   children,
 }: {
   active: boolean
   onClick: () => void
   id: string
+  controls: string
   children: React.ReactNode
 }) {
   return (
@@ -107,6 +157,8 @@ function TabButton({
       role="tab"
       id={id}
       aria-selected={active}
+      aria-controls={controls}
+      tabIndex={active ? 0 : -1}
       onClick={onClick}
       className={cn(
         'inline-flex h-10 items-center rounded-md px-4 text-sm font-semibold transition',

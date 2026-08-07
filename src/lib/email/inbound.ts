@@ -96,6 +96,8 @@ export async function ingestInboundEmail(
         reply_token: token,
         provider: input.provider,
         provider_message_id: input.providerMessageId,
+        body_text: (input.bodyText || '').slice(0, 4000),
+        body_html: input.bodyHtml ? String(input.bodyHtml).slice(0, 8000) : null,
       },
     })
     return { ok: true, id: 'unmatched', unmatched: true }
@@ -278,8 +280,15 @@ export function verifySvixSignature(opts: {
   svixTimestamp: string
   svixSignature: string
   secret: string
+  /** Max age of timestamp in seconds (default 5 minutes) */
+  maxSkewSec?: number
 }): boolean {
   try {
+    const ts = Number(opts.svixTimestamp)
+    if (!Number.isFinite(ts)) return false
+    const skew = Math.abs(Date.now() / 1000 - ts)
+    if (skew > (opts.maxSkewSec ?? 300)) return false
+
     const secretBytes = parseWebhookSecret(opts.secret)
     const signed = `${opts.svixId}.${opts.svixTimestamp}.${opts.body}`
     const expected = createHmac('sha256', secretBytes).update(signed).digest('base64')

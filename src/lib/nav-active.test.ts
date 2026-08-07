@@ -10,7 +10,7 @@ const nav = [
   '/principal',
   '/principal/release',
   '/announcements',
-  '/admin/emails',
+  '/desk',
   '/school',
   '/about',
 ]
@@ -47,5 +47,10 @@ describe('resolveActiveNavHref', () => {
 
   it('treats / as home', () => {
     expect(resolveActiveNavHref('/', nav)).toBe('/dashboard')
+  })
+
+  it('lights Desk on /desk and /admin/emails', () => {
+    expect(resolveActiveNavHref('/desk', nav)).toBe('/desk')
+    expect(resolveActiveNavHref('/admin/emails', nav)).toBe('/desk')
   })
 })

@@ -752,6 +752,8 @@ export async function replyToInboxMessage(input: {
   })
 
   revalidatePath('/admin/emails')
+  revalidatePath('/messages')
+  revalidatePath('/desk')
   return {
     ok: true,
     emailed: result.status === 'sent' ? 1 : 0,

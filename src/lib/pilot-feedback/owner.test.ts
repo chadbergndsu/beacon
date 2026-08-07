@@ -23,9 +23,9 @@ describe('resolveFeedbackOwnerEmail', () => {
     expect(resolveFeedbackOwnerEmail()).toBe('office@commoncentsip.com')
   })
 
-  it('rejects .example override and does not fall through to default', () => {
+  it('falls back to default when override is a demo domain', () => {
     process.env.BEACON_FEEDBACK_TO = 'fake@school.example'
-    expect(resolveFeedbackOwnerEmail()).toBeNull()
+    expect(resolveFeedbackOwnerEmail()).toBe('office@commoncentsip.com')
   })
 })
 

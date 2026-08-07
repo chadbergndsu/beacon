@@ -72,7 +72,7 @@ describe('inbound signature verify', () => {
     const secret = 'whsec_' + Buffer.from('super-secret-bytes!!').toString('base64')
     const body = '{"type":"email.received"}'
     const id = 'msg_123'
-    const ts = '1710000000'
+    const ts = String(Math.floor(Date.now() / 1000))
     const signed = `${id}.${ts}.${body}`
     const expected = createHmac('sha256', Buffer.from('super-secret-bytes!!'))
       .update(signed)
@@ -94,6 +94,17 @@ describe('inbound signature verify', () => {
         svixId: id,
         svixTimestamp: ts,
         svixSignature: 'v1,nope',
+        secret,
+      })
+    ).toBe(false)
+
+    // Reject replayed / stale timestamps
+    expect(
+      verifySvixSignature({
+        body,
+        svixId: id,
+        svixTimestamp: '1710000000',
+        svixSignature: `v1,${expected}`,
         secret,
       })
     ).toBe(false)

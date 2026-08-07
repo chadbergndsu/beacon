@@ -4,6 +4,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isQuickBooksConfigured } from '@/lib/billing/quickbooks'
+import { resolveFeedbackOwnerEmail } from '@/lib/pilot-feedback/owner'
 
 export type CheckStatus = 'ok' | 'warn' | 'fail' | 'info'
 
@@ -281,14 +282,17 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     category: 'integrations',
   })
 
-  const feedbackTo = envSet('BEACON_FEEDBACK_TO') || envSet('BEACON_OWNER_EMAIL')
+  const feedbackTo = resolveFeedbackOwnerEmail()
+  const feedbackEnvSet = envSet('BEACON_FEEDBACK_TO') || envSet('BEACON_OWNER_EMAIL')
   checks.push({
     id: 'feedback_owner',
-    label: 'Pilot owner email',
+    label: 'Pilot / inquiry owner email',
     status: feedbackTo ? 'ok' : 'warn',
     detail: feedbackTo
-      ? 'BEACON_FEEDBACK_TO configured'
-      : 'Set BEACON_FEEDBACK_TO so suggestions email you (not the principal)',
+      ? feedbackEnvSet
+        ? `Owner inbox resolved (${feedbackTo})`
+        : `Using default owner inbox (${feedbackTo}) — set BEACON_FEEDBACK_TO to override`
+      : 'Set BEACON_FEEDBACK_TO so inquiries and suggestions email you (not the principal)',
     category: 'integrations',
   })
 

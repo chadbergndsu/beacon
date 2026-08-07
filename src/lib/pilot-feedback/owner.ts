@@ -8,18 +8,16 @@
  * Optional alias:
  *   BEACON_OWNER_EMAIL=…
  *
- * If unset, falls back to the public Beacon office address so About / landing
+ * If unset (or invalid), falls back to the public Beacon office address so About / landing
  * contact forms never silently drop leads.
  */
 
 /** Public product inbox — also used as mailto: on marketing pages */
 export const DEFAULT_FEEDBACK_OWNER_EMAIL = 'office@commoncentsip.com'
 
-export function resolveFeedbackOwnerEmail(): string | null {
-  let raw =
-    process.env.BEACON_FEEDBACK_TO?.trim() ||
-    process.env.BEACON_OWNER_EMAIL?.trim() ||
-    DEFAULT_FEEDBACK_OWNER_EMAIL
+function parseOwnerEmail(rawIn: string): string | null {
+  let raw = rawIn.trim()
+  if (!raw) return null
   // Strip wrapping quotes from Vercel / .env paste
   if (
     (raw.startsWith('"') && raw.endsWith('"')) ||
@@ -36,6 +34,14 @@ export function resolveFeedbackOwnerEmail(): string | null {
     return null
   }
   return email
+}
+
+export function resolveFeedbackOwnerEmail(): string | null {
+  const fromEnv =
+    parseOwnerEmail(process.env.BEACON_FEEDBACK_TO || '') ||
+    parseOwnerEmail(process.env.BEACON_OWNER_EMAIL || '')
+  if (fromEnv) return fromEnv
+  return parseOwnerEmail(DEFAULT_FEEDBACK_OWNER_EMAIL)
 }
 
 export function feedbackOwnerConfigured(): boolean {

@@ -48,6 +48,8 @@ export function SchoolInquiryForm({ compact }: { compact?: boolean }) {
         name="company"
         tabIndex={-1}
         autoComplete="off"
+        data-1p-ignore
+        data-lpignore="true"
         aria-hidden
         className="absolute left-[-9999px] h-0 w-0 opacity-0"
       />

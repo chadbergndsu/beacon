@@ -29,6 +29,7 @@ Product SEO wedges already live on the app (`/vs/facts`, `/vs/renweb`, landing C
 | URL | Role |
 |-----|------|
 | `/` (logged-out) | FACTS-first hero + **Fun Facts** tab (mocking Nelnet / “not even Christian”) + inquiry CTA |
+| SEO discovery | `/robots.txt`, `/sitemap.xml`, `/opengraph-image`, `/manifest.webmanifest` — public in proxy |
 | `/vs/facts` | Side-by-side + “Is FACTS Christian?” + FAQPage schema |
 | `/vs/renweb` | RenWeb → FACTS SIS keyword landing |
 | `/about` | Ministry story + inquiry form → `BEACON_FEEDBACK_TO` |

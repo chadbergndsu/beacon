@@ -7,6 +7,7 @@ import { FACTS_ORG, FACTS_SEO_KEYWORDS } from '@/lib/marketing/facts-compare'
 import {
   breadcrumbJsonLd,
   organizationJsonLd,
+  siteUrl,
   softwareApplicationJsonLdFactsAlt,
 } from '@/lib/seo/json-ld'
 
@@ -51,7 +52,7 @@ export default function VsRenwebPage() {
             '@context': 'https://schema.org',
             '@type': 'WebPage',
             name: 'RenWeb Alternative for Christian Schools',
-            url: 'https://beacon.commoncentsip.com/vs/renweb',
+            url: siteUrl('/vs/renweb'),
             description:
               'RenWeb became FACTS SIS. Beacon is a RenWeb / FACTS alternative focused on family communications.',
           },

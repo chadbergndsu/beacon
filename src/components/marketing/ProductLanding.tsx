@@ -22,18 +22,18 @@ export function ProductLanding() {
             Beacon
           </Link>
           <nav className="flex items-center gap-3 text-sm">
+            <a
+              href="#fun-facts"
+              className="text-navy-foreground/75 transition hover:text-navy-foreground"
+            >
+              Fun Facts
+            </a>
             <Link
               href="/vs/facts"
               className="hidden text-navy-foreground/75 transition hover:text-navy-foreground sm:inline"
             >
               vs FACTS
             </Link>
-            <a
-              href="#fun-facts"
-              className="hidden text-navy-foreground/75 transition hover:text-navy-foreground sm:inline"
-            >
-              Fun Facts
-            </a>
             <Link
               href="/about"
               className="hidden text-navy-foreground/75 transition hover:text-navy-foreground sm:inline"

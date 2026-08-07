@@ -1,6 +1,7 @@
 'use server'
 
 import { deliverSchoolInquiry } from '@/lib/marketing/notify-inquiry'
+import { validateSchoolInquiry } from '@/lib/marketing/school-inquiry'
 import { rateLimitAsync } from '@/lib/security/rate-limit'
 import { headers } from 'next/headers'
 
@@ -19,9 +20,13 @@ export async function submitSchoolInquiry(input: {
   /** Honeypot — must stay empty */
   company?: string
 }): Promise<InquiryResult> {
-  // Bot trap
-  if (input.company && input.company.trim()) {
-    return { ok: true, note: 'Thanks — we received your note.' }
+  const validated = validateSchoolInquiry(input)
+  if (!validated.ok) {
+    // Honeypot: look like success
+    if (validated.honeypot) {
+      return { ok: true, note: validated.error }
+    }
+    return { ok: false, error: validated.error }
   }
 
   const h = await headers()
@@ -38,35 +43,12 @@ export async function submitSchoolInquiry(input: {
     return { ok: false, error: 'Too many messages from this network. Try again later.' }
   }
 
-  const schoolName = input.schoolName?.trim() || ''
-  const contactName = input.contactName?.trim() || ''
-  const email = input.email?.trim().toLowerCase() || ''
-  const role = input.role?.trim() || 'School leader'
-  const message = input.message?.trim() || ''
-  const phone = input.phone?.trim() || ''
-
-  if (schoolName.length < 2 || schoolName.length > 120) {
-    return { ok: false, error: 'Please include your school name.' }
-  }
-  if (contactName.length < 2 || contactName.length > 80) {
-    return { ok: false, error: 'Please include your name.' }
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 160) {
-    return { ok: false, error: 'Please use a valid work email.' }
-  }
-  if (message.length < 10 || message.length > 4000) {
-    return { ok: false, error: 'Tell us a bit more (at least a sentence).' }
-  }
-  if (phone.length > 40) {
-    return { ok: false, error: 'Phone looks too long.' }
-  }
-
   return deliverSchoolInquiry({
-    schoolName,
-    contactName,
-    email,
-    role: role.slice(0, 80),
-    message,
-    phone: phone || undefined,
+    schoolName: validated.data.schoolName,
+    contactName: validated.data.contactName,
+    email: validated.data.email,
+    role: validated.data.role,
+    message: validated.data.message,
+    phone: validated.data.phone,
   })
 }

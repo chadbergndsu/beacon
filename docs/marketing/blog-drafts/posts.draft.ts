@@ -1,5 +1,5 @@
-import type { BlogPost } from './types'
-import { h2, p, quote, ul } from './types'
+import type { BlogPost } from './types.draft'
+import { h2, p, quote, ul } from './types.draft'
 
 /**
  * DRAFT — not wired to the app. See docs/marketing-plan.md.

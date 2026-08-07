@@ -29,6 +29,16 @@ export function isInsecureEmailFrom(from: string): boolean {
   return /onboarding@resend\.dev/i.test(from)
 }
 
+/**
+ * Owner-bound mail (school inquiry, pilot feedback) must keep the human Reply-To.
+ * Family/outbound kinds may rewrite Reply-To to inbound capture when configured.
+ */
+export function shouldRewriteReplyToInbound(
+  kind: OutboundEmail['kind']
+): boolean {
+  return kind !== 'school_inquiry' && kind !== 'pilot_feedback'
+}
+
 function buildFromHeader(brand?: Pick<SchoolBrand, 'name' | 'shortName'> | null): string {
   const raw = process.env.EMAIL_FROM?.trim() || FALLBACK_FROM
   // If EMAIL_FROM is already "Name <email>", keep it; else wrap with school display name
@@ -59,11 +69,9 @@ export async function queueAndSendEmail(
   const officeReplyTo =
     email.reply_to || (brand ? resolveReplyTo(brand) : undefined) || undefined
 
-  const ownerBound =
-    email.kind === 'school_inquiry' || email.kind === 'pilot_feedback'
   let replyToken: string | null = email.reply_token ?? null
   let replyTo = officeReplyTo
-  if (!ownerBound && isEmailInboundConfigured()) {
+  if (shouldRewriteReplyToInbound(email.kind) && isEmailInboundConfigured()) {
     replyToken = replyToken || generateReplyToken()
     const inbound = buildInboundReplyTo(replyToken)
     if (inbound) replyTo = inbound
