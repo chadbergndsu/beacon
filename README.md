@@ -132,6 +132,7 @@ npm run test:e2e:install # once: Chromium (+ OS deps in CI)
 npm run test:e2e         # default: http://127.0.0.1:3010
 # Or against a running host:
 # PLAYWRIGHT_BASE_URL=https://beacon.commoncentsip.com npm run test:e2e
+# Remote-host mode runs the portable public smoke tests and skips local fixture-only journeys.
 ```
 
 Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, security/*, badge codes/guards, freeform-policy, class-access) — not the entire tree. See `vitest.config.ts`.

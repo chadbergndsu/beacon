@@ -100,6 +100,10 @@ function configuredBaseURL(value: string | undefined): string {
 }
 
 test.describe('pilot scorecard journey', () => {
+  test.skip(
+    Boolean(process.env.PLAYWRIGHT_BASE_URL),
+    'The pilot scorecard journey requires the deterministic local Supabase fixture.'
+  )
   test.describe.configure({ mode: 'serial' })
 
   test('a linked parent can submit the weekly prompt directly after Family Feed on mobile', async ({
@@ -114,13 +118,16 @@ test.describe('pilot scorecard journey', () => {
     const feedbackSection = page.getByRole('region', {
       name: 'Was Beacon helpful for understanding school this week?',
     })
+    const familyFeedViewSection = page.locator('[data-view-section="parent_feed"]')
+    const feedbackViewSection = page.locator('[data-view-section="parent_feedback"]')
     await expect(familyFeed).toBeVisible()
     await expect(feedbackSection).toBeVisible()
+    await expect(familyFeedViewSection).toBeVisible()
+    await expect(feedbackViewSection).toBeVisible()
     expect(
-      await familyFeed.evaluate(
-        (feed, feedback) =>
-          Boolean(feed.compareDocumentPosition(feedback as Node) & Node.DOCUMENT_POSITION_FOLLOWING),
-        await feedbackSection.elementHandle()
+      await familyFeedViewSection.evaluate(
+        (feed, feedback) => feed.nextElementSibling === feedback,
+        await feedbackViewSection.elementHandle()
       )
     ).toBe(true)
 
@@ -196,6 +203,46 @@ test.describe('pilot scorecard journey', () => {
 
     const attendance = page.locator('dt', { hasText: 'Attendance activity' }).locator('..')
     await expect(attendance).toContainText('Temporarily unavailable')
-    await expect(attendance).not.toContainText(/^0$/)
+    await expect(attendance).not.toContainText(/\b(?:zero|\d+)\b/i)
+    await expect(attendance.locator('.tabular-nums')).toHaveCount(0)
+  })
+
+  test('the local fixture rejects incomplete or stale parent feedback identity keys', async ({
+    request,
+  }) => {
+    const incompleteUpsert = await request.post(
+      'http://127.0.0.1:54329/rest/v1/parent_experience_feedback',
+      {
+        data: { rating: 'helpful', comment: null },
+        headers: { Prefer: 'resolution=merge-duplicates' },
+      }
+    )
+    expect.soft(incompleteUpsert.status()).toBe(400)
+
+    const staleWeekUpsert = await request.post(
+      'http://127.0.0.1:54329/rest/v1/parent_experience_feedback?on_conflict=school_id%2Cparent_id%2Csurface%2Cweek_start',
+      {
+        data: {
+          school_id: '00000000-0000-0000-0000-000000000001',
+          parent_id: '00000000-0000-0000-0000-000000000101',
+          rating: 'helpful',
+          comment: null,
+          surface: 'parent_dashboard',
+          week_start: '1999-01-04',
+        },
+        headers: { Prefer: 'resolution=merge-duplicates' },
+      }
+    )
+    expect.soft(staleWeekUpsert.status()).toBe(400)
+
+    const incompleteCurrentWeekRead = await request.get(
+      'http://127.0.0.1:54329/rest/v1/parent_experience_feedback?select=rating%2Ccomment&parent_id=eq.00000000-0000-0000-0000-000000000101'
+    )
+    expect.soft(incompleteCurrentWeekRead.status()).toBe(400)
+
+    const staleWeekRead = await request.get(
+      'http://127.0.0.1:54329/rest/v1/parent_experience_feedback?select=rating%2Ccomment&school_id=eq.00000000-0000-0000-0000-000000000001&parent_id=eq.00000000-0000-0000-0000-000000000101&surface=eq.parent_dashboard&week_start=eq.1999-01-04'
+    )
+    expect(staleWeekRead.status()).toBe(400)
   })
 })

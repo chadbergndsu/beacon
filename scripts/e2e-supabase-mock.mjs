@@ -3,6 +3,28 @@ import { createServer } from 'node:http'
 const port = Number(process.env.E2E_SUPABASE_MOCK_PORT || '54329')
 const schoolId = '00000000-0000-0000-0000-000000000001'
 const childId = '00000000-0000-0000-0000-000000000201'
+const parentId = '00000000-0000-0000-0000-000000000101'
+const parentFeedbackConflictKey = 'school_id,parent_id,surface,week_start'
+
+function isoWeekStart(date = new Date()) {
+  const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+  start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7))
+  return start.toISOString().slice(0, 10)
+}
+
+function expectedParentFeedbackKey() {
+  return {
+    school_id: schoolId,
+    parent_id: parentId,
+    surface: 'parent_dashboard',
+    week_start: isoWeekStart(),
+  }
+}
+
+function hasExpectedParentFeedbackKey(value) {
+  const expected = expectedParentFeedbackKey()
+  return Object.entries(expected).every(([name, expectedValue]) => value?.[name] === expectedValue)
+}
 
 const actors = {
   '00000000-0000-0000-0000-000000000101': {
@@ -154,10 +176,18 @@ function profileRows(url) {
 }
 
 function parentFeedbackRows(url) {
-  const parentId = eqFilter(url, 'parent_id')
-  if (parentId) {
-    return savedParentFeedback && parentId === '00000000-0000-0000-0000-000000000101'
-      ? [savedParentFeedback]
+  const requestedParentId = eqFilter(url, 'parent_id')
+  if (requestedParentId) {
+    const queryKey = {
+      school_id: eqFilter(url, 'school_id'),
+      parent_id: requestedParentId,
+      surface: eqFilter(url, 'surface'),
+      week_start: eqFilter(url, 'week_start'),
+    }
+    return savedParentFeedback &&
+      hasExpectedParentFeedbackKey(savedParentFeedback) &&
+      hasExpectedParentFeedbackKey(queryKey)
+      ? [{ rating: savedParentFeedback.rating, comment: savedParentFeedback.comment }]
       : []
   }
 
@@ -224,12 +254,42 @@ async function handleRest(request, response, url) {
   if (table === 'parent_experience_feedback' && request.method === 'POST') {
     const raw = await requestBody(request)
     const row = Array.isArray(raw) ? raw[0] : raw
+    if (
+      url.searchParams.get('on_conflict') !== parentFeedbackConflictKey ||
+      !hasExpectedParentFeedbackKey(row)
+    ) {
+      json(response, 400, {
+        code: 'E2E_PARENT_FEEDBACK_KEY_REQUIRED',
+        message: 'The parent feedback fixture requires its complete current-week identity key.',
+      })
+      return
+    }
     savedParentFeedback = {
+      ...expectedParentFeedbackKey(),
       rating: row?.rating === 'not_yet' ? 'not_yet' : 'helpful',
       comment: typeof row?.comment === 'string' ? row.comment : null,
     }
     noContent(response)
     return
+  }
+
+  if (table === 'parent_experience_feedback' && request.method === 'GET') {
+    const parentRead =
+      select.replaceAll(' ', '') === 'rating,comment' ||
+      ['parent_id', 'surface', 'week_start'].some((name) => url.searchParams.has(name))
+    const queryKey = {
+      school_id: eqFilter(url, 'school_id'),
+      parent_id: eqFilter(url, 'parent_id'),
+      surface: eqFilter(url, 'surface'),
+      week_start: eqFilter(url, 'week_start'),
+    }
+    if (parentRead && !hasExpectedParentFeedbackKey(queryKey)) {
+      json(response, 400, {
+        code: 'E2E_PARENT_FEEDBACK_KEY_REQUIRED',
+        message: 'The parent feedback fixture requires its complete current-week identity key.',
+      })
+      return
+    }
   }
 
   if (request.method === 'POST' || request.method === 'PATCH' || request.method === 'DELETE') {

@@ -4,6 +4,13 @@ import { describe, expect, it } from 'vitest'
 
 const page = readFileSync(join(process.cwd(), 'src/app/privacy/page.tsx'), 'utf8')
 const normalizedPage = page.toLowerCase().replace(/\s+/g, ' ')
+const pilotEvidenceCopy = [
+  normalizedPage.match(/'product activity',\s*'([^']*)'/)?.[1],
+  normalizedPage.match(/'parent feedback',\s*'([^']*)'/)?.[1],
+  normalizedPage.match(/school leadership can see[^<]+/)?.[0],
+]
+  .filter((copy): copy is string => Boolean(copy))
+  .join(' ')
 
 describe('Trust & Data Practices page', () => {
   it('answers the core school-diligence questions', () => {
@@ -76,6 +83,16 @@ describe('Trust & Data Practices page', () => {
       /\bfully\s+compliant\b/,
     ]) {
       expect(normalizedPage).not.toMatch(prohibitedClaim)
+    }
+  })
+
+  it('does not mislabel pilot evidence as anonymous, behavior monitoring, or outcome analytics', () => {
+    for (const prohibitedClaim of [
+      /\banonymous\b/,
+      /\bbehavio(?:u)?r monitoring\b/,
+      /\boutcome analytics\b/,
+    ]) {
+      expect(pilotEvidenceCopy).not.toMatch(prohibitedClaim)
     }
   })
 })
