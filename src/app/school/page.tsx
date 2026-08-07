@@ -11,7 +11,7 @@ import {
   Box,
 } from 'lucide-react'
 import { SchoolSiteHeader } from '@/components/school/SchoolSiteHeader'
-import { Button } from '@/components/ui/button'
+import { Button, buttonClassName } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { headers } from 'next/headers'
 import { loadSchoolBrand, loadSchoolBrandByPublicKey, locationLine } from '@/lib/school-brand'
@@ -54,19 +54,18 @@ export default async function SchoolWebsitePage({
               'Transparent academics, clear family communication, and calm operations — powered by Beacon.'}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/login">
-              <Button size="lg">
-                Sign in
-              </Button>
+            <Link href="/login" className={buttonClassName('primary', 'lg')}>
+              Sign in
             </Link>
-            <CraftHref href={tourHref}>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/25 bg-white/10 text-white hover:bg-white/15 hover:text-white"
-              >
-                Campus tour
-              </Button>
+            <CraftHref
+              href={tourHref}
+              className={buttonClassName(
+                'outline',
+                'lg',
+                'border-white/25 bg-white/10 text-white hover:bg-white/15 hover:text-white'
+              )}
+            >
+              Campus tour
             </CraftHref>
           </div>
           <p className="mt-8 text-sm text-white/60">
@@ -178,13 +177,11 @@ export default async function SchoolWebsitePage({
                 ))}
               </ul>
               <div className="mt-6 flex flex-wrap gap-3">
-                <CraftHref href={tourHref}>
-                  <Button size="lg">Start virtual tour</Button>
+                <CraftHref href={tourHref} className={buttonClassName('primary', 'lg')}>
+                  Start virtual tour
                 </CraftHref>
-                <CraftHref href={craftHref}>
-                  <Button size="lg" variant="outline">
-                    Open campus twin
-                  </Button>
+                <CraftHref href={craftHref} className={buttonClassName('outline', 'lg')}>
+                  Open campus twin
                 </CraftHref>
               </div>
             </div>

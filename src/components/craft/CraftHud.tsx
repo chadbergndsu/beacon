@@ -97,7 +97,10 @@ export function CraftHud({
         {!pointerLocked ? (
           <div className="pointer-events-none absolute inset-x-0 top-12 flex justify-center px-3 sm:top-16">
             <div className="max-w-md rounded-lg bg-black/55 px-3 py-1.5 text-center text-[11px] text-white shadow-lg backdrop-blur-sm sm:text-sm">
-              Click / tap look · WASD / arrows · Search · Floor 1 & 2
+              <span className="sm:hidden">Use move pad · drag look zone · Search · floors</span>
+              <span className="hidden sm:inline">
+                Click to look · WASD / arrows · Search · Floor 1 &amp; 2
+              </span>
             </div>
           </div>
         ) : null}
