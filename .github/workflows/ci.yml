@@ -44,9 +44,14 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: '1'
           # Build-time placeholders (no real secrets in CI)
-          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          # The E2E server later starts a loopback-only readiness RPC fixture.
+          # NEXT_PUBLIC values are baked into this build, so use that URL here.
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54329
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
           SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key
+          BEACON_FEEDBACK_TO: owner@beacon.local
+          RESEND_API_KEY: re_test_key
+          EMAIL_FROM: Beacon <hello@beacon.test>
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
@@ -56,7 +61,7 @@ jobs:
         env:
           CI: 'true'
           NEXT_TELEMETRY_DISABLED: '1'
-          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54329
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
           SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key
 

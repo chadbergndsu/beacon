@@ -44,4 +44,19 @@ describe('beaconCraftBaseUrl', () => {
     process.env.NEXT_PUBLIC_BEACONCRAFT_URL = 'http://127.0.0.1:3002/'
     expect(beaconCraftBaseUrl()).toBe('http://127.0.0.1:3002')
   })
+
+  it.each([
+    'javascript:alert(1)',
+    'data:text/html,bad',
+    'not a url',
+    'https://user:pass@example.com',
+    'https://example.com/unexpected-path',
+  ])(
+    'rejects unsafe or malformed external override %s',
+    (value) => {
+      process.env.NEXT_PUBLIC_BEACONCRAFT_URL = value
+      expect(beaconCraftBaseUrl()).toBe('')
+      expect(beaconCraftTourUrl()).toBe('/craft/tour')
+    }
+  )
 })

@@ -22,6 +22,15 @@ describe('resolveFeedbackOwnerEmail', () => {
   it('returns null when unset', () => {
     expect(resolveFeedbackOwnerEmail()).toBeNull()
   })
+
+  it.each([
+    'owner@school.org?bcc=other@school.org',
+    'owner@school.org%0abcc=other@school.org',
+    'owner@school.org,other@school.org',
+  ])('rejects unsafe single-address input %s', (email) => {
+    process.env.BEACON_FEEDBACK_TO = email
+    expect(resolveFeedbackOwnerEmail()).toBeNull()
+  })
 })
 
 describe('safeReplyTo', () => {

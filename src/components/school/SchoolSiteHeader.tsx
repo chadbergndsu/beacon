@@ -23,9 +23,13 @@ function craftTourUrl(): string {
 export function SchoolSiteHeader({
   schoolName,
   websiteUrl,
+  schoolHref = '/school',
+  beaconHref = '/about',
 }: {
   schoolName: string
   websiteUrl?: string | null
+  schoolHref?: string
+  beaconHref?: string
 }) {
   const [open, setOpen] = useState(false)
   const tourUrl = craftTourUrl()
@@ -33,12 +37,17 @@ export function SchoolSiteHeader({
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-xl pt-safe">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-        <Link href="/school" className="min-w-0">
-          <span className="block truncate text-sm font-medium sm:text-base">{schoolName}</span>
-          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        <div className="min-w-0">
+          <Link href={schoolHref} className="block truncate text-sm font-medium sm:text-base">
+            {schoolName}
+          </Link>
+          <Link
+            href={beaconHref}
+            className="inline-flex min-h-11 items-center rounded-md pr-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground hover:text-primary hover:underline"
+          >
             Powered by Beacon
-          </span>
-        </Link>
+          </Link>
+        </div>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="School site">
           {anchors.map((a) => (
@@ -50,6 +59,12 @@ export function SchoolSiteHeader({
               {a.label}
             </a>
           ))}
+          <Link
+            href={beaconHref}
+            className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            About Beacon
+          </Link>
           {websiteUrl && (
             <a
               href={websiteUrl}
@@ -75,6 +90,8 @@ export function SchoolSiteHeader({
           type="button"
           className="rounded-md border border-border p-2 md:hidden"
           aria-label={open ? 'Close menu' : 'Open menu'}
+          aria-expanded={open}
+          aria-controls="school-mobile-navigation"
           onClick={() => setOpen((v) => !v)}
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -82,6 +99,7 @@ export function SchoolSiteHeader({
       </div>
 
       <div
+        id="school-mobile-navigation"
         className={cn(
           'border-t border-border bg-card px-4 pb-4 pb-safe md:hidden',
           open ? 'block' : 'hidden'
@@ -98,6 +116,13 @@ export function SchoolSiteHeader({
               {a.label}
             </a>
           ))}
+          <Link
+            href={beaconHref}
+            className="rounded-md px-3 py-2.5 text-sm font-medium"
+            onClick={() => setOpen(false)}
+          >
+            About Beacon
+          </Link>
           {websiteUrl && (
             <a
               href={websiteUrl}

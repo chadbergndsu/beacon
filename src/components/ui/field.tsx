@@ -14,11 +14,9 @@ export function Field({
 export function FieldHint({
   className,
   children,
-}: {
-  className?: string
-  children: React.ReactNode
-}) {
-  return <p className={cn('text-xs text-muted-foreground', className)}>{children}</p>
+  ...props
+}: React.HTMLAttributes<HTMLParagraphElement>) {
+  return <p className={cn('text-xs text-muted-foreground', className)} {...props}>{children}</p>
 }
 
 export function FieldError({

@@ -58,8 +58,19 @@ export function parseEmailTransports(
 }
 
 export function isSmtpConfigured(): boolean {
-  if (process.env.SMTP_URL?.trim()) return true
+  const url = process.env.SMTP_URL?.trim()
+  if (url) return parseSmtpUrl(url) !== null
   return Boolean(process.env.SMTP_HOST?.trim())
+}
+
+function parseSmtpUrl(value: string): URL | null {
+  try {
+    const url = new URL(value)
+    if ((url.protocol !== 'smtp:' && url.protocol !== 'smtps:') || !url.hostname) return null
+    return url
+  } catch {
+    return null
+  }
 }
 
 export function isResendConfigured(): boolean {
@@ -76,7 +87,11 @@ export function isEmailLive(): boolean {
  * by insecure Resend onboarding From address.
  */
 export function isEmailHonestLive(): boolean {
-  if (!isEmailLive()) return false
+  const enabled = parseEmailTransports()
+  const hasEnabledLiveTransport =
+    (enabled.includes('resend') && isResendConfigured()) ||
+    (enabled.includes('smtp') && isSmtpConfigured())
+  if (!hasEnabledLiveTransport) return false
   const from = process.env.EMAIL_FROM?.trim() || 'Beacon <onboarding@resend.dev>'
   if (/onboarding@resend\.dev/i.test(from)) {
     const prod =
@@ -91,8 +106,8 @@ export function resolveSmtpConfig(): SmtpConfig | null {
 
   const url = process.env.SMTP_URL?.trim()
   if (url) {
-    try {
-      const u = new URL(url)
+    const u = parseSmtpUrl(url)
+    if (u) {
       const port = u.port ? Number(u.port) : u.protocol === 'smtps:' ? 465 : 587
       return {
         host: u.hostname,
@@ -102,8 +117,6 @@ export function resolveSmtpConfig(): SmtpConfig | null {
         pass: u.password ? decodeURIComponent(u.password) : null,
         from: process.env.EMAIL_FROM?.trim() || null,
       }
-    } catch {
-      // fall through to discrete vars
     }
   }
 

@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Beacon · School Suite',
   description:
-    'Beacon — the full school suite for any school: academics, families, communications, payments, and principal operations.',
+    'Beacon brings school-branded academics, family communication and operations together for small independent schools.',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

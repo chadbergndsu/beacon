@@ -459,7 +459,7 @@ export default async function LoginPage({
                       Staff twin
                     </Link>
                     <span aria-hidden>·</span>
-                    <Link href="/about">About</Link>
+                    <Link href="/about">About Beacon</Link>
                     <span aria-hidden>·</span>
                     <Link href="/privacy">Trust &amp; data practices</Link>
                   </div>

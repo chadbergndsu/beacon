@@ -19,7 +19,14 @@ export default defineConfig({
   // Local default: spin up next start if not pointing at prod/staging
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
-    : {
+    : [
+      {
+        command: 'node scripts/e2e-supabase-mock.mjs',
+        url: 'http://127.0.0.1:54329/health',
+        reuseExistingServer: !process.env.CI,
+        timeout: 30_000,
+      },
+      {
         command: `npx next start -p ${port}`,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
@@ -28,12 +35,18 @@ export default defineConfig({
           ...process.env,
           PORT: port,
           NEXT_TELEMETRY_DISABLED: '1',
-          NEXT_PUBLIC_SUPABASE_URL:
-            process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co',
+          // Browser tests intentionally use the loopback readiness fixture,
+          // even when CI injects a placeholder Supabase URL globally.
+          NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54329',
           NEXT_PUBLIC_SUPABASE_ANON_KEY:
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'ci-anon-key',
           SUPABASE_SERVICE_ROLE_KEY:
             process.env.SUPABASE_SERVICE_ROLE_KEY || 'ci-service-role-key',
+          BEACON_FEEDBACK_TO:
+            process.env.BEACON_FEEDBACK_TO || 'owner@beacon.local',
+          RESEND_API_KEY: process.env.RESEND_API_KEY || 're_test_key',
+          EMAIL_FROM: process.env.EMAIL_FROM || 'Beacon <hello@beacon.test>',
         },
       },
+    ],
 })
