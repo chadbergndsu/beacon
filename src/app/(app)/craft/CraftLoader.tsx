@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import type { CraftFloorLayout } from '@/lib/craft/types'
+import type { CraftCampusLayout } from '@/lib/craft/types'
 import type { Role } from '@/lib/types'
 
 const CraftClient = dynamic(() => import('./CraftClient').then((m) => m.CraftClient), {
@@ -13,6 +13,14 @@ const CraftClient = dynamic(() => import('./CraftClient').then((m) => m.CraftCli
   ),
 })
 
-export function CraftLoader({ layout, role }: { layout: CraftFloorLayout; role: Role }) {
-  return <CraftClient layout={layout} role={role} />
+export function CraftLoader({
+  layout,
+  role,
+  schoolId,
+}: {
+  layout: CraftCampusLayout
+  role: Role
+  schoolId: string
+}) {
+  return <CraftClient layout={layout} role={role} schoolId={schoolId} />
 }

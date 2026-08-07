@@ -2,19 +2,22 @@
 
 import { useEffect, useState } from 'react'
 import type { CraftFloorLayout, CraftStudentOption } from '@/lib/craft/types'
-import { getRoomByName } from '@/lib/craft/layout'
+import { getRoomByName, allRooms } from '@/lib/craft/layout'
+import { broadcastCraftPresenceRefresh } from '@/lib/craft/realtime-client'
 import { useCraftUi } from './CraftUiContext'
 
 export function MockScanPanel({
   layout,
+  schoolId,
   onScan,
 }: {
   layout: CraftFloorLayout
+  schoolId: string
   onScan: () => void
 }) {
   const [students, setStudents] = useState<CraftStudentOption[]>([])
   const [studentId, setStudentId] = useState('')
-  const [roomId, setRoomId] = useState(layout.rooms[2]?.roomId ?? '')
+  const [roomId, setRoomId] = useState(allRooms(layout)[2]?.roomId ?? '')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -58,6 +61,7 @@ export function MockScanPanel({
         setMessage(data.error || 'Scan failed.')
       } else {
         setMessage(`Placed ${student?.name ?? 'student'} in room.`)
+        void broadcastCraftPresenceRefresh(schoolId)
         onScan()
       }
     } catch {
@@ -96,7 +100,7 @@ export function MockScanPanel({
             value={roomId}
             onChange={(e) => setRoomId(e.target.value)}
           >
-            {layout.rooms.map((r) => (
+            {allRooms(layout).map((r) => (
               <option key={r.roomId} value={r.roomId}>
                 {r.name}
               </option>

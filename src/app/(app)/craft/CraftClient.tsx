@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { Role } from '@/lib/types'
-import type { CraftFloorLayout, CraftTrailPoint, CraftVisibleMarker } from '@/lib/craft/types'
+import type { CraftCampusLayout, CraftTrailPoint, CraftVisibleMarker } from '@/lib/craft/types'
 import { canTriggerMockScans, canUseFlyMode } from '@/lib/craft/presence'
+import { useCraftPresenceRealtime } from '@/lib/craft/realtime-client'
 import { CraftUiProvider } from '@/components/craft/CraftUiContext'
 import { CraftHud, MarkerLegend } from '@/components/craft/CraftHud'
 import { TeacherRoomPanel, TrailPanel } from '@/components/craft/CraftSidePanels'
@@ -20,9 +21,11 @@ type PresenceResponse = {
 export function CraftClient({
   layout,
   role,
+  schoolId,
 }: {
-  layout: CraftFloorLayout
+  layout: CraftCampusLayout
   role: Role
+  schoolId: string
 }) {
   const [markers, setMarkers] = useState<CraftVisibleMarker[]>([])
   const [trails, setTrails] = useState<CraftTrailPoint[]>([])
@@ -33,37 +36,50 @@ export function CraftClient({
   const [flyMode, setFlyMode] = useState(canUseFlyMode(role))
   const [error, setError] = useState<string | null>(null)
 
+  const applyPresence = useCallback((data: PresenceResponse, ok: boolean) => {
+    if (!ok || !data.ok) {
+      setError(data.error || 'Could not load presence.')
+      return
+    }
+    setError(null)
+    setMarkers(data.markers ?? [])
+    setTrails(data.trails ?? [])
+    setTeacherRoster(data.teacherRoster ?? [])
+    setTeacherRoomIds(data.meta?.teacherRoomIds ?? [])
+  }, [])
+
   const refresh = useCallback(async () => {
     try {
       const res = await fetch('/api/craft/presence', { cache: 'no-store' })
       const data = (await res.json()) as PresenceResponse
-      if (!res.ok || !data.ok) {
-        setError(data.error || 'Could not load presence.')
-        return
-      }
-      setError(null)
-      setMarkers(data.markers ?? [])
-      setTrails(data.trails ?? [])
-      setTeacherRoster(data.teacherRoster ?? [])
-      setTeacherRoomIds(data.meta?.teacherRoomIds ?? [])
+      applyPresence(data, res.ok)
     } catch {
       setError('Network error loading presence.')
     }
-  }, [])
+  }, [applyPresence])
+
+  useCraftPresenceRealtime(schoolId, refresh)
 
   useEffect(() => {
     let cancelled = false
-    const load = async () => {
-      if (cancelled) return
-      await refresh()
+
+    async function poll() {
+      try {
+        const res = await fetch('/api/craft/presence', { cache: 'no-store' })
+        const data = (await res.json()) as PresenceResponse
+        if (!cancelled) applyPresence(data, res.ok)
+      } catch {
+        if (!cancelled) setError('Network error loading presence.')
+      }
     }
-    const id = window.setInterval(() => void load(), 2000)
-    void load()
+
+    void poll()
+    const id = window.setInterval(() => void poll(), 15000)
     return () => {
       cancelled = true
       window.clearInterval(id)
     }
-  }, [refresh])
+  }, [applyPresence])
 
   return (
     <CraftUiProvider
@@ -84,6 +100,7 @@ export function CraftClient({
           canFly={canUseFlyMode(role)}
           canMockScan={canTriggerMockScans(role)}
           markerCount={markers.length}
+          schoolId={schoolId}
           onRefresh={() => void refresh()}
         />
         {role === 'teacher' ? (

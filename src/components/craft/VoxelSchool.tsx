@@ -1,12 +1,12 @@
 'use client'
 
-import { layoutBounds } from '@/lib/craft/layout'
+import { layoutBounds, getRoomById, getRoomFloorId } from '@/lib/craft/campus'
 import { EmissiveBlocks, InstancedBlocks } from './InstancedBlocks'
 import { useCraftUi } from './CraftUiContext'
 
 function CampusGround() {
-  const { layout } = useCraftUi()
-  const bounds = layoutBounds(layout)
+  const { layout, activeFloorId } = useCraftUi()
+  const bounds = layoutBounds(layout, activeFloorId)
   const cx = (bounds.minX + bounds.maxX) / 2
   const cz = (bounds.minZ + bounds.maxZ) / 2
   const w = bounds.maxX - bounds.minX + 8
@@ -21,8 +21,9 @@ function CampusGround() {
 }
 
 export function VoxelSchool() {
-  const { geometry, highlightRoomId, layout } = useCraftUi()
-  const highlightRoom = layout.rooms.find((r) => r.roomId === highlightRoomId)
+  const { geometry, highlightRoomId, layout, activeFloorId } = useCraftUi()
+  const highlightRoom = highlightRoomId ? getRoomById(layout, highlightRoomId) : undefined
+  const highlightFloor = highlightRoom ? getRoomFloorId(layout, highlightRoom.roomId) : null
 
   return (
     <group>
@@ -33,6 +34,7 @@ export function VoxelSchool() {
       <InstancedBlocks instances={geometry.walls} defaultRoughness={0.78} />
       <InstancedBlocks instances={geometry.doors} defaultRoughness={0.65} />
       <EmissiveBlocks instances={geometry.windows} />
+      <EmissiveBlocks instances={geometry.portals} />
       {geometry.lights.map((light) => (
         <pointLight
           key={light.roomId}
@@ -43,11 +45,11 @@ export function VoxelSchool() {
           decay={2}
         />
       ))}
-      {highlightRoom ? (
+      {highlightRoom && highlightFloor === activeFloorId ? (
         <mesh
           position={[
             highlightRoom.origin[0] + highlightRoom.size[0] / 2,
-            highlightRoom.origin[1] + 0.02,
+            geometry.elevationY + 0.02,
             highlightRoom.origin[2] + highlightRoom.size[2] / 2,
           ]}
         >

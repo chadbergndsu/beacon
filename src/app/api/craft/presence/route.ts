@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { requireCraftProfile } from '@/lib/craft/auth-api'
-import { loadCraftLayoutForSchool } from '@/lib/craft/settings'
+import { allRooms } from '@/lib/craft/campus'
 import { loadCampusPresence } from '@/lib/craft/presence-store'
 import { filterPresenceForViewer, defaultAnonymizeForRole } from '@/lib/craft/presence'
 import { isLeadership } from '@/lib/roles'
 import { loadCraftRoomMapping } from '@/lib/craft/rooms'
+import { loadCraftLayoutForSchool } from '@/lib/craft/settings'
 import { loadPresenceTrails } from '@/lib/craft/trails'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -15,7 +16,7 @@ export async function GET() {
   const { profile } = auth
   const schoolId = profile.school_id!
   const layout = await loadCraftLayoutForSchool(schoolId)
-  const layoutRoomIds = layout.rooms.map((r) => r.roomId)
+  const layoutRoomIds = allRooms(layout).map((r) => r.roomId)
   const { layoutToDb, dbToLayout } = await loadCraftRoomMapping(schoolId, layout)
 
   const records = await loadCampusPresence({
@@ -106,8 +107,8 @@ export async function GET() {
       meta: {
         role: profile.role,
         teacherRoomIds,
-        roomsMapped: layout.rooms.filter((r) => layoutToDb[r.roomId]).length,
-        roomsTotal: layout.rooms.length,
+        roomsMapped: allRooms(layout).filter((r) => layoutToDb[r.roomId]).length,
+        roomsTotal: allRooms(layout).length,
         flyMode: isLeadership(profile.role),
       },
     },

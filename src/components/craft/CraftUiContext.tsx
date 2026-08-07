@@ -1,9 +1,14 @@
 'use client'
 
-import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import { buildSchoolGeometry, type CraftSchoolGeometry } from '@/lib/craft/geometry'
-import { getRoomCenter, getRoomById } from '@/lib/craft/layout'
-import type { CraftFloorLayout, CraftTrailPoint, CraftVisibleMarker } from '@/lib/craft/types'
+import {
+  getDefaultFloorId,
+  getFloor,
+  getRoomById,
+  getRoomCenter,
+} from '@/lib/craft/campus'
+import type { CraftCampusLayout, CraftTrailPoint, CraftVisibleMarker } from '@/lib/craft/types'
 
 export type PlayerSnapshot = {
   x: number
@@ -16,8 +21,11 @@ export type PlayerSnapshot = {
 export type TouchMove = { x: number; y: number }
 
 type CraftUiContextValue = {
-  layout: CraftFloorLayout
+  layout: CraftCampusLayout
   geometry: CraftSchoolGeometry
+  activeFloorId: string
+  setActiveFloorId: (id: string) => void
+  switchFloor: (floorId: string, roomId?: string | null) => void
   markers: CraftVisibleMarker[]
   trails: CraftTrailPoint[]
   player: PlayerSnapshot
@@ -37,9 +45,12 @@ type CraftUiContextValue = {
 
 const CraftUiContext = createContext<CraftUiContextValue | null>(null)
 
-function initialPlayer(layout: CraftFloorLayout): PlayerSnapshot {
-  const entrance = getRoomById(layout, 'craft-demo-entrance') ?? layout.rooms[0]
-  const [cx, cy, cz] = entrance ? getRoomCenter(entrance) : [24, 2, 26]
+function initialPlayer(layout: CraftCampusLayout, floorId: string): PlayerSnapshot {
+  const entrance = getRoomById(layout, 'craft-demo-entrance')
+  const floor = getFloor(layout, floorId)
+  const room = entrance ?? floor?.rooms[0]
+  if (!room) return { x: 24, y: 2, z: 26, yaw: 0, pitch: 0 }
+  const [cx, cy, cz] = getRoomCenter(layout, room)
   return { x: cx, y: cy + 0.5, z: cz, yaw: 0, pitch: 0 }
 }
 
@@ -51,25 +62,45 @@ export function CraftUiProvider({
   setFlyMode,
   children,
 }: {
-  layout: CraftFloorLayout
+  layout: CraftCampusLayout
   markers: CraftVisibleMarker[]
   trails?: CraftTrailPoint[]
   flyMode: boolean
   setFlyMode: (v: boolean) => void
   children: ReactNode
 }) {
-  const geometry = useMemo(() => buildSchoolGeometry(layout), [layout])
-  const [player, setPlayer] = useState<PlayerSnapshot>(() => initialPlayer(layout))
+  const defaultFloor = getDefaultFloorId(layout)
+  const [activeFloorId, setActiveFloorId] = useState(defaultFloor)
+  const geometry = useMemo(
+    () => buildSchoolGeometry(layout, activeFloorId),
+    [layout, activeFloorId]
+  )
+  const [player, setPlayer] = useState<PlayerSnapshot>(() => initialPlayer(layout, defaultFloor))
   const [teleportRoomId, setTeleportRoomId] = useState<string | null>(null)
   const [highlightRoomId, setHighlightRoomId] = useState<string | null>(null)
   const [pointerLocked, setPointerLocked] = useState(false)
   const [touchMove, setTouchMove] = useState<TouchMove>({ x: 0, y: 0 })
   const touchLookRef = useRef({ dx: 0, dy: 0 })
 
+  const switchFloor = useCallback(
+    (floorId: string, roomId?: string | null) => {
+      setActiveFloorId(floorId)
+      const room = roomId ? getRoomById(layout, roomId) : getFloor(layout, floorId)?.rooms[0]
+      if (room) {
+        const [cx, cy, cz] = getRoomCenter(layout, room)
+        setPlayer({ x: cx, y: cy + 0.5, z: cz, yaw: player.yaw, pitch: player.pitch })
+      }
+    },
+    [layout, player.pitch, player.yaw]
+  )
+
   const value = useMemo(
     () => ({
       layout,
       geometry,
+      activeFloorId,
+      setActiveFloorId,
+      switchFloor,
       markers,
       trails,
       player,
@@ -89,6 +120,8 @@ export function CraftUiProvider({
     [
       layout,
       geometry,
+      activeFloorId,
+      switchFloor,
       markers,
       trails,
       player,

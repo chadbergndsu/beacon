@@ -8,6 +8,7 @@ import { PlayerController } from './PlayerController'
 import { OccupancyParticles, PresenceMarkers, RoomLabels } from './PresenceLayer'
 import { TrailMarkers } from './CraftSidePanels'
 import { SceneEnvironment } from './SceneEnvironment'
+import { ScenePostProcessing } from './ScenePostProcessing'
 
 export function VoxelScene() {
   return (
@@ -37,6 +38,7 @@ export function VoxelScene() {
         <TrailMarkers />
       </Suspense>
       <PlayerController />
+      <ScenePostProcessing />
     </Canvas>
   )
 }

@@ -18,7 +18,7 @@ export default async function CraftPage() {
 
   return (
     <div>
-      <CraftLoader layout={layout} role={profile.role} />
+      <CraftLoader layout={layout} role={profile.role} schoolId={profile.school_id} />
     </div>
   )
 }

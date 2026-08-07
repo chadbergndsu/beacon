@@ -5,7 +5,7 @@ import { useEffect, useRef, type ComponentRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { PointerLockControls } from '@react-three/drei'
 import * as THREE from 'three'
-import { getRoomById, getRoomCenter } from '@/lib/craft/layout'
+import { getRoomById, getRoomCenter, getRoomFloorId, portalsOnFloor, worldPortalAabb } from '@/lib/craft/campus'
 import { clampToBounds, resolvePlayerCollision } from '@/lib/craft/collision'
 import { useCraftUi } from './CraftUiContext'
 
@@ -13,6 +13,7 @@ const WALK_SPEED = 7
 const SPRINT_SPEED = 11
 const FLY_SPEED = 14
 const LOOK_SENS = 0.0022
+const PORTAL_COOLDOWN_MS = 900
 
 export function PlayerController() {
   const { camera } = useThree()
@@ -23,6 +24,8 @@ export function PlayerController() {
     requestTeleport,
     layout,
     geometry,
+    activeFloorId,
+    switchFloor,
     setPointerLocked,
     pointerLocked,
     touchMove,
@@ -33,6 +36,7 @@ export function PlayerController() {
   const velocity = useRef(new THREE.Vector3())
   const yaw = useRef(0)
   const pitch = useRef(0)
+  const portalCooldown = useRef(0)
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -56,11 +60,15 @@ export function PlayerController() {
       requestTeleport(null)
       return
     }
-    const [cx, cy, cz] = getRoomCenter(room)
-    camera.position.set(cx, cy + 0.5, cz)
+    const floorId = getRoomFloorId(layout, teleportRoomId)
+    if (floorId) switchFloor(floorId, teleportRoomId)
+    else {
+      const [cx, cy, cz] = getRoomCenter(layout, room)
+      camera.position.set(cx, cy + 0.5, cz)
+    }
     velocity.current.set(0, 0, 0)
     requestTeleport(null)
-  }, [teleportRoomId, layout, camera, requestTeleport])
+  }, [teleportRoomId, layout, camera, requestTeleport, switchFloor])
 
   useFrame((_, delta) => {
     camera.rotation.order = 'YXZ'
@@ -83,7 +91,7 @@ export function PlayerController() {
     const sprint =
       !flyMode &&
       (keys.current.ShiftLeft || keys.current.ShiftRight) &&
-      !(keys.current.Space)
+      !keys.current.Space
     const maxSpeed = flyMode ? FLY_SPEED : sprint ? SPRINT_SPEED : WALK_SPEED
 
     const forward = new THREE.Vector3()
@@ -124,14 +132,37 @@ export function PlayerController() {
       const clamped = clampToBounds(nextX, nextZ, geometry.bounds)
       nextX = clamped.x
       nextZ = clamped.z
-      camera.position.y = THREE.MathUtils.lerp(camera.position.y, 2, 0.35)
+      const targetY = geometry.elevationY + 2
+      camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.35)
     } else {
       camera.position.y += step.y
-      camera.position.y = THREE.MathUtils.clamp(camera.position.y, 1, 12)
+      camera.position.y = THREE.MathUtils.clamp(camera.position.y, 1, 20)
     }
 
     camera.position.x = nextX
     camera.position.z = nextZ
+
+    portalCooldown.current = Math.max(0, portalCooldown.current - delta * 1000)
+    if (!flyMode && portalCooldown.current <= 0) {
+      for (const portal of portalsOnFloor(layout, activeFloorId)) {
+        const box = worldPortalAabb(layout, portal)
+        const px = camera.position.x
+        const py = camera.position.y
+        const pz = camera.position.z
+        if (
+          px >= box.minX &&
+          px <= box.maxX &&
+          py >= box.minY &&
+          py <= box.maxY + 0.5 &&
+          pz >= box.minZ &&
+          pz <= box.maxZ
+        ) {
+          portalCooldown.current = PORTAL_COOLDOWN_MS
+          switchFloor(portal.targetFloorId, portal.targetRoomId ?? null)
+          break
+        }
+      }
+    }
 
     setPlayer({
       x: camera.position.x,

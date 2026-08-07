@@ -8,7 +8,9 @@ import { LaunchSuggestions } from '@/components/ops/LaunchSuggestions'
 import { ReleaseChecklistForm } from '@/components/ops/ReleaseChecklistForm'
 import { SchoolBrandForm } from '@/components/ops/SchoolBrandForm'
 import { probeCraftReadiness } from '@/lib/craft/go-live'
+import { loadCraftLayoutForSchool } from '@/lib/craft/settings'
 import { CraftSetupCard } from '@/components/craft/CraftSetupCard'
+import { CraftLayoutEditor } from '@/components/craft/CraftLayoutEditor'
 import { OnboardingProgress } from '@/components/ops/OnboardingProgress'
 import { loadSchoolOnboarding } from '@/lib/ops/onboarding'
 import { Badge } from '@/components/ui/badge'
@@ -16,12 +18,13 @@ import { Card, CardContent } from '@/components/ui/card'
 
 export default async function PrincipalReleasePage() {
   const { schoolId } = await requirePrincipal()
-  const [health, checklist, brand, onboarding, craftReadiness] = await Promise.all([
+  const [health, checklist, brand, onboarding, craftReadiness, craftLayout] = await Promise.all([
     probeOpsHealth(schoolId),
     loadReleaseChecklistState(schoolId),
     loadSchoolBrand(schoolId),
     loadSchoolOnboarding(schoolId),
     probeCraftReadiness(schoolId),
+    loadCraftLayoutForSchool(schoolId),
   ])
 
   const done = RELEASE_CHECKLIST.filter((i) => checklist[i.id]).length
@@ -92,6 +95,8 @@ export default async function PrincipalReleasePage() {
       <OnboardingProgress status={onboarding} />
 
       <CraftSetupCard readiness={craftReadiness} />
+
+      <CraftLayoutEditor initialLayout={craftLayout} />
 
       <Card>
         <div className="border-b border-border px-5 py-4">

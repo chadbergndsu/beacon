@@ -1,7 +1,7 @@
 'use client'
 
 import type { CraftTrailPoint } from '@/lib/craft/types'
-import { getRoomById } from '@/lib/craft/layout'
+import { allRooms, getRoomById } from '@/lib/craft/campus'
 import { useCraftUi } from './CraftUiContext'
 
 export function TrailMarkers() {
@@ -59,7 +59,7 @@ export function TeacherRoomPanel({
   roomIds: string[]
 }) {
   const { layout, markers, requestTeleport } = useCraftUi()
-  const focusRoom = layout.rooms.find((r) => roomIds.includes(r.roomId))
+  const focusRoom = allRooms(layout).find((r) => roomIds.includes(r.roomId))
 
   return (
     <div className="rounded-lg border border-border bg-card/60 p-3">

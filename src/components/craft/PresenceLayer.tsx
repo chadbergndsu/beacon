@@ -4,7 +4,7 @@ import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
-import { getRoomById, getRoomCenter } from '@/lib/craft/layout'
+import { getRoomById, getRoomCenter, getFloor } from '@/lib/craft/campus'
 import type { CraftVisibleMarker } from '@/lib/craft/types'
 import { useCraftUi } from './CraftUiContext'
 
@@ -55,12 +55,14 @@ function PresenceAvatar({
 }
 
 export function RoomLabels() {
-  const { layout } = useCraftUi()
+  const { layout, activeFloorId } = useCraftUi()
+  const floor = getFloor(layout, activeFloorId)
+  if (!floor) return null
 
   return (
     <>
-      {layout.rooms.map((room) => {
-        const [x, y, z] = getRoomCenter(room)
+      {floor.rooms.map((room) => {
+        const [x, y, z] = getRoomCenter(layout, room)
         return (
           <Html
             key={room.roomId}
@@ -80,11 +82,13 @@ export function RoomLabels() {
 }
 
 export function PresenceMarkers() {
-  const { layout, markers } = useCraftUi()
+  const { layout, markers, activeFloorId } = useCraftUi()
+  const floorRoomIds = new Set(getFloor(layout, activeFloorId)?.rooms.map((r) => r.roomId))
+  const visible = markers.filter((m) => floorRoomIds.has(m.roomId))
 
   const positioned = (() => {
     const byRoom = new Map<string, CraftVisibleMarker[]>()
-    for (const m of markers) {
+    for (const m of visible) {
       const list = byRoom.get(m.roomId) ?? []
       list.push(m)
       byRoom.set(m.roomId, list)
@@ -93,7 +97,7 @@ export function PresenceMarkers() {
     for (const [roomId, list] of byRoom.entries()) {
       const room = getRoomById(layout, roomId)
       if (!room) continue
-      const [cx, cy, cz] = getRoomCenter(room)
+      const [cx, cy, cz] = getRoomCenter(layout, room)
       list.forEach((marker, i) => {
         const angle = (i / Math.max(list.length, 1)) * Math.PI * 2
         const radius = Math.min(2.2, room.size[0] * 0.22)
@@ -116,18 +120,22 @@ export function PresenceMarkers() {
 }
 
 export function OccupancyParticles() {
-  const { layout, markers } = useCraftUi()
+  const { layout, markers, activeFloorId } = useCraftUi()
+  const floor = getFloor(layout, activeFloorId)
+  if (!floor) return null
   const counts = new Map<string, number>()
+  const floorIds = new Set(floor.rooms.map((r) => r.roomId))
   for (const m of markers) {
+    if (!floorIds.has(m.roomId)) continue
     counts.set(m.roomId, (counts.get(m.roomId) ?? 0) + 1)
   }
 
   return (
     <>
-      {layout.rooms.map((room) => {
+      {floor.rooms.map((room) => {
         const count = counts.get(room.roomId) ?? 0
         if (!count) return null
-        const [cx, , cz] = getRoomCenter(room)
+        const [cx, , cz] = getRoomCenter(layout, room)
         return (
           <mesh key={`occ-${room.roomId}`} position={[cx, room.size[1] + 0.25, cz]}>
             <sphereGeometry args={[0.12 + count * 0.04, 12, 12]} />

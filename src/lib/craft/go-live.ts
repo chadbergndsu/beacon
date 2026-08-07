@@ -3,6 +3,7 @@ import { listRooms } from '@/lib/badge/store'
 import { listMockPresence } from './presence-store'
 import { loadCraftSettings, loadCraftLayoutForSchool } from './settings'
 import { resolveRoomIdMap } from './rooms'
+import { allRooms } from './campus'
 
 export type CraftReadiness = {
   roomsMapped: number
@@ -45,7 +46,7 @@ export function evaluateCraftReadiness(input: {
 
 export async function probeCraftReadiness(schoolId: string): Promise<CraftReadiness> {
   const layout = await loadCraftLayoutForSchool(schoolId)
-  const roomsTotal = layout.rooms.length
+  const roomsTotal = allRooms(layout).length
 
   let schoolRooms: Awaited<ReturnType<typeof listRooms>> = []
   try {
@@ -56,7 +57,7 @@ export async function probeCraftReadiness(schoolId: string): Promise<CraftReadin
 
   const settings = await loadCraftSettings(schoolId)
   const map = resolveRoomIdMap(layout, schoolRooms, settings.roomIdMap || {})
-  const roomsMapped = layout.rooms.filter((r) => Boolean(map[r.roomId])).length
+  const roomsMapped = allRooms(layout).filter((r) => Boolean(map[r.roomId])).length
 
   let hasBadgeActivity = listMockPresence(schoolId).length > 0
   if (!hasBadgeActivity) {

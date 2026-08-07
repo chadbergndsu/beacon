@@ -1,6 +1,6 @@
 import { listRooms, upsertRoom } from '@/lib/badge/store'
 import type { SchoolRoom } from '@/lib/badge/types'
-import { buildRoomIdMap } from './layout'
+import { allRooms, buildRoomIdMap } from './campus'
 import type { CraftFloorLayout } from './types'
 import { loadCraftSettings, loadCraftLayoutForSchool, saveCraftRoomMap } from './settings'
 
@@ -49,7 +49,7 @@ export async function syncLayoutRoomsToSchool(
   let created = 0
   const roomIdMap: Record<string, string> = {}
 
-  for (const lr of resolvedLayout.rooms) {
+  for (const lr of allRooms(resolvedLayout)) {
     const hit = byName.get(lr.name.trim().toLowerCase())
     if (hit) {
       roomIdMap[lr.roomId] = hit.id

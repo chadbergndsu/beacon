@@ -1,11 +1,13 @@
 'use client'
 
-import { layoutBounds } from '@/lib/craft/layout'
+import { layoutBounds } from '@/lib/craft/campus'
+import { getFloor, getRoomById } from '@/lib/craft/campus'
 import { useCraftUi } from './CraftUiContext'
 
 export function Minimap() {
-  const { layout, player, markers } = useCraftUi()
-  const bounds = layoutBounds(layout)
+  const { layout, player, markers, activeFloorId } = useCraftUi()
+  const bounds = layoutBounds(layout, activeFloorId)
+  const floorRooms = getFloor(layout, activeFloorId)?.rooms ?? []
   const width = bounds.maxX - bounds.minX
   const height = bounds.maxZ - bounds.minZ
 
@@ -23,7 +25,7 @@ export function Minimap() {
         <p className="text-[10px] font-bold text-sky-300">{compass[compassIdx]}</p>
       </div>
       <svg viewBox="0 0 100 100" className="h-28 w-full rounded-lg bg-slate-950/70 sm:h-32">
-        {layout.rooms.map((room) => {
+        {floorRooms.map((room) => {
           const [ox, , oz] = room.origin
           const [w, , d] = room.size
           return (
@@ -42,8 +44,8 @@ export function Minimap() {
           )
         })}
         {markers.map((m) => {
-          const room = layout.rooms.find((r) => r.roomId === m.roomId)
-          if (!room) return null
+          const room = getRoomById(layout, m.roomId)
+          if (!room || !floorRooms.some((r) => r.roomId === m.roomId)) return null
           const cx = room.origin[0] + room.size[0] / 2
           const cz = room.origin[2] + room.size[2] / 2
           return (

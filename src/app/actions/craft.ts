@@ -8,6 +8,8 @@ import type { Role } from '@/lib/types'
 import { syncLayoutRoomsToSchool } from '@/lib/craft/rooms'
 import { markCraftSmokeTest } from '@/lib/craft/settings'
 import { loadReleaseChecklistState, saveReleaseChecklistState } from '@/lib/ops/release-checklist'
+import { parseCraftLayout } from '@/lib/craft/layout-validate'
+import type { CraftCampusLayout } from '@/lib/craft/types'
 
 async function requireCraftLeadership() {
   const supabase = await createClient()
@@ -63,5 +65,25 @@ export async function markCraftSmokeAction(): Promise<{ ok: true } | { ok: false
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Could not save smoke test.' }
+  }
+}
+
+export async function saveCraftLayoutAction(
+  layout: CraftCampusLayout
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const auth = await requireCraftLeadership()
+  if (!auth.ok) return auth
+
+  const parsed = parseCraftLayout(layout)
+  if (!parsed) return { ok: false, error: 'Invalid campus layout.' }
+
+  try {
+    const { saveCraftCustomLayout } = await import('@/lib/craft/settings')
+    await saveCraftCustomLayout(auth.schoolId, parsed)
+    revalidatePath('/principal/release')
+    revalidatePath('/craft')
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Save failed.' }
   }
 }
