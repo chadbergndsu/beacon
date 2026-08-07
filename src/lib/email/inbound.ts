@@ -42,7 +42,7 @@ export async function ingestInboundEmail(
 
   const subject = sanitizeText(input.subject || '(no subject)', MAX_SUBJECT)
   let bodyText = sanitizeText(input.bodyText || '', MAX_BODY)
-  let bodyHtml = input.bodyHtml
+  const bodyHtml = input.bodyHtml
     ? sanitizeText(input.bodyHtml, MAX_BODY)
     : null
   if (!bodyText && bodyHtml) {
