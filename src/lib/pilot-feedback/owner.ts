@@ -1,19 +1,25 @@
 /**
- * Pilot suggestions go to the product owner (you), not the principal.
- * Principal can still read them in-app; primary delivery is email to this address.
+ * Pilot suggestions + school inquiries go to the product owner (you), not the principal.
+ * Principal can still read suggestions in-app; primary delivery is email to this address.
  *
- * Set on Vercel Production:
- *   BEACON_FEEDBACK_TO=you@yourdomain.com
+ * Set on Vercel Production + Preview:
+ *   BEACON_FEEDBACK_TO=office@commoncentsip.com
+ *   (or your personal inbox — Chad, use whatever you actually read)
  * Optional alias:
- *   BEACON_OWNER_EMAIL=you@yourdomain.com
+ *   BEACON_OWNER_EMAIL=…
+ *
+ * If unset, falls back to the public Beacon office address so About / landing
+ * contact forms never silently drop leads.
  */
+
+/** Public product inbox — also used as mailto: on marketing pages */
+export const DEFAULT_FEEDBACK_OWNER_EMAIL = 'office@commoncentsip.com'
 
 export function resolveFeedbackOwnerEmail(): string | null {
   let raw =
     process.env.BEACON_FEEDBACK_TO?.trim() ||
     process.env.BEACON_OWNER_EMAIL?.trim() ||
-    ''
-  if (!raw) return null
+    DEFAULT_FEEDBACK_OWNER_EMAIL
   // Strip wrapping quotes from Vercel / .env paste
   if (
     (raw.startsWith('"') && raw.endsWith('"')) ||

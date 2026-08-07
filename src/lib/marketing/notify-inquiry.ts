@@ -42,8 +42,8 @@ export async function deliverSchoolInquiry(
 
   if (!to) {
     return {
-      ok: true,
-      note: 'Received. Configure BEACON_FEEDBACK_TO so new school inquiries email the product owner.',
+      ok: false,
+      error: 'Inquiry inbox is not configured. Email office@commoncentsip.com directly.',
     }
   }
 

@@ -59,11 +59,11 @@ export async function queueAndSendEmail(
   const officeReplyTo =
     email.reply_to || (brand ? resolveReplyTo(brand) : undefined) || undefined
 
-  // When inbound capture is on, Reply-To routes to Beacon so parent replies are logged.
-  // Office contact stays in meta (and email footer) for human follow-up.
+  const ownerBound =
+    email.kind === 'school_inquiry' || email.kind === 'pilot_feedback'
   let replyToken: string | null = email.reply_token ?? null
   let replyTo = officeReplyTo
-  if (isEmailInboundConfigured()) {
+  if (!ownerBound && isEmailInboundConfigured()) {
     replyToken = replyToken || generateReplyToken()
     const inbound = buildInboundReplyTo(replyToken)
     if (inbound) replyTo = inbound

@@ -19,7 +19,12 @@ describe('resolveFeedbackOwnerEmail', () => {
     expect(resolveFeedbackOwnerEmail()).toBe('chad@school.org')
   })
 
-  it('returns null when unset', () => {
+  it('falls back to public office inbox when unset', () => {
+    expect(resolveFeedbackOwnerEmail()).toBe('office@commoncentsip.com')
+  })
+
+  it('rejects .example override and does not fall through to default', () => {
+    process.env.BEACON_FEEDBACK_TO = 'fake@school.example'
     expect(resolveFeedbackOwnerEmail()).toBeNull()
   })
 })

@@ -270,7 +270,7 @@ Full list of names lives in **`.env.example`**. Summary:
 
 | Integration | Env | Purpose |
 |-------------|-----|---------|
-| Pilot owner email | `BEACON_FEEDBACK_TO` / `BEACON_OWNER_EMAIL` | Suggestion button inbox (**not** the principal) |
+| Pilot / inquiry owner email | `BEACON_FEEDBACK_TO` / `BEACON_OWNER_EMAIL` | About + landing school inquiries **and** Suggestion button → product owner (**not** the principal). Defaults to `office@commoncentsip.com` if unset. |
 | ntfy push | `BEACON_NTFY_*` | Owner phone alerts |
 | Twilio SMS | `TWILIO_*` | Aftercare parent SMS |
 | Stripe (family pay) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Card Checkout on `/pay/[token]`; webhook `/api/stripe/webhook`; success-page confirm; migration **020** |
