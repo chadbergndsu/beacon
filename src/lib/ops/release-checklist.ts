@@ -93,6 +93,12 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
     group: 'trust',
   },
   {
+    id: 'email_inbound',
+    label: 'Parent email reply capture ready (or N/A)',
+    help: 'Migration 023; EMAIL_INBOUND_DOMAIN + EMAIL_INBOUND_WEBHOOK_SECRET (or RESEND_WEBHOOK_SECRET); Resend email.received → /api/email/inbound. Or use Comms → Simulate parent reply to smoke-test Inbox without MX.',
+    group: 'trust',
+  },
+  {
     id: 'pilot_owner_alerts',
     label: 'Pilot owner alerts wired',
     help: 'BEACON_FEEDBACK_TO for email + optional BEACON_NTFY_URL for phone push. Suggestion button tested.',

@@ -289,6 +289,161 @@ export async function sendTestEmail(): Promise<CommsResult> {
   }
 }
 
+/**
+ * Staff smoke-test: insert a synthetic parent reply against a recent outbox row
+ * (or a freshly minted test send). Does not call the public webhook — no secrets required.
+ */
+export async function simulateParentReply(input?: {
+  body?: string
+}): Promise<CommsResult> {
+  const access = await requireStaff()
+  if (!access.ok) return access
+  if (!canSendSystemEmail(access.profile.role)) {
+    return { ok: false, error: 'Only office leadership can simulate replies.' }
+  }
+
+  const schoolId = access.profile.school_id!
+  const brand = await loadSchoolBrand(schoolId)
+  const { generateReplyToken, buildInboundReplyTo, isEmailInboundConfigured } =
+    await import('@/lib/email/reply-routing')
+  const { ingestInboundEmail } = await import('@/lib/email/inbound')
+  const { rateLimit } = await import('@/lib/security/rate-limit')
+
+  const rl = rateLimit({
+    key: `simulate-reply:${schoolId}:${access.user.id}`,
+    limit: 20,
+    windowMs: 60 * 60 * 1000,
+  })
+  if (!rl.ok) {
+    return { ok: false, error: 'Too many simulate replies — try again later.' }
+  }
+
+  // Prefer a recent outbox row that already has a reply_token
+  let withToken: {
+    id: string
+    to_email: string
+    to_name: string | null
+    subject: string
+    reply_token: string | null
+  } | null = null
+  {
+    const { data, error } = await access.admin
+      .from('email_outbox')
+      .select('id, to_email, to_name, subject, reply_token, meta')
+      .eq('school_id', schoolId)
+      .not('reply_token', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (error && /reply_token|column/i.test(error.message)) {
+      return {
+        ok: false,
+        error: 'Migration 023 not applied — run npm run db:migrate for email_inbox / reply_token.',
+      }
+    }
+    withToken = data
+  }
+
+  let outboxId = withToken?.id as string | undefined
+  let replyToken = (withToken?.reply_token as string | null) || null
+  const parentEmail = (withToken?.to_email as string | undefined) || access.profile.email
+  const parentName = (withToken?.to_name as string | null) || access.profile.full_name
+  let subject = (withToken?.subject as string | undefined) || 'Beacon delivery test'
+
+  if (!replyToken) {
+    // Mint a log-only test send that carries a token even when inbound env is off
+    replyToken = generateReplyToken()
+    const tag = subjectTag(brand)
+    const minted = await queueAndSendEmail(
+      {
+        school_id: schoolId,
+        kind: 'test',
+        to_email: parentEmail || 'office@example.com',
+        to_name: parentName,
+        subject: `[${tag}] Beacon reply-capture seed`,
+        body_text: `Seed message for reply capture smoke test.\n\n${plainFooter(brand)}`,
+        body_html: brandedEmailShell({
+          brand,
+          eyebrow: 'Reply capture',
+          title: 'Seed message',
+          bodyHtml: '<p>This seed exists so Comms can simulate a parent reply.</p>',
+        }),
+        reply_token: replyToken,
+        meta: { simulate_seed: true },
+      },
+      { brand }
+    )
+    // When inbound env is off, queueAndSendEmail won't set reply_token column —
+    // force-update the row so correlation works for the smoke test.
+    outboxId = minted.id
+    if (outboxId && outboxId !== 'unknown') {
+      await access.admin
+        .from('email_outbox')
+        .update({
+          reply_token: replyToken,
+          meta: {
+            simulate_seed: true,
+            reply_token: replyToken,
+            ...(isEmailInboundConfigured()
+              ? { reply_to: buildInboundReplyTo(replyToken) }
+              : {}),
+          },
+        })
+        .eq('id', outboxId)
+        .eq('school_id', schoolId)
+    }
+    subject = `[${tag}] Beacon reply-capture seed`
+  }
+
+  if (!parentEmail?.includes('@')) {
+    return { ok: false, error: 'Need a parent/staff email on the outbox or your profile.' }
+  }
+
+  const body =
+    input?.body?.trim() ||
+    `Hi — this is a simulated parent reply for the smoke test.\n\nThanks,\n${parentName || 'Parent'}`
+
+  const inboundTo =
+    buildInboundReplyTo(replyToken!) || `reply+${replyToken}@simulate.local`
+
+  const result = await ingestInboundEmail({
+    from: `${parentName || 'Parent'} <${parentEmail}>`,
+    fromName: parentName,
+    to: inboundTo,
+    subject: subject.startsWith('Re:') ? subject : `Re: ${subject}`,
+    bodyText: body.slice(0, 4000),
+    provider: 'simulate',
+    providerMessageId: `simulate:${schoolId}:${Date.now()}:${replyToken!.slice(0, 12)}`,
+    replyToken: replyToken!,
+    schoolId,
+    meta: { simulated_by: access.user.id },
+  })
+
+  if (!result.ok) {
+    return { ok: false, error: result.error }
+  }
+
+  await access.admin.from('audit_logs').insert({
+    school_id: schoolId,
+    user_id: access.user.id,
+    action: 'email.inbound_simulated',
+    table_name: 'email_inbox',
+    record_id: result.id === 'unmatched' ? null : result.id,
+    details: { outbox_id: outboxId, reply_token: replyToken },
+  })
+
+  revalidatePath('/admin/emails')
+  revalidatePath('/messages')
+  revalidatePath('/principal/release')
+
+  return {
+    ok: true,
+    emailNote: result.unmatched
+      ? 'Simulated reply stored (unmatched outbox — check migration 023 / reply_token).'
+      : 'Simulated parent reply logged in Inbox. Open it below.',
+  }
+}
+
 export async function resendFailedEmail(outboxId: string): Promise<CommsResult> {
   const access = await requireStaff()
   if (!access.ok) return access

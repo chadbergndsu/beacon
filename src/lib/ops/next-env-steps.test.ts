@@ -13,6 +13,7 @@ function health(partial: Partial<OpsHealth> & { checks?: OpsHealth['checks'] }):
     generatedAt: new Date().toISOString(),
     readyScore: 50,
     emailLive: false,
+    emailInboundConfigured: false,
     qbLiveConfigured: false,
     checks: [],
     ...partial,
@@ -37,6 +38,24 @@ describe('buildLaunchSuggestions', () => {
     expect(items.find((i) => i.id === 'env_migrations')?.done).toBe(true)
     expect(items.find((i) => i.id === 'env_email')?.done).toBe(true)
     expect(items.find((i) => i.id === 'env_office_email')?.done).toBe(true)
+  })
+
+  it('marks inbound done from health or checklist', () => {
+    const fromHealth = buildLaunchSuggestions({
+      health: health({ emailInboundConfigured: true }),
+      checklist: {},
+      brand,
+      checklistItems: RELEASE_CHECKLIST,
+    })
+    expect(fromHealth.find((i) => i.id === 'env_email_inbound')?.done).toBe(true)
+
+    const fromChecklist = buildLaunchSuggestions({
+      health: health({}),
+      checklist: { email_inbound: true },
+      brand,
+      checklistItems: RELEASE_CHECKLIST,
+    })
+    expect(fromChecklist.find((i) => i.id === 'env_email_inbound')?.done).toBe(true)
   })
 
   it('partitions open before done', () => {

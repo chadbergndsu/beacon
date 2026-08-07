@@ -20,6 +20,8 @@ export type OpsHealth = {
   readyScore: number // 0–100
   checks: HealthCheck[]
   emailLive: boolean
+  /** Parent reply capture env (domain + webhook secret) */
+  emailInboundConfigured: boolean
   qbLiveConfigured: boolean
 }
 
@@ -251,6 +253,22 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     category: 'integrations',
   })
 
+  const { isEmailInboundConfigured, inboundDomain } = await import('@/lib/email/reply-routing')
+  const inboundOn = isEmailInboundConfigured()
+  const inboundHost = inboundDomain()
+  const inboxTableOk = await tableExists('email_inbox')
+  checks.push({
+    id: 'email_inbound',
+    label: 'Parent reply capture',
+    status: inboundOn && inboxTableOk ? 'ok' : inboundOn && !inboxTableOk ? 'warn' : 'info',
+    detail: inboundOn
+      ? inboxTableOk
+        ? `Inbound on · reply+…@${inboundHost || 'domain'} → /api/email/inbound`
+        : 'Inbound env set but email_inbox missing — apply migration 023'
+      : 'Optional: EMAIL_INBOUND_DOMAIN + webhook secret; or Comms → Simulate parent reply',
+    category: 'integrations',
+  })
+
   const { isNtfyConfigured } = await import('@/lib/notify/ntfy')
   const ntfyOn = isNtfyConfigured()
   checks.push({
@@ -392,6 +410,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     readyScore,
     checks,
     emailLive: emailStack.live,
+    emailInboundConfigured: inboundOn,
     qbLiveConfigured,
   }
 }

@@ -115,7 +115,7 @@ export async function queueAndSendEmail(
     meta,
     sent_at: sendResult.status === 'sent' ? new Date().toISOString() : null,
   }
-  // Column added in migration 024 — only write when inbound capture minted a token
+  // Column added in migration 023 — only write when inbound capture minted a token
   if (replyToken) row.reply_token = replyToken
 
   const { data, error } = await admin

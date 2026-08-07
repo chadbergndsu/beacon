@@ -83,8 +83,21 @@ export function buildLaunchSuggestions(input: {
       group: 'env',
       label: 'School office email on branding',
       detail:
-        'Office email on branding becomes Reply-To so parents can answer the office.',
+        'Office email on branding (footer + office_reply_to). With inbound off it is also Reply-To.',
       done: Boolean(brand.email?.trim()),
+    },
+    {
+      id: 'env_email_inbound',
+      group: 'env',
+      label: 'Parent reply capture (or N/A)',
+      detail:
+        'EMAIL_INBOUND_DOMAIN + webhook secret; Resend email.received → /api/email/inbound. Smoke-test with Comms → Simulate parent reply.',
+      done:
+        Boolean(checklist.email_inbound) ||
+        health.emailInboundConfigured ||
+        checkStatus(health, 'email_inbound') === 'ok',
+      optional: true,
+      href: '/admin/emails',
     },
     {
       id: 'env_upstash',
@@ -144,7 +157,7 @@ export function buildLaunchSuggestions(input: {
     label: item.label,
     detail: item.help,
     done: Boolean(checklist[item.id]),
-    optional: item.group === 'launch' || item.id.startsWith('qb_') || item.id === 'stripe',
+    optional: item.group === 'launch' || item.id.startsWith('qb_') || item.id === 'stripe' || item.id === 'email_inbound',
   }))
 
   return [...envSteps, ...checklistSteps]

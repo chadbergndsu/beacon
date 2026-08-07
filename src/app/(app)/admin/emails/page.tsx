@@ -7,6 +7,7 @@ import { ComposeMessageForm } from '@/components/comms/ComposeMessageForm'
 import { TestEmailButton } from '@/components/comms/TestEmailButton'
 import { ResendEmailButton } from '@/components/comms/ResendEmailButton'
 import { InboxRepliesPanel } from '@/components/comms/InboxRepliesPanel'
+import { SimulateReplyButton } from '@/components/comms/SimulateReplyButton'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
 import { ViewSection } from '@/components/view-prefs/ViewSection'
 import { getProfile } from '@/lib/auth'
@@ -231,6 +232,18 @@ export default async function CommunicationsPage() {
               {inboundOn ? 'Inbound capture on' : 'Inbound off'}
             </Badge>
           </div>
+          {canManual ? (
+            <div className="mb-3 rounded-lg border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground">Smoke-test without MX</p>
+              <p className="mt-1">
+                Inserts a synthetic parent reply against a recent outbox row (or seeds one). Uses
+                the same ingest path as the webhook — no inbound secrets required.
+              </p>
+              <div className="mt-2">
+                <SimulateReplyButton />
+              </div>
+            </div>
+          ) : null}
           <InboxRepliesPanel items={inbox} canReply={canManual} />
         </section>
       </ViewSection>
