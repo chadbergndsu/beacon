@@ -15,7 +15,7 @@ When a student **scans in** at a room kiosk (or RFID device):
 **Default twin:** same-origin `/craft` using Go-live room mapping (`settings.craft.roomIdMap`) + name heuristics (`craft-demo-*` layout ids).  
 **Legacy:** if `BEACONCRAFT_URL` is an **external** host and `BEACONCRAFT_SCAN_API_KEY` is set, also `POST /api/scans` to that deploy.
 
-Public marketing tour (`/craft/tour`) stays privacy-first (demo markers + guided stops). Staff `/craft` can show real first names.
+Public marketing tour (`/craft/tour` or `/?tour=1`) stays privacy-first (fictional student names only). Staff twin: real **teacher** names + enrollment counts; student markers anonymized (`Student`). Parents see real name + room for **linked** children only.
 
 ## Why (current)
 
@@ -83,3 +83,21 @@ BEACONCRAFT_SCAN_API_KEY=…
 ```
 
 Prefer Go-live **Craft room mapping** over env JSON when possible.
+
+## Related code
+
+- Beacon: `src/lib/badge/store.ts` (`processBadgeScan`), `src/components/badge/KioskScanner.tsx`, `src/lib/badge/campus-twin.ts`
+- Craft: integrated `/craft`, `src/lib/craft/presence.ts`, mock scan + presence store
+
+## Family feedback (Olivia Berg · 2026-08)
+
+Kid review of the School Digital Twin asked for:
+
+1. **Two floors** — already in demo layout (`Floor 1` / `Floor 2` + stairs/elevator)
+2. **Walk with arrow keys** — WASD **and** arrows in in-app `/craft` (`PlayerController`)
+3. **Teachers in rooms** — staff markers (prefer **real** teacher names from roster mapping)
+4. **People not creepy** — low-poly block people with faces (no glowing capsules / blank spheres)
+
+**Minor privacy (follow-up):** public/tour surfaces use fictional student names only. Staff twin shows real teachers + enrollment counts (~110 at Lighthouse, heavier younger); parents see where their linked child is. Public twin fan-out never sends real `displayName`s. Named staff: Leigh Evans (1st), Debbie (2–3), Jen Berg (4–5, blond), John/Lexie Lynn (middle/HS), Frank (HS), Marian (secretary), Will Gordon (chapel), Chris Cowan (principal, larger avatar).
+
+In-app BeaconCraft at `/craft` is the primary surface for this feedback; external `beaconcraft.vercel.app` remains optional legacy fan-out.

@@ -37,6 +37,8 @@ export type CraftSchoolGeometry = {
   doors: CraftBlockInstance[]
   windows: CraftBlockInstance[]
   portals: CraftBlockInstance[]
+  /** Hallway locker banks (metal props + collision). */
+  lockers: CraftBlockInstance[]
   collision: CraftAabb[]
   lights: CraftRoomLight[]
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number }
@@ -163,12 +165,105 @@ function buildPortalGeometry(portal: CraftPortalDef, elev: number, geo: CraftSch
   })
 }
 
+const LOCKER_COLORS = ['#1d4ed8', '#b45309', '#0f766e', '#7c2d12', '#334155'] as const
+
+function isHallRoom(room: CraftRoomDef): boolean {
+  return /hall/i.test(room.name) || /hall/i.test(room.roomId)
+}
+
+/**
+ * School locker banks lining both long walls of hallways.
+ * Leaves gaps near stairs/elevator so kids can still walk the corridor.
+ */
+function buildHallLockers(
+  room: CraftRoomDef,
+  elev: number,
+  portals: CraftPortalDef[],
+  geo: CraftSchoolGeometry
+) {
+  if (!isHallRoom(room)) return
+
+  const [ox, , oz] = room.origin
+  const [w, h, d] = room.size
+  const y0 = elev + room.origin[1]
+  const lockerW = 0.52
+  const lockerH = Math.min(2.05, h * 0.52)
+  const lockerD = 0.4
+  const inset = 0.38
+  const gap = 0.05
+
+  const blocked: { minZ: number; maxZ: number }[] = portals
+    .filter((p) => {
+      const px = p.origin[0]
+      const pz = p.origin[2]
+      const pw = p.size[0]
+      const pd = p.size[2]
+      // Portal overlaps this hall’s footprint
+      return px + pw > ox && px < ox + w && pz + pd > oz && pz < oz + d
+    })
+    .map((p) => ({
+      minZ: p.origin[2] - 0.6,
+      maxZ: p.origin[2] + p.size[2] + 0.6,
+    }))
+
+  const zBlocked = (z: number) => blocked.some((b) => z + lockerW > b.minZ && z < b.maxZ)
+
+  const placeBank = (side: 'west' | 'east') => {
+    let i = 0
+    const x = side === 'west' ? ox + inset : ox + w - inset - lockerD
+    for (let z = oz + 1.4; z + lockerW < oz + d - 1.4; z += lockerW + gap) {
+      if (zBlocked(z)) continue
+      const color = LOCKER_COLORS[i % LOCKER_COLORS.length]!
+      const key = `${room.roomId}-locker-${side}-${i}`
+      // Body
+      pushBlock(geo.lockers, key, x, y0 + 0.12, z, lockerD, lockerH, lockerW, color, {
+        metalness: 0.55,
+        roughness: 0.35,
+      })
+      // Door face (slightly inset)
+      const doorX = side === 'west' ? x + lockerD - 0.06 : x
+      pushBlock(
+        geo.lockers,
+        `${key}-door`,
+        doorX,
+        y0 + 0.18,
+        z + 0.04,
+        0.06,
+        lockerH - 0.2,
+        lockerW - 0.08,
+        color,
+        { metalness: 0.65, roughness: 0.28 }
+      )
+      // Handle
+      const handleX = side === 'west' ? x + lockerD - 0.01 : x - 0.02
+      pushBlock(
+        geo.lockers,
+        `${key}-handle`,
+        handleX,
+        y0 + 0.12 + lockerH * 0.48,
+        z + lockerW * 0.55,
+        0.08,
+        0.12,
+        0.06,
+        '#cbd5e1',
+        { metalness: 0.8, roughness: 0.25 }
+      )
+      pushCollision(geo.collision, x, y0 + 0.12, z, lockerD, lockerH, lockerW)
+      i++
+    }
+  }
+
+  placeBank('west')
+  placeBank('east')
+}
+
 export function buildSchoolGeometry(
   layout: CraftCampusLayout,
   activeFloorId: string
 ): CraftSchoolGeometry {
   const floor = getFloor(layout, activeFloorId) ?? layout.floors[0]!
   const elev = floor.elevationY
+  const floorPortals = portalsOnFloor(layout, activeFloorId)
   const geo: CraftSchoolGeometry = {
     floors: [],
     walls: [],
@@ -177,6 +272,7 @@ export function buildSchoolGeometry(
     doors: [],
     windows: [],
     portals: [],
+    lockers: [],
     collision: [],
     lights: [],
     bounds: layoutBounds(layout, activeFloorId),
@@ -185,8 +281,9 @@ export function buildSchoolGeometry(
 
   for (const room of floor.rooms) {
     buildRoomGeometry(room, elev, geo)
+    buildHallLockers(room, elev, floorPortals, geo)
   }
-  for (const portal of portalsOnFloor(layout, activeFloorId)) {
+  for (const portal of floorPortals) {
     buildPortalGeometry(portal, elev, geo)
   }
 

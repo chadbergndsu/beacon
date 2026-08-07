@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireCraftProfile } from '@/lib/craft/auth-api'
-import { canTriggerMockScans } from '@/lib/craft/presence'
+import { canTriggerMockScans, FAKE_DEMO_STUDENTS } from '@/lib/craft/presence'
 import { getRoomById } from '@/lib/craft/campus'
 import { loadCraftLayoutForSchool } from '@/lib/craft/settings'
 import { upsertMockPresence } from '@/lib/craft/presence-store'
@@ -55,6 +55,15 @@ export async function POST(request: Request) {
     )
   }
 
+  // Mock scans are demo-only — never accept real minor ids/names onto the twin.
+  const demo = FAKE_DEMO_STUDENTS.find((s) => s.id === parsed.data.studentId)
+  if (!demo) {
+    return NextResponse.json(
+      { ok: false, error: 'Mock scans only accept fictional demo students.' },
+      { status: 400 }
+    )
+  }
+
   const layout = await loadCraftLayoutForSchool(auth.profile.school_id!)
   const room = getRoomById(layout, parsed.data.roomId)
   if (!room) {
@@ -63,8 +72,8 @@ export async function POST(request: Request) {
 
   const rec = upsertMockPresence({
     schoolId: auth.profile.school_id!,
-    studentId: parsed.data.studentId,
-    studentName: parsed.data.studentName || `Student ${parsed.data.studentId.slice(0, 6)}`,
+    studentId: demo.id,
+    studentName: demo.name,
     roomId: parsed.data.roomId,
     since: parsed.data.timestamp,
   })

@@ -96,8 +96,8 @@ export function CraftHud({
         <FloorSwitcher />
         {!pointerLocked ? (
           <div className="pointer-events-none absolute inset-x-0 top-12 flex justify-center px-3 sm:top-16">
-            <div className="max-w-xs rounded-lg bg-black/55 px-3 py-1.5 text-center text-[11px] text-white shadow-lg backdrop-blur-sm sm:text-sm">
-              Tap look zone · move pad · Search to find people
+            <div className="max-w-md rounded-lg bg-black/55 px-3 py-1.5 text-center text-[11px] text-white shadow-lg backdrop-blur-sm sm:text-sm">
+              Click / tap look · WASD / arrows · Search · Floor 1 & 2
             </div>
           </div>
         ) : null}
@@ -131,7 +131,12 @@ export function MarkerLegend({ markers }: { markers: CraftVisibleMarker[] }) {
     <ul className="mt-2 max-h-24 space-y-1 overflow-y-auto text-xs">
       {markers.map((m) => (
         <li key={m.id} className="flex justify-between gap-2">
-          <span>{m.label}</span>
+          <span>
+            {m.label}
+            {m.kind === 'teacher' ? (
+              <span className="ml-1 text-[10px] text-sky-700">teacher</span>
+            ) : null}
+          </span>
           <span className="text-muted-foreground">{new Date(m.since).toLocaleTimeString()}</span>
         </li>
       ))}

@@ -68,7 +68,15 @@ export function Minimap() {
               cx={toX(cx)}
               cy={toY(cz)}
               r={selected ? 2.1 : 1.1}
-              fill={selected ? '#fbbf24' : m.anonymized ? '#94a3b8' : '#4ade80'}
+              fill={
+                selected
+                  ? '#fbbf24'
+                  : m.anonymized
+                    ? '#94a3b8'
+                    : m.kind === 'teacher'
+                      ? '#38bdf8'
+                      : '#4ade80'
+              }
               stroke={selected ? '#f59e0b' : 'none'}
               strokeWidth={selected ? 0.6 : 0}
             />

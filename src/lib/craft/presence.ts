@@ -1,6 +1,13 @@
 import { isLeadership } from '@/lib/roles'
 import type { Role } from '@/lib/types'
-import type { CraftPresenceRecord, CraftVisibleMarker, CraftViewerContext } from './types'
+import { allRooms, getRoomById } from './campus'
+import { LIGHTHOUSE_STAFF } from './lighthouse-staff'
+import type {
+  CraftCampusLayout,
+  CraftPresenceRecord,
+  CraftVisibleMarker,
+  CraftViewerContext,
+} from './types'
 
 export function canUseFlyMode(role: Role | null | undefined): boolean {
   return isLeadership(role)
@@ -14,6 +21,74 @@ export function defaultAnonymizeForRole(role: Role): boolean {
   return role === 'parent'
 }
 
+/** Fictional minors only — never use real family names on public/demo surfaces. */
+export const FAKE_DEMO_STUDENTS = [
+  { id: 'demo-stu-jordan', name: 'Jordan Lee', gradeLevel: '3' },
+  { id: 'demo-stu-sam', name: 'Sam Ortiz', gradeLevel: '4' },
+  { id: 'demo-stu-riley', name: 'Riley Kim', gradeLevel: '2' },
+  { id: 'demo-stu-casey', name: 'Casey Brooks', gradeLevel: '5' },
+] as const
+
+/** Fallback teacher labels when a room has no mapped staff yet. */
+const FALLBACK_TEACHER_NAMES = [
+  'Ms. Hart',
+  'Mr. Cole',
+  'Ms. Rivera',
+  'Mr. Blake',
+  'Ms. Nguyen',
+  'Mr. Patel',
+  'Ms. Owens',
+  'Mr. Diaz',
+]
+
+export function staffMarkersForLayout(
+  layout: CraftCampusLayout,
+  teacherNameByRoom: Record<string, string> = {}
+): CraftVisibleMarker[] {
+  const since = new Date().toISOString()
+
+  // Prefer named Lighthouse staff when those rooms exist on the layout
+  const lighthouse = LIGHTHOUSE_STAFF.filter((s) => getRoomById(layout, s.roomId))
+  if (lighthouse.length) {
+    return lighthouse.map((s) => {
+      const override = teacherNameByRoom[s.roomId]?.trim()
+      return {
+        id: `teacher-${s.staffId}`,
+        label: override || s.name,
+        roomId: s.roomId,
+        since,
+        anonymized: false,
+        kind: 'teacher' as const,
+        look: {
+          ...s.look,
+          roleLabel: s.title || s.look.roleLabel,
+        },
+      }
+    })
+  }
+
+  const rooms = allRooms(layout).filter(
+    (r) => r.kind === 'classroom' || r.kind === 'office' || r.kind === 'gym'
+  )
+  return rooms.map((room, i) => {
+    const real = teacherNameByRoom[room.roomId]?.trim()
+    return {
+      id: `teacher-${room.roomId}`,
+      label: real || FALLBACK_TEACHER_NAMES[i % FALLBACK_TEACHER_NAMES.length]!,
+      roomId: room.roomId,
+      since,
+      anonymized: false,
+      kind: 'teacher' as const,
+    }
+  })
+}
+
+/**
+ * Presence markers for the twin.
+ * - Parents: only linked kids (real name + room). Never other minors.
+ * - Staff/leadership: anonymized student markers (id kept for roster “here”);
+ *   real names stay off the 3D labels — use enrollment counts instead.
+ */
 export function filterPresenceForViewer(
   records: CraftPresenceRecord[],
   ctx: Pick<
@@ -32,6 +107,19 @@ export function filterPresenceForViewer(
   return markers.sort((a, b) => a.label.localeCompare(b.label))
 }
 
+export function mergePresenceWithStaff(
+  studentMarkers: CraftVisibleMarker[],
+  layout: CraftCampusLayout,
+  teacherNameByRoom: Record<string, string> = {}
+): CraftVisibleMarker[] {
+  const staff = staffMarkersForLayout(layout, teacherNameByRoom)
+  const byId = new Map<string, CraftVisibleMarker>()
+  for (const m of [...staff, ...studentMarkers]) {
+    byId.set(m.id, m)
+  }
+  return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label))
+}
+
 function visibilityForRecord(
   rec: CraftPresenceRecord,
   ctx: Pick<
@@ -39,15 +127,16 @@ function visibilityForRecord(
     'role' | 'teacherRoomIds' | 'parentStudentIds' | 'anonymizeOthers'
   >
 ): CraftVisibleMarker | null {
-  const { role, teacherRoomIds, parentStudentIds, anonymizeOthers } = ctx
+  const { role, teacherRoomIds, parentStudentIds } = ctx
 
   if (isLeadership(role)) {
     return {
       id: rec.studentId,
-      label: rec.studentName,
+      label: 'Student',
       roomId: rec.roomId,
       since: rec.since,
-      anonymized: false,
+      anonymized: true,
+      kind: 'student',
     }
   }
 
@@ -55,34 +144,25 @@ function visibilityForRecord(
     if (!teacherRoomIds.includes(rec.roomId)) return null
     return {
       id: rec.studentId,
-      label: rec.studentName,
+      label: 'Student',
       roomId: rec.roomId,
       since: rec.since,
-      anonymized: false,
+      anonymized: true,
+      kind: 'student',
     }
   }
 
   if (role === 'parent') {
-    const linked = parentStudentIds.includes(rec.studentId)
-    if (linked) {
-      return {
-        id: rec.studentId,
-        label: rec.studentName,
-        roomId: rec.roomId,
-        since: rec.since,
-        anonymized: false,
-      }
+    // Only linked children — real name + location. Never show other minors.
+    if (!parentStudentIds.includes(rec.studentId)) return null
+    return {
+      id: rec.studentId,
+      label: rec.studentName,
+      roomId: rec.roomId,
+      since: rec.since,
+      anonymized: false,
+      kind: 'student',
     }
-    if (anonymizeOthers) {
-      return {
-        id: rec.studentId,
-        label: 'Guest',
-        roomId: rec.roomId,
-        since: rec.since,
-        anonymized: true,
-      }
-    }
-    return null
   }
 
   return null
@@ -96,7 +176,7 @@ export function pickTeacherFocusRoom(
   return hit ?? teacherRoomIds[0] ?? layoutRoomIds[0] ?? null
 }
 
-/** Fuzzy match a visible marker by display name (supports "easton berg", "berg", etc.). */
+/** Fuzzy match a visible marker by display name (supports "leigh evans", "berg", etc.). */
 export function matchMarkerByName(
   markers: CraftVisibleMarker[],
   query: string
@@ -118,4 +198,14 @@ export function matchMarkerByName(
     .sort((a, b) => b.score - a.score)
 
   return scored[0]?.marker
+}
+
+/** Anonymize trail labels for shared admin screens (minors). */
+export function anonymizeTrailsForDisplay(
+  trails: { studentId: string; studentName: string; roomId: string; since: string }[]
+): { studentId: string; studentName: string; roomId: string; since: string }[] {
+  return trails.map((t) => ({
+    ...t,
+    studentName: 'Student',
+  }))
 }

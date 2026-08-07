@@ -7,9 +7,11 @@ import type { CraftBlockInstance } from '@/lib/craft/geometry'
 export function InstancedBlocks({
   instances,
   defaultRoughness = 0.75,
+  defaultMetalness = 0.05,
 }: {
   instances: CraftBlockInstance[]
   defaultRoughness?: number
+  defaultMetalness?: number
 }) {
   const ref = useRef<THREE.InstancedMesh>(null)
   const obj = useRef(new THREE.Object3D())
@@ -38,7 +40,7 @@ export function InstancedBlocks({
       <meshStandardMaterial
         vertexColors
         roughness={defaultRoughness}
-        metalness={0.05}
+        metalness={defaultMetalness}
       />
     </instancedMesh>
   )

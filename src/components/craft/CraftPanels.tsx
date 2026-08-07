@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { CraftFloorLayout, CraftStudentOption, CraftVisibleMarker } from '@/lib/craft/types'
-import { getRoomByName, allRooms } from '@/lib/craft/layout'
-import { matchMarkerByName } from '@/lib/craft/presence'
+import { FAKE_DEMO_STUDENTS, matchMarkerByName } from '@/lib/craft/presence'
+import { allRooms } from '@/lib/craft/layout'
 import { broadcastCraftPresenceRefresh } from '@/lib/craft/realtime-client'
 import { useCraftUi } from './CraftUiContext'
 
@@ -16,32 +16,11 @@ export function MockScanPanel({
   schoolId: string
   onScan: () => void
 }) {
-  const [students, setStudents] = useState<CraftStudentOption[]>([])
-  const [studentId, setStudentId] = useState('')
+  const options: CraftStudentOption[] = [...FAKE_DEMO_STUDENTS]
+  const [studentId, setStudentId] = useState(options[0]?.id ?? '')
   const [roomId, setRoomId] = useState(allRooms(layout)[2]?.roomId ?? '')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    void fetch('/api/craft/students')
-      .then((r) => r.json())
-      .then((data: { ok?: boolean; students?: CraftStudentOption[] }) => {
-        if (cancelled || !data.ok || !data.students?.length) return
-        setStudents(data.students)
-        setStudentId(data.students[0]?.id ?? '')
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const fallbackStudents: CraftStudentOption[] = [
-    { id: 'demo-stu-1', name: 'Alex Rivera', gradeLevel: '3' },
-    { id: 'demo-stu-2', name: 'Blake Chen', gradeLevel: '4' },
-  ]
-  const options = students.length ? students : fallbackStudents
 
   async function submit() {
     setBusy(true)
@@ -61,7 +40,7 @@ export function MockScanPanel({
       if (!res.ok || !data.ok) {
         setMessage(data.error || 'Scan failed.')
       } else {
-        setMessage(`Placed ${student?.name ?? 'student'} in room.`)
+        setMessage(`Placed ${student?.name ?? 'student'} in room (demo name).`)
         void broadcastCraftPresenceRefresh(schoolId)
         onScan()
       }
@@ -76,11 +55,11 @@ export function MockScanPanel({
     <div className="rounded-lg border border-violet-200 bg-violet-50/95 p-3 text-sm text-violet-950 shadow-sm">
       <p className="font-semibold">Mock badge scan (admin)</p>
       <p className="mt-1 text-xs text-violet-800">
-        Simulates a door scan — markers update on the next poll.
+        Uses fictional demo kids only — never real minor names on the twin.
       </p>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
         <label className="grid gap-1 text-xs">
-          Student
+          Demo student
           <select
             className="rounded border border-violet-200 bg-white px-2 py-1.5"
             value={studentId || options[0]?.id || ''}
@@ -152,7 +131,7 @@ export function PersonSearch({
           Find person
           <input
             className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
-            placeholder="Easton Berg"
+            placeholder="Teacher or child name"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value)
@@ -185,42 +164,33 @@ export function RoomSearch({
   layout: CraftFloorLayout
   onSelectRoom: (roomId: string) => void
 }) {
-  const { setHighlightRoomId } = useCraftUi()
-  const [query, setQuery] = useState('')
-
-  function go() {
-    const room = getRoomByName(layout, query)
-    if (room) {
-      setHighlightRoomId(room.roomId)
-      onSelectRoom(room.roomId)
-    }
-  }
+  const [q, setQ] = useState('')
+  const rooms = allRooms(layout).filter((r) =>
+    r.name.toLowerCase().includes(q.trim().toLowerCase())
+  )
 
   return (
-    <div className="flex flex-wrap items-end gap-2">
-      <label className="grid flex-1 gap-1 text-xs text-slate-700 min-w-[140px]">
-        Teleport / search room
-        <input
-          className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
-          placeholder="Room 101 or room id"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value)
-            const room = getRoomByName(layout, e.target.value)
-            setHighlightRoomId(room?.roomId ?? null)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') go()
-          }}
-        />
-      </label>
-      <button
-        type="button"
-        onClick={go}
-        className="rounded-md bg-sky-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-800"
-      >
-        Go
-      </button>
+    <div className="rounded-lg border border-slate-200 bg-white/95 p-3 text-sm shadow-sm">
+      <p className="font-semibold text-slate-900">Go to room</p>
+      <input
+        className="mt-2 w-full rounded border border-slate-200 px-2 py-1.5 text-xs"
+        placeholder="Search rooms…"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+      />
+      <ul className="mt-2 max-h-28 space-y-1 overflow-y-auto text-xs">
+        {rooms.map((r) => (
+          <li key={r.roomId}>
+            <button
+              type="button"
+              className="w-full rounded px-2 py-1 text-left hover:bg-slate-100"
+              onClick={() => onSelectRoom(r.roomId)}
+            >
+              {r.name}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

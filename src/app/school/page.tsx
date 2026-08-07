@@ -161,8 +161,9 @@ export default async function SchoolWebsitePage({
                 Explore campus in 3D
               </h2>
               <p className="mt-3 text-muted-foreground leading-relaxed">
-                Take a guided tour of {brand.name} — entrance, hall, classrooms, office, and gym —
-                in a live digital twin. No login required for the public tour.
+                Take a guided tour of {brand.name} — entrance, hall, classrooms, chapel, office, and
+                gym — in a live digital twin. Public tour uses{' '}
+                <strong>fictional student names</strong> only (kids are minors). No login required.
               </p>
               <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
                 {[
@@ -199,11 +200,11 @@ export default async function SchoolWebsitePage({
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Public tour opens in a new tab. Staff signed into Beacon: use{' '}
+                  Public tour opens in a new tab (fictional student names). Staff:{' '}
                   <Link href="/craft" className="font-semibold text-primary hover:underline">
                     Craft
                   </Link>{' '}
-                  in the app for live badge presence and person search.
+                  for live presence, teachers, and person search. Parents see linked kids only.
                 </p>
               </CardContent>
             </Card>

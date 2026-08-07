@@ -362,9 +362,9 @@ Minecraft-style voxel campus driven by badge presence. Not the same product as *
 | Layout editor (Go-live) | `CraftLayoutEditor` on Principal → Go-live — drag rooms, floor tabs, JSON/SVG import |
 | Real badge path | Merges `listRoomPresence()` when layout room **names** match `school_rooms` |
 
-**Controls:** click world for pointer lock · WASD move · sprint · floor switcher + stairs/elevator portals · admin fly (Space up / Shift down) · room search teleports · rotating mini-map + compass · mobile move/look pads.
+**Controls:** click the world to capture mouse · **WASD / arrow keys** · Shift sprint · Space/Shift fly (admin) · Floor 1↔2 switcher · Mobile: on-screen stick.
 
-**Privacy defaults:** teachers see their classroom rooms only; parents see linked children by name and optional anonymized “Guest” markers elsewhere; leadership sees full campus.
+**Privacy (minors):** public tour / twin labels never show real student names (fictional demos only). Staff twin shows **real teacher names** (Leigh Evans, Debbie, Jen Berg, John/Lexie Lynn, Frank, Marian, Will Gordon · chapel, Chris Cowan) + **enrollment counts** (~110, younger-heavy). Student avatars stay anonymous. Parents see **where their linked child is** (real name + room). Mock scans accept fictional demo kids only.
 
 **Extend:** edit layout on Go-live or import JSON/SVG (`src/lib/craft/svg-import.ts`); custom layout stored in `schools.settings.craft.customLayout`. Wire hardware scans via existing `POST /api/kiosk/device-scan` — presence API merges DB scans when room names align.
 

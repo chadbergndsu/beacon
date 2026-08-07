@@ -7,4 +7,5 @@ export const CRAFT_DEMO_ROOM_IDS = {
   room103: 'craft-demo-room-103',
   office: 'craft-demo-office',
   gym: 'craft-demo-gym',
+  chapel: 'craft-demo-chapel',
 } as const

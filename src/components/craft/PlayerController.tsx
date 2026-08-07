@@ -48,6 +48,14 @@ export function PlayerController() {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       keys.current[e.code] = true
+      if (
+        e.code === 'ArrowUp' ||
+        e.code === 'ArrowDown' ||
+        e.code === 'ArrowLeft' ||
+        e.code === 'ArrowRight'
+      ) {
+        e.preventDefault()
+      }
     }
     const up = (e: KeyboardEvent) => {
       keys.current[e.code] = false
@@ -164,10 +172,10 @@ export function PlayerController() {
     const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize()
     const wish = new THREE.Vector3()
 
-    if (keys.current.KeyW) wish.add(forward)
-    if (keys.current.KeyS) wish.sub(forward)
-    if (keys.current.KeyA) wish.sub(right)
-    if (keys.current.KeyD) wish.add(right)
+    if (keys.current.KeyW || keys.current.ArrowUp) wish.add(forward)
+    if (keys.current.KeyS || keys.current.ArrowDown) wish.sub(forward)
+    if (keys.current.KeyA || keys.current.ArrowLeft) wish.sub(right)
+    if (keys.current.KeyD || keys.current.ArrowRight) wish.add(right)
 
     if (touchMove.x || touchMove.y) {
       wish.add(right.clone().multiplyScalar(touchMove.x))
