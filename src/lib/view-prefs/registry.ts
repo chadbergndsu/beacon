@@ -38,6 +38,11 @@ export const SCREEN_CATALOG: Record<ScreenId, { title: string; sections: Section
         label: 'Balances & pay',
       },
       {
+        id: 'parent_lbc',
+        label: 'LBC Snack Shack',
+        description: 'Load snack funds for kids',
+      },
+      {
         id: 'parent_missing',
         label: 'Family missing work',
       },
