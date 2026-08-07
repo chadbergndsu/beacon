@@ -12,7 +12,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 |-------|--------|--------|
 | App | Next.js 16 App Router + React 19 + TypeScript + Tailwind 4 | Portable web frontend |
 | Auth edge | `src/proxy.ts` → Supabase SSR session | Public routes listed below; fail-closed without Supabase env on prod/preview |
-| DB | Supabase Postgres | Schema owned in `supabase/migrations/` (**001–018**) |
+| DB | Supabase Postgres | Schema owned in `supabase/migrations/` (**001–023**) |
 | Auth | Supabase Auth | App code uses `getUser()` before service-role; edge refreshes cookies via `getClaims()` |
 | Host | Vercel + HTTPS | Default per Solid Systems |
 | Email | Resend and/or SMTP (cascade) | Log-only outbox without live transport; never use `onboarding@resend.dev` in prod |
@@ -167,6 +167,9 @@ POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate -- 017
 | **020** | Stripe payment columns (`stripe_checkout_session_id`, payment intent) |
 | **021** | P0 money settle: one succeeded payment per invoice |
 | **022** | BeaconCraft Realtime: `badge_scans` on `supabase_realtime` publication |
+| **023** | Office admin / principal pilot profile seed (Marian Gordon, Chris Cowan emails) |
+
+**Soft pilot:** ordered runbook in [`docs/pilot-go-live.md`](docs/pilot-go-live.md) · `npm run pilot:check` · account bind SQL in `scripts/seed-pilot-accounts.sql` · Go-live **Pilot path** card.
 
 **Billing money path** uses tables only. Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`.
 

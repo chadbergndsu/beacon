@@ -15,7 +15,9 @@ import { CraftSetupCard } from '@/components/craft/CraftSetupCard'
 import { CraftLayoutEditor } from '@/components/craft/CraftLayoutEditor'
 import { CraftRoomMapPanel } from '@/components/craft/CraftRoomMapPanel'
 import { OnboardingProgress } from '@/components/ops/OnboardingProgress'
+import { PilotPathCard } from '@/components/ops/PilotPathCard'
 import { loadSchoolOnboarding } from '@/lib/ops/onboarding'
+import { resolvePilotPath } from '@/lib/ops/pilot-path'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
@@ -43,12 +45,32 @@ export default async function PrincipalReleasePage() {
     checklistItems: RELEASE_CHECKLIST,
   })
 
+  const healthById = Object.fromEntries(health.checks.map((c) => [c.id, c.status]))
+  const brandOk = onboarding.steps.find((s) => s.id === 'brand')?.done ?? false
+  const hasTeacher = onboarding.steps.find((s) => s.id === 'teachers')?.done ?? false
+  const hasParentLinks = onboarding.steps.find((s) => s.id === 'parents')?.done ?? false
+  const pilotStatuses = resolvePilotPath({
+    checklist,
+    healthById,
+    emailLive: health.emailLive,
+    hasPrincipalOrAdmin: true, // this page requires principal/admin
+    hasTeacher,
+    hasParentLinks,
+    brandOk,
+  })
+  const nextPilot = pilotStatuses.find((s) => !s.done)
+
   return (
     <div className="page-stack">
       <PageHeader
         eyebrow="Ops & trust"
         title={`Go-live for ${brand.name}`}
         description="Finish platform health, label demo vs live integrations, set your school branding, and tick the human checklist before wider parent rollout. Beacon works for any school — this page is your launch control."
+      />
+
+      <PilotPathCard
+        statuses={pilotStatuses}
+        nextHref={nextPilot?.step.href ?? null}
       />
 
       <div className="grid gap-4 sm:grid-cols-3">

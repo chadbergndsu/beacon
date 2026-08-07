@@ -19,7 +19,8 @@
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "ci": "npm run lint && npm run typecheck && npm run test:coverage && npm run build",
-    "db:migrate": "node scripts/apply-migrations.mjs"
+    "db:migrate": "node scripts/apply-migrations.mjs",
+    "pilot:check": "node scripts/pilot-env-check.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
