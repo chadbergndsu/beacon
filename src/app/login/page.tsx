@@ -4,7 +4,7 @@ import { LoginForm } from '@/components/auth/LoginForm'
 import { demoOfficeAdminEmail, demoPrincipalEmail } from '@/lib/roles'
 import { safeInternalPath } from '@/lib/safe-redirect'
 import { loadSchoolBrand } from '@/lib/school-brand'
-import { beaconCraftAppHref, beaconCraftTourUrl } from '@/lib/beaconcraft-url'
+import { beaconCraftTourUrl } from '@/lib/beaconcraft-url'
 import { CraftHref } from '@/components/craft/CraftHref'
 
 /**
@@ -240,11 +240,19 @@ const LOGIN_CRITICAL_CSS = `
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.35rem 0.75rem;
-    font-size: 0.75rem;
+    gap: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    line-height: 1.6;
     color: #64748b;
   }
-  .login-footer a { font-weight: 600; color: #0284c7; }
+  .login-footer a {
+    font-weight: 600;
+    color: #0284c7;
+    padding: 0.25rem 0.1rem;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
   .login-principal-card {
     width: 100%;
     border-radius: 1.25rem;
@@ -321,7 +329,6 @@ export default async function LoginPage({
   const brand = await loadSchoolBrand(null)
   const principalEmail = demoPrincipalEmail() || PILOT_PRINCIPAL_EMAIL
   const officeAdminEmail = demoOfficeAdminEmail() || PILOT_OFFICE_ADMIN_EMAIL
-  const craftHref = beaconCraftAppHref()
   const tourHref = beaconCraftTourUrl()
 
   return (
@@ -448,10 +455,8 @@ export default async function LoginPage({
                     <span aria-hidden>·</span>
                     <CraftHref href={tourHref}>Campus tour</CraftHref>
                     <span aria-hidden>·</span>
-                    <CraftHref href={craftHref}>Campus twin</CraftHref>
-                    <span aria-hidden>·</span>
                     <Link href="/craft" className="font-semibold">
-                      Staff Craft
+                      Staff twin
                     </Link>
                     <span aria-hidden>·</span>
                     <Link href="/about">About</Link>

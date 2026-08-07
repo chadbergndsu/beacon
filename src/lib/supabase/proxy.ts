@@ -4,7 +4,15 @@ import { safeInternalPath } from '@/lib/safe-redirect'
 import { KIOSK_COOKIE, KIOSK_COOKIE_MAX_AGE_SEC } from '@/lib/badge/kiosk-cookie'
 
 /** Unauthenticated allowlist — keep in sync with README “Public routes” + proxy-public.test.ts */
-const PUBLIC_EXACT = new Set(['/', '/login', '/about', '/school'])
+const PUBLIC_EXACT = new Set(['/', '/login', '/about', '/school', '/privacy'])
+/** Prefixes: trailing slash means “path or children”; bare `/kiosk` matches `/kiosk` + `/kiosk/…`. */
+const PUBLIC_PREFIXES = ['/pay/', '/kiosk', '/craft/tour', '/vs/']
+
+function matchesPublicPrefix(path: string): boolean {
+  return PUBLIC_PREFIXES.some(
+    (p) => path === p.replace(/\/$/, '') || path.startsWith(p.endsWith('/') ? p : `${p}/`) || path === p
+  )
+}
 
 export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname
@@ -41,11 +49,8 @@ export async function updateSession(request: NextRequest) {
       process.env.VERCEL_ENV === 'preview'
     const isPublicPath =
       PUBLIC_EXACT.has(path) ||
-      path === '/privacy' ||
-      path === '/kiosk' ||
-      path.startsWith('/kiosk/') ||
+      matchesPublicPrefix(path) ||
       path.startsWith('/api/kiosk/') ||
-      path.startsWith('/pay/') ||
       path.startsWith('/api/stripe/') ||
       path.startsWith('/api/cron/') ||
       path === '/api/health'
@@ -83,18 +88,16 @@ export async function updateSession(request: NextRequest) {
   const isDeviceApi = path.startsWith('/api/kiosk/')
   // Public liveness probe (detailed checks still require BEACON_HEALTH_SECRET)
   const isHealth = path === '/api/health'
-  const isFamilyPay = path.startsWith('/pay/')
   const isStripeWebhook = path.startsWith('/api/stripe/')
   const isCron = path.startsWith('/api/cron/')
   const isPublic =
     PUBLIC_EXACT.has(path) ||
+    matchesPublicPrefix(path) ||
     isKiosk ||
     isDeviceApi ||
     isHealth ||
-    isFamilyPay ||
     isStripeWebhook ||
-    isCron ||
-    path === '/privacy'
+    isCron
 
   if (!user && !isPublic) {
     const redirectUrl = request.nextUrl.clone()
