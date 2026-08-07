@@ -36,6 +36,8 @@ type CraftUiContextValue = {
   requestTeleport: (roomId: string | null) => void
   highlightRoomId: string | null
   setHighlightRoomId: (id: string | null) => void
+  highlightMarkerId: string | null
+  setHighlightMarkerId: (id: string | null) => void
   pointerLocked: boolean
   setPointerLocked: (v: boolean) => void
   touchMove: TouchMove
@@ -78,6 +80,7 @@ export function CraftUiProvider({
   const [player, setPlayer] = useState<PlayerSnapshot>(() => initialPlayer(layout, defaultFloor))
   const [teleportRoomId, setTeleportRoomId] = useState<string | null>(null)
   const [highlightRoomId, setHighlightRoomId] = useState<string | null>(null)
+  const [highlightMarkerId, setHighlightMarkerId] = useState<string | null>(null)
   const [pointerLocked, setPointerLocked] = useState(false)
   const [touchMove, setTouchMove] = useState<TouchMove>({ x: 0, y: 0 })
   const touchLookRef = useRef({ dx: 0, dy: 0 })
@@ -111,6 +114,8 @@ export function CraftUiProvider({
       requestTeleport: setTeleportRoomId,
       highlightRoomId,
       setHighlightRoomId,
+      highlightMarkerId,
+      setHighlightMarkerId,
       pointerLocked,
       setPointerLocked,
       touchMove,
@@ -129,6 +134,7 @@ export function CraftUiProvider({
       setFlyMode,
       teleportRoomId,
       highlightRoomId,
+      highlightMarkerId,
       pointerLocked,
       touchMove,
     ]

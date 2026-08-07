@@ -19,12 +19,12 @@ export function Minimap() {
   const compassIdx = Math.round((((player.yaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8
 
   return (
-    <div className="pointer-events-none absolute bottom-4 right-4 w-40 rounded-xl border border-white/20 bg-slate-900/80 p-2 text-white shadow-xl backdrop-blur-md sm:w-48">
+    <div className="pointer-events-none absolute right-3 top-14 w-28 rounded-xl border border-white/20 bg-slate-900/80 p-1.5 text-white shadow-xl backdrop-blur-md sm:bottom-4 sm:top-auto sm:w-40 sm:p-2">
       <div className="mb-1 flex items-center justify-between gap-2">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-300">Campus map</p>
         <p className="text-[10px] font-bold text-sky-300">{compass[compassIdx]}</p>
       </div>
-      <svg viewBox="0 0 100 100" className="h-28 w-full rounded-lg bg-slate-950/70 sm:h-32">
+      <svg viewBox="0 0 100 100" className="h-20 w-full rounded-lg bg-slate-950/70 sm:h-32">
         {floorRooms.map((room) => {
           const [ox, , oz] = room.origin
           const [w, , d] = room.size

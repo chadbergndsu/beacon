@@ -21,7 +21,7 @@ export function TouchMovePad() {
   }
 
   return (
-    <div className="pointer-events-none absolute bottom-20 left-4 z-20 sm:hidden">
+    <div className="pointer-events-none absolute bottom-16 left-3 z-20 sm:bottom-20 sm:hidden">
       <div
         className="pointer-events-auto h-24 w-24 rounded-full border border-white/40 bg-slate-900/35 backdrop-blur"
         onTouchStart={(e) => {

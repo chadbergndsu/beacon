@@ -100,6 +100,7 @@ export function CraftClient({
           canFly={canUseFlyMode(role)}
           canMockScan={canTriggerMockScans(role)}
           markerCount={markers.length}
+          markers={markers}
           schoolId={schoolId}
           onRefresh={() => void refresh()}
         />
