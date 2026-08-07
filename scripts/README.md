@@ -1,6 +1,6 @@
 # Database / ops scripts
 
-**Canonical schema:** `../supabase/migrations/` (`001` … `021`).
+**Canonical schema:** every SQL file in `../supabase/migrations/`, including timestamped hardening migrations after the numbered series.
 
 ## Preferred
 
@@ -17,7 +17,7 @@ This runs `apply-migrations.mjs`, applies pending files in order, and records th
 
 ## SQL Editor paste copies (`pending-*.sql`)
 
-These are convenience copies for the Supabase SQL Editor. **If a pending file disagrees with `supabase/migrations/`, the migration file wins.** Prefer re-copying from migrations rather than editing only `pending-*`.
+These are incomplete convenience copies for the Supabase SQL Editor, not the upgrade contract. **If a pending file disagrees with `supabase/migrations/`, the migration file wins.** Prefer `npm run db:migrate`; if the SQL Editor is unavoidable, apply every canonical migration rather than assuming this table is complete.
 
 | File | Role |
 |------|------|

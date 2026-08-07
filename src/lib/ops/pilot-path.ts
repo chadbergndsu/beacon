@@ -17,8 +17,9 @@ export type PilotPathStep = {
 export const PILOT_PATH_STEPS: readonly PilotPathStep[] = [
   {
     id: 'migrations',
-    title: '1. Migrations 001–023',
-    detail: 'Run npm run db:migrate against production Supabase (016–023 especially).',
+    title: '1. All database migrations',
+    detail:
+      'Run npm run db:migrate against production Supabase and confirm every repository migration, including timestamped authorization hardening.',
     checklistId: 'migrations',
   },
   {
@@ -45,8 +46,9 @@ export const PILOT_PATH_STEPS: readonly PilotPathStep[] = [
   },
   {
     id: 'golive',
-    title: '5. Go-live health green',
-    detail: 'Brand school, tick Go-live checklist, ready score healthy.',
+    title: '5. Go-live health reviewed',
+    detail:
+      'Brand the school and clear every blocking health failure. Approved controlled-pilot warnings may remain visible.',
     href: '/principal/release',
     checklistId: 'brand',
   },
@@ -78,6 +80,7 @@ export function resolvePilotPath(input: {
   hasTeacher: boolean
   hasParentLinks: boolean
   brandOk: boolean
+  hasBlockingHealthFailure: boolean
 }): PilotPathStatus[] {
   return PILOT_PATH_STEPS.map((step) => {
     let done = false
@@ -100,7 +103,9 @@ export function resolvePilotPath(input: {
     } else if (step.id === 'email') {
       done = Boolean(input.checklist.email_mode) || input.emailLive
     } else if (step.id === 'golive') {
-      done = Boolean(input.checklist.brand) || input.brandOk
+      done =
+        (Boolean(input.checklist.brand) || input.brandOk) &&
+        !input.hasBlockingHealthFailure
     } else if (step.id === 'parents') {
       done = Boolean(input.checklist.parent_login) || input.hasParentLinks
     } else if (step.id === 'soft_launch') {

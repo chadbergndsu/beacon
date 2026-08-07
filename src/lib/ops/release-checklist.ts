@@ -5,13 +5,14 @@ export type ChecklistItem = {
   label: string
   help: string
   group: 'ops' | 'trust' | 'launch'
+  optional?: boolean
 }
 
 export const RELEASE_CHECKLIST: ChecklistItem[] = [
   {
     id: 'migrations',
-    label: 'Database migrations 001–023 applied',
-    help: 'Prefer: npm run db:migrate. Includes craft realtime (022), office admin seed (023), family portal, Stripe, money settle.',
+    label: 'Every repository database migration applied',
+    help: 'Run npm run db:migrate and confirm every file in supabase/migrations/ is recorded, including the timestamped authorization and tenant-integrity hardening after 023.',
     group: 'ops',
   },
   {
@@ -34,8 +35,8 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
   },
   {
     id: 'upstash_prod',
-    label: 'Upstash rate limits set for production',
-    help: 'UPSTASH_REDIS_REST_URL + TOKEN on Vercel Production (or RATE_LIMIT_ALLOW_MEMORY=1 break-glass only).',
+    label: 'Production rate-limit path approved',
+    help: 'Use Upstash for public or multi-instance production. A controlled, non-public pilot may explicitly approve RATE_LIMIT_ALLOW_MEMORY=1 as a temporary break-glass exception.',
     group: 'ops',
   },
   {
@@ -43,30 +44,35 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
     label: 'Sentry DSN set for production errors',
     help: 'SENTRY_DSN (server) + NEXT_PUBLIC_SENTRY_DSN (browser) on Vercel. Optional for pilot; recommended for public traffic.',
     group: 'ops',
+    optional: true,
   },
   {
     id: 'stripe',
     label: 'Stripe family pay configured (or N/A)',
     help: 'STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET on Vercel; webhook URL /api/stripe/webhook (checkout.session.completed). Apply migration 020. Test with sk_test_ first.',
     group: 'ops',
+    optional: true,
   },
   {
     id: 'kiosk_tokens',
     label: 'Kiosk tokens rotated after go-live',
     help: 'Principal → Badges: open kiosk once, then rotate if the link was ever shared outside the tablet. Re-open after expiry.',
     group: 'ops',
+    optional: true,
   },
   {
     id: 'craft_smoke',
     label: 'BeaconCraft twin smoke test',
     help: 'Go-live → sync twin rooms, open /craft, trigger a test scan, confirm marker appears in the correct room.',
     group: 'launch',
+    optional: true,
   },
   {
     id: 'slack',
     label: 'Slack office channel configured (or N/A)',
     help: 'BEACON_SLACK_WEBHOOK_URL on Vercel (Incoming Webhook), or bot token + channel. Test from Comms → Slack.',
     group: 'launch',
+    optional: true,
   },
   {
     id: 'principal_login',
@@ -103,18 +109,21 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
     label: 'Pilot owner alerts wired',
     help: 'BEACON_FEEDBACK_TO for email + optional BEACON_NTFY_URL for phone push. Suggestion button tested.',
     group: 'trust',
+    optional: true,
   },
   {
     id: 'qb_push',
     label: 'QuickBooks push verified (or N/A)',
     help: 'If using live QBO: Connect → create a test invoice → Push to QuickBooks → confirm in sandbox company. Demo mode is labeled and does not call Intuit.',
     group: 'trust',
+    optional: true,
   },
   {
     id: 'qb_mode',
     label: 'QuickBooks mode labeled',
     help: 'Sandbox demo vs live OAuth is clear to the office — no surprise invoices.',
     group: 'trust',
+    optional: true,
   },
   {
     id: 'brand',

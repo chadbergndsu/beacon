@@ -63,7 +63,7 @@ export function LaunchSuggestions({ items }: { items: LaunchSuggestion[] }) {
         <p className="font-semibold text-foreground">Launch suggestions</p>
         <p className="text-xs text-muted-foreground">
           {done.length} done · {open.length} open
-          {openRequired.length ? ` (${openRequired.length} recommended)` : ''}
+          {openRequired.length ? ` (${openRequired.length} required)` : ''}
         </p>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
