@@ -10,6 +10,8 @@ import {
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 const PAGE_SIZE = 1000
+// Keeps UUID-based PostgREST `in` filters to only a few KB before URL encoding.
+const ID_FILTER_CHUNK_SIZE = 100
 
 type QueryResponse<Row> = {
   data: Row[] | null
@@ -89,6 +91,29 @@ async function loadRows<Row>(
   }
 }
 
+async function loadRowsByIdChunks<Row>(
+  schoolId: string,
+  source: string,
+  ids: string[],
+  queryFactory: (idChunk: string[]) => OrderedQuery<Row>,
+  orderColumns: string[]
+): Promise<SourceResult<Row[]>> {
+  const rows: Row[] = []
+
+  for (let from = 0; from < ids.length; from += ID_FILTER_CHUNK_SIZE) {
+    const chunkRows = await loadRows(
+      schoolId,
+      source,
+      () => queryFactory(ids.slice(from, from + ID_FILTER_CHUNK_SIZE)),
+      orderColumns
+    )
+    if (!chunkRows.ok) return { ok: false }
+    rows.push(...chunkRows.value)
+  }
+
+  return { ok: true, value: rows }
+}
+
 async function loadEligibleLinkedParents(
   admin: AdminClient,
   schoolId: string
@@ -104,14 +129,15 @@ async function loadEligibleLinkedParents(
   const studentIds = distinctStrings(students.value, 'id')
   if (studentIds.length === 0) return { ok: true, value: [] }
 
-  const links = await loadRows<{ parent_id: string; student_id: string }>(
+  const links = await loadRowsByIdChunks<{ parent_id: string; student_id: string }>(
     schoolId,
     'parent_students',
-    () =>
+    studentIds,
+    (studentIdChunk) =>
       admin
         .from('parent_students')
         .select('parent_id, student_id')
-        .in('student_id', studentIds),
+        .in('student_id', studentIdChunk),
     ['parent_id', 'student_id']
   )
   if (!links.ok) return links
@@ -119,16 +145,17 @@ async function loadEligibleLinkedParents(
   const linkedParentIds = distinctStrings(links.value, 'parent_id')
   if (linkedParentIds.length === 0) return { ok: true, value: [] }
 
-  const parentProfiles = await loadRows<{ id: string }>(
+  const parentProfiles = await loadRowsByIdChunks<{ id: string }>(
     schoolId,
     'profiles',
-    () =>
+    linkedParentIds,
+    (linkedParentIdChunk) =>
       admin
         .from('profiles')
         .select('id')
         .eq('school_id', schoolId)
         .eq('role', 'parent')
-        .in('id', linkedParentIds),
+        .in('id', linkedParentIdChunk),
     ['id']
   )
   if (!parentProfiles.ok) return parentProfiles
@@ -155,10 +182,12 @@ async function loadGradeActivity(
     return { ok: true, value: { state: 'ready', primary: 0, secondary: 0 } }
   }
 
-  const assignments = await loadRows<{ id: string }>(
+  const assignments = await loadRowsByIdChunks<{ id: string }>(
     schoolId,
     'assignments',
-    () => admin.from('assignments').select('id').in('class_id', classIds),
+    classIds,
+    (classIdChunk) =>
+      admin.from('assignments').select('id').in('class_id', classIdChunk),
     ['id']
   )
   if (!assignments.ok) return assignments
@@ -168,14 +197,15 @@ async function loadGradeActivity(
     return { ok: true, value: { state: 'ready', primary: 0, secondary: 0 } }
   }
 
-  const grades = await loadRows<{ assignment_id: string }>(
+  const grades = await loadRowsByIdChunks<{ assignment_id: string }>(
     schoolId,
     'grades',
-    () =>
+    assignmentIds,
+    (assignmentIdChunk) =>
       admin
         .from('grades')
         .select('assignment_id')
-        .in('assignment_id', assignmentIds)
+        .in('assignment_id', assignmentIdChunk)
         .gte('entered_at', timestampStart)
         .lt('entered_at', timestampEnd),
     ['id']

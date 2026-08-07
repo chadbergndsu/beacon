@@ -17,6 +17,7 @@ type PostgrestError = {
 type Script = {
   rows?: Record<string, Row[]>
   errors?: Record<string, PostgrestError>
+  maxInValues?: number
   nullData?: string[]
   queryError?: (query: QueryRecord) => PostgrestError | undefined
   queryRejection?: (query: QueryRecord) => Error | undefined
@@ -104,14 +105,32 @@ function createScriptedAdmin(script: Script): {
               return Promise.reject(rejection).then(onfulfilled, onrejected)
             }
 
-            const error = script.queryError?.(query) ?? script.errors?.[table]
+            const oversizedInFilter = query.operations.find(([method, , values]) => {
+              return (
+                method === 'in' &&
+                Array.isArray(values) &&
+                script.maxInValues !== undefined &&
+                values.length > script.maxInValues
+              )
+            })
+            const error =
+              script.queryError?.(query) ??
+              script.errors?.[table] ??
+              (oversizedInFilter
+                ? {
+                    code: '414',
+                    details: 'request URI exceeds the test boundary',
+                    hint: '',
+                    message: 'URI too long',
+                  }
+                : undefined)
             if (error) {
               return Promise.resolve({
                 data: null,
                 error,
                 count: null,
-                status: 500,
-                statusText: 'Internal Server Error',
+                status: error.code === '414' ? 414 : 500,
+                statusText: error.code === '414' ? 'URI Too Long' : 'Internal Server Error',
               }).then(onfulfilled, onrejected)
             }
 
@@ -420,6 +439,71 @@ function installScript(script: Script): QueryRecord[] {
   return queries
 }
 
+function rowsCrossingParentChunkBoundary(): Record<string, Row[]> {
+  const rows = successfulRows()
+  rows.students = Array.from({ length: 101 }, (_, index) => ({
+    id: `student-${String(index).padStart(3, '0')}`,
+    school_id: 'school-1',
+    active: true,
+  }))
+  rows.parent_students = Array.from({ length: 101 }, (_, index) => ({
+    parent_id: `parent-${String(index).padStart(3, '0')}`,
+    student_id: `student-${String(index).padStart(3, '0')}`,
+  }))
+  rows.profiles = [
+    ...rows.profiles.filter((row) => row.role !== 'parent'),
+    ...Array.from({ length: 101 }, (_, index) => ({
+      id: `parent-${String(index).padStart(3, '0')}`,
+      school_id: 'school-1',
+      role: 'parent',
+    })),
+  ]
+  rows.pilot_activity_daily = [
+    ...rows.pilot_activity_daily.filter((row) => row.actor_role !== 'parent'),
+    ...Array.from({ length: 101 }, (_, index) => ({
+      school_id: 'school-1',
+      user_id: `parent-${String(index).padStart(3, '0')}`,
+      actor_role: 'parent',
+      event_type: 'parent_portal',
+      activity_date: '2026-08-07',
+    })),
+  ]
+  return rows
+}
+
+function rowsCrossingGradeChunkBoundary(): Record<string, Row[]> {
+  const rows = successfulRows()
+  rows.classes = Array.from({ length: 101 }, (_, index) => ({
+    id: `class-${String(index).padStart(3, '0')}`,
+    school_id: 'school-1',
+  }))
+  rows.assignments = Array.from({ length: 101 }, (_, index) => ({
+    id: `assignment-${String(index).padStart(3, '0')}`,
+    class_id: `class-${String(index).padStart(3, '0')}`,
+  }))
+  rows.grades = Array.from({ length: 101 }, (_, index) => ({
+    id: `grade-${String(index).padStart(3, '0')}`,
+    assignment_id: `assignment-${String(index).padStart(3, '0')}`,
+    entered_at: '2026-08-07T12:00:00.000Z',
+  }))
+  return rows
+}
+
+function inFilterValues(
+  queries: QueryRecord[],
+  table: string,
+  column: string
+): unknown[][] {
+  return queries.flatMap((query) => {
+    if (query.table !== table) return []
+    return query.operations.flatMap(([method, candidateColumn, values]) => {
+      return method === 'in' && candidateColumn === column && Array.isArray(values)
+        ? [values]
+        : []
+    })
+  })
+}
+
 describe('loadPilotScorecard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -664,6 +748,91 @@ describe('loadPilotScorecard', () => {
         ['range', 1000, 1999],
       ],
     ])
+  })
+
+  it('merges bounded student and linked-parent ID chunks into the exact parent ratio', async () => {
+    const queries = installScript({
+      rows: rowsCrossingParentChunkBoundary(),
+      maxInValues: 100,
+    })
+
+    const scorecard = await loadPilotScorecard(
+      'school-1',
+      new Date('2026-08-07T16:30:00.000Z')
+    )
+
+    expect(scorecard.activeLinkedParents).toEqual({
+      state: 'ready',
+      active: 101,
+      eligible: 101,
+      percent: 100,
+    })
+    const studentChunks = inFilterValues(queries, 'parent_students', 'student_id')
+    const parentChunks = inFilterValues(queries, 'profiles', 'id')
+    expect(studentChunks.map((values) => values.length)).toEqual([100, 1])
+    expect(parentChunks.map((values) => values.length)).toEqual([100, 1])
+    expect([...studentChunks, ...parentChunks].every((values) => values.length <= 100)).toBe(
+      true
+    )
+  })
+
+  it('merges bounded class and assignment ID chunks into exact grade activity', async () => {
+    const queries = installScript({
+      rows: rowsCrossingGradeChunkBoundary(),
+      maxInValues: 100,
+    })
+
+    const scorecard = await loadPilotScorecard(
+      'school-1',
+      new Date('2026-08-07T16:30:00.000Z')
+    )
+
+    expect(scorecard.gradeActivity).toEqual({
+      state: 'ready',
+      primary: 101,
+      secondary: 101,
+    })
+    const classChunks = inFilterValues(queries, 'assignments', 'class_id')
+    const assignmentChunks = inFilterValues(queries, 'grades', 'assignment_id')
+    expect(classChunks.map((values) => values.length)).toEqual([100, 1])
+    expect(assignmentChunks.map((values) => values.length)).toEqual([100, 1])
+    expect([...classChunks, ...assignmentChunks].every((values) => values.length <= 100)).toBe(
+      true
+    )
+  })
+
+  it('fails grade activity closed when a later assignment-ID chunk fails', async () => {
+    const laterChunkError = {
+      code: '08006',
+      details: 'connection failure',
+      hint: '',
+      message: 'database unavailable',
+    }
+    const queries = installScript({
+      rows: rowsCrossingGradeChunkBoundary(),
+      queryError: (query) => {
+        const chunks = inFilterValues([query], 'grades', 'assignment_id')
+        return chunks[0]?.length === 1 ? laterChunkError : undefined
+      },
+    })
+
+    const scorecard = await loadPilotScorecard(
+      'school-1',
+      new Date('2026-08-07T16:30:00.000Z')
+    )
+
+    expect(scorecard.gradeActivity).toEqual({
+      state: 'unavailable',
+      reason: 'Grade activity data is unavailable.',
+    })
+    expect(inFilterValues(queries, 'grades', 'assignment_id').map((values) => values.length)).toEqual([
+      100,
+      1,
+    ])
+    expect(mocks.reportError).toHaveBeenCalledWith(laterChunkError, {
+      source: 'grades',
+      schoolId: 'school-1',
+    })
   })
 
   it('marks only attendance unavailable when the attendance source fails', async () => {

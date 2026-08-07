@@ -276,3 +276,137 @@ Tests       386 passed (386)
 ### Concerns
 
 No blocking concern remains. Offset pagination is deterministic but not snapshot-isolated, so writes occurring between page requests could theoretically shift a live scorecard page. A database-side aggregate/RPC would be the future option if strict point-in-time reporting becomes necessary; the current read-only pilot scorecard now returns exact results for stable source data under the configured PostgREST cap.
+
+---
+
+## Fix Round 2 — bounded relational ID filters
+
+Status: complete. All four relational handoff paths now bound their PostgREST `.in(...)` arrays before applying the existing deterministic response pagination:
+
+- active student IDs → `parent_students.student_id`;
+- linked parent IDs → `profiles.id`;
+- school class IDs → `assignments.class_id`;
+- assignment IDs → `grades.assignment_id`.
+
+### Current Supabase check
+
+The current Supabase JavaScript documentation defines `.in(column, values)` as matching the supplied values array; it does not provide an SDK chunking guarantee. The current breaking-change index contains no change that alters this filter contract. Therefore Beacon owns the request-size bound at this aggregation boundary.
+
+### Chunk contract
+
+`scorecard.ts` documents an internal conservative maximum of 100 IDs per relational filter. For UUIDs, this keeps the raw value portion to only a few kilobytes before URL encoding.
+
+The exact contract is:
+
+1. Upstream IDs are already loaded with stable pagination and deduplicated.
+2. Empty ID sets return the existing zero/no-eligible result before any `.in()` call.
+3. Nonempty IDs are sliced sequentially into `[0, 100)`, `[100, 200)`, and so on.
+4. Every ID chunk creates its own filtered query and uses the existing stable `order(...)` + inclusive `range(...)` response pagination.
+5. Successful chunk rows are merged in chunk order. Parent IDs and assignment IDs are deduplicated at the existing metric boundary; grade row totals retain every grade row.
+6. If any chunk returns an error, rejects, or returns `data: null`, accumulated rows are discarded and the dependent metric is unavailable. `reportError` receives only the original failure plus `{ source, schoolId }`.
+
+### RED evidence
+
+Test file:
+
+- `src/lib/pilot-analytics/scorecard.test.ts`
+
+Command:
+
+```text
+npm test -- src/lib/pilot-analytics/scorecard.test.ts
+```
+
+The scripted boundary applies a hand-set 100-value request limit. Both success fixtures contain exactly 101 independently named IDs, so they must emit two chunks and merge both results. Before implementation, each path emitted one 101-value filter and failed at the simulated request boundary:
+
+```text
+merges bounded student and linked-parent ID chunks into the exact parent ratio
+expected { state: 'ready', active: 101, eligible: 101, percent: 100 }
+received { state: 'unavailable', reason: 'Activity or eligibility data is unavailable.' }
+
+merges bounded class and assignment ID chunks into exact grade activity
+expected { state: 'ready', primary: 101, secondary: 101 }
+received { state: 'unavailable', reason: 'Grade activity data is unavailable.' }
+```
+
+The later-chunk fixture returns an error only for a one-ID second `grades.assignment_id` chunk. Before implementation there was no second chunk, so the loader incorrectly returned a ready metric:
+
+```text
+fails grade activity closed when a later assignment-ID chunk fails
+expected { state: 'unavailable', reason: 'Grade activity data is unavailable.' }
+received { state: 'ready', primary: 101, secondary: 101 }
+
+Test Files  1 failed (1)
+Tests       3 failed | 13 passed (16)
+```
+
+### GREEN evidence and emitted boundaries
+
+Parent fixture consumer output:
+
+```text
+{ state: 'ready', active: 101, eligible: 101, percent: 100 }
+```
+
+Parent relational filters:
+
+```text
+parent_students.student_id chunk lengths: [100, 1]
+profiles.id chunk lengths:                [100, 1]
+```
+
+Grade fixture consumer output:
+
+```text
+{ state: 'ready', primary: 101, secondary: 101 }
+```
+
+Grade relational filters:
+
+```text
+assignments.class_id chunk lengths: [100, 1]
+grades.assignment_id chunk lengths: [100, 1]
+```
+
+Every emitted array is asserted to be at most 100 values. On the later grade-chunk failure, the final metric is unavailable rather than the 100-row partial result, and the report call is asserted as:
+
+```text
+reportError(laterChunkError, { source: 'grades', schoolId: 'school-1' })
+```
+
+Focused verification:
+
+```text
+npm test -- src/lib/pilot-analytics/scorecard.test.ts src/lib/pilot-analytics/windows.test.ts
+Test Files  2 passed (2)
+Tests       34 passed (34)
+```
+
+Repository verification:
+
+```text
+npm run lint
+eslint .
+exit 0
+
+npm run typecheck
+tsc --noEmit
+exit 0
+
+npm test
+Test Files  86 passed (86)
+Tests       389 passed (389)
+```
+
+### Mutation self-review
+
+- Raise/remove the 100-ID chunk bound: the simulated 414 response makes parent and grade outputs unavailable.
+- Drop the final one-ID chunk: the literal 101-parent and 101-grade outputs fail.
+- Return accumulated rows after a later chunk failure: the fail-closed grade test receives a partial ready metric and fails.
+- Stop deduplicating merged linked parents or graded assignments: distinct consumer counts fail.
+- Reintroduce `.in([])`: the existing parent and grade empty-upstream assertions fail.
+- Add row data to failure context: exact `{ source, schoolId }` reporting assertions fail.
+
+### Concerns
+
+No blocking concern. Large schools now trade additional sequential read requests for bounded URLs and exact/fail-closed results. The prior note about offset pagination not being snapshot-isolated during concurrent writes remains the only future consistency consideration.
