@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: '%s · Beacon',
   },
   description:
-    'Beacon — the full school suite for any school: academics, families, communications, payments, and principal operations.',
+    'Beacon — the full school suite for independent schools: academics, Family Desk communications, Dinner Table Digests, payments, and principal operations.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
@@ -46,7 +46,13 @@ export const metadata: Metadata = {
     siteName: 'Beacon',
     title: 'Beacon · School Suite',
     description:
-      'The full school suite for any school — academics, family communications, payments, and principal operations.',
+      'The full school suite for independent schools — academics, family communications, and principal operations.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Beacon · School Suite',
+    description:
+      'The school suite families actually open — Family Desk, Dinner Table Digests, and honest ops.',
   },
   other: {
     'mobile-web-app-capable': 'yes',

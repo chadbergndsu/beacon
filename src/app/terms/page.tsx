@@ -1,6 +1,13 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { Card, CardContent } from '@/components/ui/card'
 import { buttonClassName } from '@/components/ui/button'
+
+export const metadata: Metadata = {
+  title: 'Terms of use',
+  description: 'Terms for using Beacon web and store shells — accounts, acceptable use, and contact.',
+  alternates: { canonical: '/terms' },
+}
 
 const EFFECTIVE = '2026-08-07'
 const SUPPORT = 'office@commoncentsip.com'

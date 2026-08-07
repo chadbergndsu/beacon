@@ -34,6 +34,7 @@ export const KIND_LABEL: Record<EmailKind, string> = {
   welcome: 'Welcome',
   test: 'Delivery test',
   pilot_feedback: 'Pilot',
+  school_inquiry: 'School inquiry',
   invoice: 'Billing',
 }
 
@@ -52,6 +53,7 @@ export const KIND_TONE: Record<
   welcome: 'success',
   test: 'muted',
   pilot_feedback: 'muted',
+  school_inquiry: 'sky',
   invoice: 'navy',
 }
 

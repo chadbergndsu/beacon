@@ -1,7 +1,15 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { Shield } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { buttonClassName } from '@/components/ui/button'
+
+export const metadata: Metadata = {
+  title: 'Privacy',
+  description:
+    'How Beacon handles school and family data — role-based access, processors, and retention.',
+  alternates: { canonical: '/privacy' },
+}
 
 const EFFECTIVE = '2026-08-07'
 const SUPPORT = 'office@commoncentsip.com'

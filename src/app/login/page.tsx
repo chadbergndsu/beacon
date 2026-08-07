@@ -1,10 +1,16 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { ExternalLink, Shield } from 'lucide-react'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { demoPrincipalEmail } from '@/lib/roles'
 import { safeInternalPath } from '@/lib/safe-redirect'
 import { loadSchoolBrand } from '@/lib/school-brand'
 import { beaconCraftBaseUrl, beaconCraftTourUrl } from '@/lib/beaconcraft-url'
+
+export const metadata: Metadata = {
+  title: 'Sign in',
+  robots: { index: false, follow: false },
+}
 
 /**
  * Critical CSS keeps the login usable even if the Tailwind chunk fails.

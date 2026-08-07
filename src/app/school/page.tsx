@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import {
   BookOpen,
   GraduationCap,
@@ -16,6 +17,13 @@ import { Card, CardContent } from '@/components/ui/card'
 import { headers } from 'next/headers'
 import { loadSchoolBrand, loadSchoolBrandByPublicKey, locationLine } from '@/lib/school-brand'
 import { beaconCraftBaseUrl, beaconCraftTourUrl } from '@/lib/beaconcraft-url'
+
+export const metadata: Metadata = {
+  title: 'School site',
+  description:
+    'Public school website powered by Beacon — mission, academics, and family sign-in.',
+  alternates: { canonical: '/school' },
+}
 
 export default async function SchoolWebsitePage({
   searchParams,
@@ -274,8 +282,24 @@ export default async function SchoolWebsitePage({
         <p className="font-semibold text-foreground">{brand.name}</p>
         <p className="mt-1">
           Powered by Beacon ·{' '}
+          <Link href="/" className="text-primary hover:underline">
+            Product home
+          </Link>
+          {' · '}
           <Link href="/about" className="text-primary hover:underline">
-            About the suite
+            About
+          </Link>
+          {' · '}
+          <Link href="/#inquiry" className="text-primary hover:underline">
+            Bring Beacon to your school
+          </Link>
+          {' · '}
+          <Link href="/privacy" className="text-primary hover:underline">
+            Privacy
+          </Link>
+          {' · '}
+          <Link href="/terms" className="text-primary hover:underline">
+            Terms
           </Link>
           {brand.websiteUrl && (
             <>

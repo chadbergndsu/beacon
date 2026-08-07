@@ -34,6 +34,8 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 
 Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/privacy`, `/terms`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/pay/*` (family invoice portal), `/api/stripe/*` (webhook), `/api/email/*` (inbound reply webhook), `/api/health`.
 
+**Product home (`/`):** logged-out visitors see the Beacon marketing landing + school inquiry form. Logged-in users go to `/dashboard`. Tenant school site remains at `/school`.
+
 **Not public:** `/api/quickbooks/callback` requires an existing principal/admin session (Intuit redirect after Connect).
 
 ## Modules

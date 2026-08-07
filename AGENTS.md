@@ -17,6 +17,7 @@ This file embeds the full standards so agents enforce them without needing netwo
 - **Family email replies:** inbound webhook `/api/email/inbound` + `email_inbox` (migration **023**); Reply-To uses `reply+{token}@EMAIL_INBOUND_DOMAIN` when configured.
 - **Family Desk:** staff daily driver at `/desk` (alias of `/admin/emails`) — intention compose + reply inbox; parents use **Notes from school** at `/messages`.
 - **App stores:** PWA manifest + icons; Capacitor shells (`capacitor.config.cjs`) load production HTTPS — runbook `docs/store-launch.md`.
+- **Acquisition SEO:** product landing at `/` (logged-out), sitemap/robots/OG, school inquiry → `BEACON_FEEDBACK_TO`.
 
 ---
 
