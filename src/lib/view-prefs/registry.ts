@@ -25,6 +25,11 @@ export const SCREEN_CATALOG: Record<ScreenId, { title: string; sections: Section
         locked: true,
       },
       {
+        id: 'teacher_encouragement',
+        label: 'Teacher encouragement',
+        description: 'Random saying or scripture — tap for another',
+      },
+      {
         id: 'teacher_today',
         label: "Today's focus",
         description: 'Missing work rollup for your classes',
