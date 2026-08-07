@@ -33,6 +33,11 @@ export function VoxelSchool() {
       <InstancedBlocks instances={geometry.ceilings} defaultRoughness={0.95} />
       <InstancedBlocks instances={geometry.walls} defaultRoughness={0.78} />
       <InstancedBlocks instances={geometry.doors} defaultRoughness={0.65} />
+      <InstancedBlocks
+        instances={geometry.lockers}
+        defaultRoughness={0.32}
+        defaultMetalness={0.55}
+      />
       <EmissiveBlocks instances={geometry.windows} />
       <EmissiveBlocks instances={geometry.portals} />
       {geometry.lights.map((light) => (
