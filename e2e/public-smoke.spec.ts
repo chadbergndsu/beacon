@@ -47,6 +47,9 @@ test.describe('public smoke', () => {
     await expect(
       page.getByRole('contentinfo').getByRole('link', { name: 'Trust & data practices' })
     ).toHaveAttribute('href', '/privacy?school=missing-school-test')
+    await expect(
+      page.getByRole('banner').getByRole('link', { name: 'Sign in' })
+    ).toHaveAttribute('href', '/login?school=missing-school-test')
     await page.getByRole('link', { name: 'Powered by Beacon' }).click()
     await expect(page).toHaveURL(/\/about\?school=missing-school-test$/)
     await expect(page.getByRole('link', { name: 'School site' })).toHaveAttribute(
@@ -69,10 +72,42 @@ test.describe('public smoke', () => {
     )
   })
 
+  test('school-branded login keeps tenant context through role selection', async ({ page }) => {
+    await page.goto('/login?school=missing-school-test')
+    await expect(page.getByRole('link', { name: 'School site' })).toHaveAttribute(
+      'href',
+      '/school?school=missing-school-test'
+    )
+    await expect(page.getByRole('link', { name: 'Secretary / admin sign-in' })).toHaveAttribute(
+      'href',
+      '/login?school=missing-school-test&as=office'
+    )
+    await expect(page.getByRole('link', { name: 'Principal sign-in' })).toHaveAttribute(
+      'href',
+      '/login?school=missing-school-test&as=principal'
+    )
+
+    await page.getByRole('link', { name: 'Principal sign-in' }).click()
+    await expect(page).toHaveURL(/\/login\?school=missing-school-test&as=principal$/)
+    await expect(page.getByRole('link', { name: 'Staff & parent sign-in' })).toHaveAttribute(
+      'href',
+      '/login?school=missing-school-test'
+    )
+  })
+
   test('mobile school-to-Beacon journey reaches an accessible inquiry form', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
     await page.goto('/school?school=missing-school-test')
-    await page.getByRole('button', { name: 'Open menu' }).click()
+    const menuButton = page.getByRole('button', { name: 'Open menu' })
+    const menuButtonBox = await menuButton.boundingBox()
+    expect(menuButtonBox?.height).toBeGreaterThanOrEqual(44)
+    expect(menuButtonBox?.width).toBeGreaterThanOrEqual(44)
+    await menuButton.click()
+    const mobileLinks = page.locator('#school-mobile-navigation a')
+    for (let index = 0; index < (await mobileLinks.count()); index += 1) {
+      const box = await mobileLinks.nth(index).boundingBox()
+      expect(box?.height).toBeGreaterThanOrEqual(44)
+    }
     await page
       .locator('#school-mobile-navigation')
       .getByRole('link', { name: 'About Beacon' })

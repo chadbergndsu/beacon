@@ -25,11 +25,13 @@ export function SchoolSiteHeader({
   websiteUrl,
   schoolHref = '/school',
   beaconHref = '/about',
+  loginHref = '/login',
 }: {
   schoolName: string
   websiteUrl?: string | null
   schoolHref?: string
   beaconHref?: string
+  loginHref?: string
 }) {
   const [open, setOpen] = useState(false)
   const tourUrl = craftTourUrl()
@@ -81,14 +83,14 @@ export function SchoolSiteHeader({
           >
             Campus tour
           </CraftHref>
-          <Link href="/login" className={cn(buttonClassName('primary', 'sm'), 'ml-1')}>
+          <Link href={loginHref} className={cn(buttonClassName('primary', 'sm'), 'ml-1')}>
             Sign in
           </Link>
         </nav>
 
         <button
           type="button"
-          className="rounded-md border border-border p-2 md:hidden"
+          className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-border p-2 md:hidden"
           aria-label={open ? 'Close menu' : 'Open menu'}
           aria-expanded={open}
           aria-controls="school-mobile-navigation"
@@ -110,7 +112,7 @@ export function SchoolSiteHeader({
             <a
               key={a.href}
               href={a.href}
-              className="rounded-md px-3 py-2.5 text-sm font-medium"
+              className="flex min-h-11 items-center rounded-md px-3 py-2.5 text-sm font-medium"
               onClick={() => setOpen(false)}
             >
               {a.label}
@@ -118,7 +120,7 @@ export function SchoolSiteHeader({
           ))}
           <Link
             href={beaconHref}
-            className="rounded-md px-3 py-2.5 text-sm font-medium"
+            className="flex min-h-11 items-center rounded-md px-3 py-2.5 text-sm font-medium"
             onClick={() => setOpen(false)}
           >
             About Beacon
@@ -128,21 +130,21 @@ export function SchoolSiteHeader({
               href={websiteUrl}
               target="_blank"
               rel="noreferrer"
-              className="rounded-md px-3 py-2.5 text-sm font-medium text-primary"
+              className="flex min-h-11 items-center rounded-md px-3 py-2.5 text-sm font-medium text-primary"
             >
               Official website
             </a>
           )}
           <CraftHref
             href={tourUrl}
-            className="rounded-md px-3 py-2.5 text-sm font-medium"
+            className="flex min-h-11 items-center rounded-md px-3 py-2.5 text-sm font-medium"
             onClick={() => setOpen(false)}
           >
             Campus tour
           </CraftHref>
           <Link
-            href="/login"
-            className={cn(buttonClassName('primary', 'sm'), 'mt-1 text-center')}
+            href={loginHref}
+            className={cn(buttonClassName('primary', 'sm'), 'mt-1 min-h-11 text-center')}
             onClick={() => setOpen(false)}
           >
             Sign in to Beacon

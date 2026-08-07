@@ -32,7 +32,7 @@ export default async function SchoolWebsitePage({
   const hostSlug =
     sub && !['www', 'beacon', 'app', 'localhost', '127'].includes(sub) ? sub : null
   const key = sp.school || sp.slug || hostSlug
-  const { schoolHref, beaconHref, trustHref } = buildSchoolContextLinks(sp)
+  const { schoolHref, beaconHref, trustHref, loginHref } = buildSchoolContextLinks(sp)
   const brand = key ? await loadSchoolBrandByPublicKey(key) : await loadSchoolBrand(null)
   const location = locationLine(brand)
   const craftHref = beaconCraftAppHref()
@@ -45,6 +45,7 @@ export default async function SchoolWebsitePage({
         websiteUrl={brand.websiteUrl}
         schoolHref={schoolHref}
         beaconHref={beaconHref}
+        loginHref={loginHref}
       />
 
       <section className="relative min-h-[70vh] overflow-hidden sm:min-h-[78vh]">
@@ -61,7 +62,7 @@ export default async function SchoolWebsitePage({
               'Transparent academics, clear family communication, and calm operations — powered by Beacon.'}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/login" className={buttonClassName('primary', 'lg')}>
+            <Link href={loginHref} className={buttonClassName('primary', 'lg')}>
               Sign in
             </Link>
             <CraftHref
@@ -272,7 +273,7 @@ export default async function SchoolWebsitePage({
               <p className="text-sm leading-relaxed text-primary-foreground/85">
                 Teachers, staff, parents, and leadership use one platform for {brand.name}.
               </p>
-              <Link href="/login">
+              <Link href={loginHref}>
                 <Button variant="secondary">Open Beacon →</Button>
               </Link>
             </CardContent>

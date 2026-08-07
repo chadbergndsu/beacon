@@ -3,9 +3,10 @@ import { ExternalLink, Shield, UserCog } from 'lucide-react'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { demoOfficeAdminEmail, demoPrincipalEmail } from '@/lib/roles'
 import { safeInternalPath } from '@/lib/safe-redirect'
-import { loadSchoolBrand } from '@/lib/school-brand'
+import { loadSchoolBrand, loadSchoolBrandByPublicKey } from '@/lib/school-brand'
 import { beaconCraftTourUrl } from '@/lib/beaconcraft-url'
 import { CraftHref } from '@/components/craft/CraftHref'
+import { buildSchoolContextLinks } from '@/lib/marketing/design-partner'
 
 /**
  * Critical CSS keeps the login usable even if the Tailwind chunk fails.
@@ -320,13 +321,25 @@ const PILOT_OFFICE_ADMIN_EMAIL = 'office@lighthouse.test'
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; as?: string }>
+  searchParams: Promise<{ next?: string; as?: string; school?: string; slug?: string }>
 }) {
   const params = await searchParams
   const nextPath = safeInternalPath(params.next, '/dashboard')
   const asPrincipal = params.as === 'principal'
   const asOffice = params.as === 'office'
-  const brand = await loadSchoolBrand(null)
+  const schoolKey = params.school || params.slug
+  const { schoolHref, beaconHref, trustHref, loginHref } = buildSchoolContextLinks(params)
+  const baseLoginHref =
+    params.next && nextPath !== '/dashboard'
+      ? `${loginHref}${loginHref.includes('?') ? '&' : '?'}next=${encodeURIComponent(nextPath)}`
+      : loginHref
+  const roleLoginHref = (role: 'office' | 'principal') =>
+    `${loginHref}${loginHref.includes('?') ? '&' : '?'}as=${role}${
+      params.next && nextPath !== '/dashboard' ? `&next=${encodeURIComponent(nextPath)}` : ''
+    }`
+  const brand = schoolKey
+    ? await loadSchoolBrandByPublicKey(schoolKey)
+    : await loadSchoolBrand(null)
   const principalEmail = demoPrincipalEmail() || PILOT_PRINCIPAL_EMAIL
   const officeAdminEmail = demoOfficeAdminEmail() || PILOT_OFFICE_ADMIN_EMAIL
   const tourHref = beaconCraftTourUrl()
@@ -336,7 +349,7 @@ export default async function LoginPage({
       <style dangerouslySetInnerHTML={{ __html: LOGIN_CRITICAL_CSS }} />
       <div className="login-shell relative overflow-x-hidden">
         <div className="relative z-10 w-full">
-          <Link href="/school" className="login-brand group">
+          <Link href={schoolHref} className="login-brand group">
             <span className="login-mark transition group-hover:brightness-110">{brand.logoLetter}</span>
             <span className="min-w-0">
               <p className="login-brand-title truncate">{brand.name}</p>
@@ -382,7 +395,7 @@ export default async function LoginPage({
                     submitLabel="Enter principal office"
                     variant="principal"
                   />
-                  <Link href="/login" className="login-back">
+                  <Link href={baseLoginHref} className="login-back">
                     ← Staff &amp; parent sign-in
                   </Link>
                 </div>
@@ -407,7 +420,7 @@ export default async function LoginPage({
                     submitLabel="Enter school office"
                     variant="office"
                   />
-                  <Link href="/login" className="login-back">
+                  <Link href={baseLoginHref} className="login-back">
                     ← Staff &amp; parent sign-in
                   </Link>
                 </div>
@@ -420,14 +433,14 @@ export default async function LoginPage({
                   <LoginForm nextPath={nextPath} />
 
                   <div className="login-links">
-                    <Link href="/login?as=office" className="login-link-row">
+                    <Link href={roleLoginHref('office')} className="login-link-row">
                       <span>
                         <span>Office</span>
                         <strong>Secretary / admin sign-in</strong>
                       </span>
                       <em>Continue →</em>
                     </Link>
-                    <Link href="/login?as=principal" className="login-link-row">
+                    <Link href={roleLoginHref('principal')} className="login-link-row">
                       <span>
                         <span>Leadership</span>
                         <strong>Principal sign-in</strong>
@@ -437,7 +450,7 @@ export default async function LoginPage({
                   </div>
 
                   <div className="login-footer">
-                    <Link href="/school">School site</Link>
+                    <Link href={schoolHref}>School site</Link>
                     {brand.websiteUrl ? (
                       <>
                         <span aria-hidden>·</span>
@@ -459,9 +472,9 @@ export default async function LoginPage({
                       Staff twin
                     </Link>
                     <span aria-hidden>·</span>
-                    <Link href="/about">About Beacon</Link>
+                    <Link href={beaconHref}>About Beacon</Link>
                     <span aria-hidden>·</span>
-                    <Link href="/privacy">Trust &amp; data practices</Link>
+                    <Link href={trustHref}>Trust &amp; data practices</Link>
                   </div>
                 </div>
               )}

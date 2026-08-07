@@ -31,11 +31,13 @@ describe('buildSchoolContextLinks', () => {
       schoolHref: '/school?school=north-campus',
       beaconHref: '/about?school=north-campus',
       trustHref: '/privacy?school=north-campus',
+      loginHref: '/login?school=north-campus',
     })
     expect(buildSchoolContextLinks({ slug: 'south_2' })).toEqual({
       schoolHref: '/school?slug=south_2',
       beaconHref: '/about?slug=south_2',
       trustHref: '/privacy?slug=south_2',
+      loginHref: '/login?slug=south_2',
     })
   })
 
@@ -44,6 +46,7 @@ describe('buildSchoolContextLinks', () => {
       schoolHref: '/school',
       beaconHref: '/about',
       trustHref: '/privacy',
+      loginHref: '/login',
     })
   })
 })
