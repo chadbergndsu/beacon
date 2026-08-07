@@ -56,7 +56,7 @@ Public marketing tour (`/craft/tour`) stays privacy-first (demo markers + guided
 
 - [ ] Redis/Postgres presence store (multi-instance Vercel) beyond badge sessions + mock map
 - [ ] Family portal: “where is my child” only for linked students (already filtered in craft)
-- [ ] Longer camera follow of live markers after person search (teleport + highlight shipped)
+- [x] Camera follow of live markers after person search (short look-at window)
 
 ## Non-goals (now)
 

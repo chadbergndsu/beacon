@@ -3,5 +3,5 @@
 # Beacon
 
 Product runbook: **README.md** + **.env.example**.  
-Migrations: `supabase/migrations/` 001–022 via `npm run db:migrate`.  
+Migrations: `supabase/migrations/` 001–023 via `npm run db:migrate`.  
 Standards template: AGENTS.md (Solid Systems) — Beacon notes are at the top of that file.

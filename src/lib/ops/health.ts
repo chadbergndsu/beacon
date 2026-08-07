@@ -269,7 +269,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     label: 'Slack office channel',
     status: slackOn ? 'ok' : 'info',
     detail: slackOn
-      ? `Slack live (${slackMode === 'bot' ? 'bot API' : 'incoming webhook'}) — announcements + pilot alerts`
+      ? `Slack live (${slackMode === 'bot' ? 'bot API' : 'incoming webhook'}) — announcements, compose, attendance digests, pilot alerts`
       : 'Optional: BEACON_SLACK_WEBHOOK_URL or BEACON_SLACK_BOT_TOKEN + BEACON_SLACK_CHANNEL',
     category: 'integrations',
   })

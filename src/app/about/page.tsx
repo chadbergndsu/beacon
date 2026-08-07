@@ -131,6 +131,7 @@ export default async function AboutPage() {
                 <ul className="space-y-1 pt-1 text-sm text-muted-foreground">
                   <li>Transparent grades · Dinner Table Digest · Conference Brief</li>
                   <li>Beacon Pulse · Beacon Signal · Teacher Quick Mode</li>
+                  <li>Campus twin (Craft) · badges &amp; kiosk · office Slack alerts</li>
                   <li>School-owned tuition · QuickBooks when you connect it</li>
                 </ul>
               </div>

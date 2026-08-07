@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { TOUR_STOPS } from '@/lib/craft/tour-stops'
 import { useCraftUi } from './CraftUiContext'
@@ -23,6 +23,7 @@ export function CraftTourHud({
   } = useCraftUi()
   const [toolsOpen, setToolsOpen] = useState(false)
   const [stopIndex, setStopIndex] = useState(0)
+  const started = useRef(false)
   const stop = TOUR_STOPS[stopIndex]!
 
   function goToStop(next: number) {
@@ -32,6 +33,15 @@ export function CraftTourHud({
     setHighlightRoomId(s.roomId)
     requestTeleport(s.roomId)
   }
+
+  // Land on entrance stop once the canvas is up
+  useEffect(() => {
+    if (started.current) return
+    started.current = true
+    const t = window.setTimeout(() => goToStop(0), 250)
+    return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only guided start
+  }, [])
 
   function focusPerson(marker: (typeof markers)[number]) {
     setHighlightMarkerId(marker.id)
