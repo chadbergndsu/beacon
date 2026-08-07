@@ -64,6 +64,29 @@ It does not.
 
 ---
 
+## New words, same owner: “FACTS Intelligence”
+
+Visit [factsmgt.com](https://factsmgt.com) today and you will not only see tuition software. You will see a full **Intelligence** framework sold as the school operating system:
+
+| Their label | Product hub |
+|-------------|-------------|
+| Core Intelligence | **FACTS IQ** — SIS, analytics, AI, integrations |
+| First Touch | **Admissions Intelligence** |
+| Commitment & Onboarding | **Engagement Intelligence** (Family App, alerts, workflows) |
+| Affordability & Stability | **Financial Intelligence** |
+| (plus) | **Success Intelligence** — PD, coaching, conferences |
+
+The hero line is soft: *“Technology with Heart. Powered by Data.”*  
+The corporate reality is unchanged: **a Nelnet company**, publicly traded, optimizing for suite retention.
+
+They even dedicate a homepage segment to **Christian and Faith-Based Schools** — “Operational Clarity. Mission Focus.” That is not evidence FACTS is a ministry. It is evidence they know how to sell *into* ministries.
+
+**Unified Intelligence is unified lock-in** with better marketing. Admissions → Engagement → Financial → SIS under one vendor is exactly how “leaving” starts to feel impossible.
+
+Beacon’s answer stays narrow and honest: we are not trying to out-module Financial Intelligence. We fight where Christian schools still bleed every week — **Engagement**: a family conversation parents will open, with logged sends and captured replies.
+
+---
+
 ## What “taking advantage” looks like without a villain speech
 
 You do not need to invent malice. You only need mismatched incentives.
