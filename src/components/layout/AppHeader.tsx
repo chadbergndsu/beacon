@@ -31,7 +31,7 @@ export function buildStaffNavGroups(role: Profile['role'] | null): {
       { href: '/teacher/printables', label: 'Printables' },
       { href: '/teacher/scan', label: 'Scan' },
       { href: '/craft', label: 'Craft' },
-      ...(staffComms ? [{ href: '/admin/emails', label: 'Comms' }] : []),
+      ...(staffComms ? [{ href: '/desk', label: 'Desk' }] : []),
       { href: '/school', label: 'School site' },
     ],
   }
@@ -50,7 +50,7 @@ export function buildNav(role: Profile['role'] | null): NavItem[] {
       { href: '/dashboard', label: 'Home' },
       { href: '/principal', label: 'Office' },
       { href: '/announcements', label: 'News' },
-      ...(staffComms ? [{ href: '/admin/emails', label: 'Comms' }] : []),
+      ...(staffComms ? [{ href: '/desk', label: 'Desk' }] : []),
       { href: '/settings', label: 'Settings' },
       { href: '/school', label: 'School site' },
     ]

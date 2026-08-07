@@ -10,11 +10,13 @@ import {
 } from '@/lib/insights/load-missing-work'
 import { ParentFeed } from '@/components/parent/ParentFeed'
 import { ParentBillingCard } from '@/components/parent/ParentBillingCard'
+import { ParentMessagesTeaser } from '@/components/parent/ParentMessagesTeaser'
 import { MissingWorkRadar } from '@/components/insights/MissingWorkRadar'
 import { TeacherTodayCard } from '@/components/insights/TeacherTodayCard'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
 import { ViewSection } from '@/components/view-prefs/ViewSection'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
+import { loadSchoolBrand } from '@/lib/school-brand'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
@@ -155,12 +157,16 @@ export default async function DashboardPage() {
     }
   }
 
+  const brand =
+    role === 'parent' && schoolId ? await loadSchoolBrand(schoolId) : null
+
   const presentSectionIds = [
     'header',
     'announcements',
     ...(showQuick ? (['quick_mobile'] as const) : []),
     ...(teacherToday ? (['teacher_today'] as const) : []),
     ...(isStaffHome ? (['classes'] as const) : []),
+    ...(role === 'parent' && schoolId ? (['parent_messages'] as const) : []),
     ...(role === 'parent' && schoolId ? (['parent_billing'] as const) : []),
     ...(role === 'parent' && parentMissing.length > 0 ? (['parent_missing'] as const) : []),
     ...(role === 'parent' ? (['children'] as const) : []),
@@ -173,7 +179,7 @@ export default async function DashboardPage() {
 
   const welcomeDescription =
     role === 'parent'
-      ? 'Balances, Dinner Table Digest, grades, and Pulse — your family’s home.'
+      ? 'Notes from school, Dinner Table Digest, grades, and Pulse — your family’s home.'
       : isPrincipal
         ? 'School-wide hub. Open Office for tuition, go-live, and climate.'
         : 'Your classroom home. Use Edit view to show only what you need.'
@@ -319,6 +325,16 @@ export default async function DashboardPage() {
               </Table>
             )}
           </section>
+        </ViewSection>
+      ) : null}
+
+      {role === 'parent' && schoolId && user.email ? (
+        <ViewSection id="parent_messages" title="Notes from school">
+          <ParentMessagesTeaser
+            schoolId={schoolId}
+            parentEmail={user.email}
+            schoolName={brand?.name || 'your school'}
+          />
         </ViewSection>
       ) : null}
 

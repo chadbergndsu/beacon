@@ -47,7 +47,7 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 | **Conference Brief** | One-page PTC sheet from grades + pulse + attendance (unique) |
 | **Beacon Signal** | Principal school climate heart-rate + pastoral watch list (unique) |
 | **BeaconCraft** | Voxel digital twin at `/craft` — multi-floor campus, live badge presence (Realtime + poll), layout editor on Go-live |
-| **Communications** | Compose to families, announcements, Dinner Table Digest email, grade/attendance notices, outbox + **inbox (parent replies)**, staff reply-from-Comms |
+| **Communications** | **Family Desk** (`/desk`) — intention-based compose, reply inbox, logged outbox; parents get **Notes from school** (`/messages`) |
 | **Principal office** | Tuition, family billing portal, QuickBooks, videos, **cameras**, pulse, **Go-live** |
 | **Family billing** | Pay portal `/pay/[token]`, email reminders, payment plans, recurring schedules, optional Stripe + QBO push — **school-owned** (not BillerGenie/third-party biller) |
 | **Campus cameras** | Principal live wall — EasyCamera LiveGrid pattern + go2rtc/MediaMTX HLS + hls.js simulator fallback |

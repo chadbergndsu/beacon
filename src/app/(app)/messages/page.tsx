@@ -1,11 +1,10 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { format } from 'date-fns'
 import { getProfile } from '@/lib/auth'
 import { listFamilyThreadForEmail } from '@/lib/email/inbound'
-import { PageHeader } from '@/components/ui/page-header'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { loadSchoolBrand } from '@/lib/school-brand'
+import { NoteTimeline } from '@/components/comms/NoteTimeline'
+import { buttonClassName } from '@/components/ui/button'
 
 export default async function FamilyMessagesPage() {
   const { profile, user } = await getProfile()
@@ -16,66 +15,51 @@ export default async function FamilyMessagesPage() {
     redirect('/dashboard')
   }
 
-  const thread = await listFamilyThreadForEmail(profile.school_id, user.email, 50)
+  const [thread, brand] = await Promise.all([
+    listFamilyThreadForEmail(profile.school_id, user.email, 50),
+    loadSchoolBrand(profile.school_id),
+  ])
+
+  const school = brand.name || 'your school'
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <PageHeader
-        eyebrow="Family messages"
-        title="Your conversation with the school"
-        description={
-          <>
-            Messages the school emailed you — and your replies — are logged here. Reply from your
-            email inbox; Beacon captures them automatically when inbound mail is configured.
-          </>
-        }
+      <section className="relative overflow-hidden rounded-2xl border border-border/80">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(100% 80% at 100% 0%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 55%), linear-gradient(160deg, color-mix(in oklab, var(--navy) 5%, var(--background)), var(--card))',
+          }}
+          aria-hidden
+        />
+        <div className="relative animate-beacon-in px-5 py-7 sm:px-7 sm:py-8">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+            Notes from school
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
+            {school}
+          </h1>
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+            Everything the school emailed you — Dinner Table Digests, reminders, grade notes —
+            and your replies. Reply from your email inbox; Beacon keeps the thread.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link href="/dashboard" className={buttonClassName('outline', 'sm')}>
+              Family home
+            </Link>
+            <Link href="/announcements" className={buttonClassName('ghost', 'sm')}>
+              News
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <NoteTimeline
+        items={thread}
+        emptyTitle="Quiet for now"
+        emptyDescription={`When ${school} writes home, notes appear here in order. Reply by email to continue the conversation.`}
       />
-
-      <p className="text-sm text-muted-foreground">
-        Prefer the full school picture?{' '}
-        <Link href="/dashboard" className="font-medium text-primary hover:underline">
-          Back to home
-        </Link>
-      </p>
-
-      {thread.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6 text-sm text-muted-foreground">
-            No messages yet. When the school emails you (announcements, grades, attendance, or
-            office notes), they will show up here. Reply to those emails and your response is
-            logged for the office.
-          </CardContent>
-        </Card>
-      ) : (
-        <ul className="space-y-3">
-          {thread.map((m) => (
-            <li key={m.id}>
-              <Card>
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant={m.direction === 'out' ? 'muted' : 'success'}>
-                      {m.direction === 'out' ? 'From school' : 'Your reply'}
-                    </Badge>
-                    {m.kind ? (
-                      <span className="text-[11px] text-muted-foreground">
-                        {m.kind.replace(/_/g, ' ')}
-                      </span>
-                    ) : null}
-                    <time className="ml-auto text-xs text-muted-foreground">
-                      {format(new Date(m.created_at), 'MMM d · h:mm a')}
-                    </time>
-                  </div>
-                  <p className="mt-2 font-medium text-foreground">{m.subject}</p>
-                  <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">
-                    {m.body_text.slice(0, 2500)}
-                    {m.body_text.length > 2500 ? '…' : ''}
-                  </pre>
-                </CardContent>
-              </Card>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   )
 }
