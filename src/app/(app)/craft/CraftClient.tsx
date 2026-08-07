@@ -1,0 +1,78 @@
+'use client'
+
+import { useCallback, useEffect, useState } from 'react'
+import type { Role } from '@/lib/types'
+import type { CraftFloorLayout, CraftVisibleMarker } from '@/lib/craft/types'
+import { canTriggerMockScans, canUseFlyMode } from '@/lib/craft/presence'
+import { CraftUiProvider } from '@/components/craft/CraftUiContext'
+import { CraftHud, MarkerLegend } from '@/components/craft/CraftHud'
+
+type PresenceResponse = {
+  ok: boolean
+  markers?: CraftVisibleMarker[]
+  error?: string
+}
+
+export function CraftClient({
+  layout,
+  role,
+}: {
+  layout: CraftFloorLayout
+  role: Role
+}) {
+  const [markers, setMarkers] = useState<CraftVisibleMarker[]>([])
+  const [flyMode, setFlyMode] = useState(canUseFlyMode(role))
+  const [error, setError] = useState<string | null>(null)
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch('/api/craft/presence', { cache: 'no-store' })
+      const data = (await res.json()) as PresenceResponse
+      if (!res.ok || !data.ok) {
+        setError(data.error || 'Could not load presence.')
+        return
+      }
+      setError(null)
+      setMarkers(data.markers ?? [])
+    } catch {
+      setError('Network error loading presence.')
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      if (cancelled) return
+      await refresh()
+    }
+    const id = window.setInterval(() => void load(), 2000)
+    void load()
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
+  }, [refresh])
+
+  return (
+    <CraftUiProvider layout={layout} markers={markers} flyMode={flyMode} setFlyMode={setFlyMode}>
+      <div className="space-y-3">
+        {error ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            {error}
+          </div>
+        ) : null}
+        <CraftHud
+          role={role}
+          canFly={canUseFlyMode(role)}
+          canMockScan={canTriggerMockScans(role)}
+          markerCount={markers.length}
+          onRefresh={() => void refresh()}
+        />
+        <div className="rounded-lg border border-border bg-card/60 p-3">
+          <p className="text-sm font-medium">Live presence</p>
+          <MarkerLegend markers={markers} />
+        </div>
+      </div>
+    </CraftUiProvider>
+  )
+}

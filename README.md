@@ -46,6 +46,7 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 | **Dinner Table Digest** | 60-second plain-English parent story + conversation starters (unique) |
 | **Conference Brief** | One-page PTC sheet from grades + pulse + attendance (unique) |
 | **Beacon Signal** | Principal school climate heart-rate + pastoral watch list (unique) |
+| **BeaconCraft** | Voxel digital twin at `/craft` — explore campus, live badge presence, role-filtered markers (MVP) |
 | **Communications** | Compose to families, announcements, Dinner Table Digest email, grade/attendance notices, outbox + resend |
 | **Principal office** | Tuition, family billing portal, QuickBooks, videos, **cameras**, pulse, **Go-live** |
 | **Family billing** | Pay portal `/pay/[token]`, email reminders, payment plans, recurring schedules, optional Stripe + QBO push — **school-owned** (not BillerGenie/third-party biller) |
@@ -332,6 +333,26 @@ Platform-provided (do not put secrets in git): `VERCEL_URL`, `VERCEL_ENV`, `VERC
 | HTTPS only | Vercel |
 | Health check | `/api/health` + Go-live |
 | Branch protection + required reviews | Configure in GitHub org settings (not in-repo) |
+
+## BeaconCraft (digital twin MVP)
+
+**Route:** `/craft` (staff/principal nav link **Craft**)
+
+Minecraft-style voxel campus driven by badge presence. Not the same product as **Beacon Signal** (climate analytics).
+
+| Piece | Location |
+|-------|----------|
+| Layout schema + demo floor | `src/lib/craft/layout.ts` |
+| Role-filtered presence | `src/lib/craft/presence.ts` |
+| Poll presence | `GET /api/craft/presence` (2s client poll) |
+| Mock door scan (admin) | `POST /api/craft/mock-scan` `{ studentId, roomId, studentName?, timestamp? }` |
+| Real badge path | Merges `listRoomPresence()` when layout room **names** match `school_rooms` |
+
+**Controls:** click world for pointer lock · WASD move · admin fly (Space up / Shift down) · room search teleports · mini-map overlay.
+
+**Privacy defaults:** teachers see their classroom rooms only; parents see linked children by name and optional anonymized “Guest” markers elsewhere; leadership sees full campus.
+
+**Extend:** replace `DEMO_SCHOOL_LAYOUT` with imported JSON using the `CraftFloorLayout` type; wire hardware scans via existing `POST /api/kiosk/device-scan` — presence API already merges DB scans when room names align.
 
 ## Repo
 
