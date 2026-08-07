@@ -33,6 +33,7 @@ export function ParentExperienceFeedback({
   const [selectedRating, setSelectedRating] = useState<ParentExperienceRating | null>(
     initialResponse?.rating ?? null
   )
+  const [commentDraft, setCommentDraft] = useState(initialResponse?.comment ?? '')
   const activeRating = state.rating ?? selectedRating
 
   return (
@@ -80,7 +81,8 @@ export function ParentExperienceFeedback({
             <Textarea
               id="parent-experience-comment"
               name="comment"
-              defaultValue={initialResponse?.comment ?? ''}
+              value={commentDraft}
+              onChange={(event) => setCommentDraft(event.target.value)}
               maxLength={500}
               rows={4}
               disabled={pending || unavailable}

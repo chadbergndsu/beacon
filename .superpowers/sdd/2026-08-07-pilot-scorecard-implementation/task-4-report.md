@@ -134,3 +134,103 @@ The current Supabase changelog and official SSR/Auth, `getUser`, RLS, and JavaSc
 
 - No blocking concerns.
 - Interaction behavior is covered through server-rendered component contracts and server-action tests; a browser E2E test was not added in this task. The existing database migration/RLS SQL was created and tested by the preceding task and was not modified here.
+
+## Fix Round 1
+
+### Findings and fixes
+
+1. React 19 resets uncontrolled fields after a form action completes. The textarea used `defaultValue`, so a failed or successful update reverted the DOM value to the last server-rendered comment. `ParentExperienceFeedback` now owns a controlled `commentDraft` state and submits that value without letting the action reset replace it. A jsdom + Testing Library interaction test now types an edited note, submits a real React form action, and verifies the note survives both failure and success responses; the success case also verifies the updated rating state.
+2. `resolveScreenLayout()` previously kept all saved IDs first and appended every catalog addition. A saved dashboard layout created before `parent_feedback` therefore placed the card after Announcements. Missing catalog IDs are now inserted after the nearest present catalog predecessor, or before the nearest successor, while saved IDs retain their user-defined order.
+3. The parent dashboard awaited activity, then feedback, before starting other independent parent work. Activity, feedback, children, announcements, and billing now start immediately. Only the child result is awaited for child-dependent missing-work/section decisions; feedback, announcements, billing, activity, and view preferences are joined before render. The regression test holds activity and feedback unresolved and proves feedback, child, announcement, and view-preference work have already started.
+
+The earlier accessibility self-review statement that called the textarea uncontrolled is superseded by Fix Round 1: the field is now controlled specifically to preserve drafts across React form-action responses.
+
+### Covering tests
+
+- `src/components/parent/ParentExperienceFeedback.test.tsx`
+- `src/lib/view-prefs/resolve.test.ts`
+- `src/app/(app)/dashboard/page.test.ts`
+
+### RED evidence
+
+Component interaction command:
+
+```text
+npm test -- src/components/parent/ParentExperienceFeedback.test.tsx
+```
+
+Failing output before the fix:
+
+```text
+Test Files  1 failed (1)
+Tests       2 failed | 3 passed (5)
+preserves an edited comment after a failed update:
+  expected 'Saved note.' to be 'Keep this draft after failure.'
+keeps the edited comment and selected rating after a successful update:
+  expected 'Saved note.' to be 'Updated note.'
+```
+
+Legacy layout command:
+
+```text
+npm test -- src/lib/view-prefs/resolve.test.ts
+```
+
+Failing output before the fix:
+
+```text
+Test Files  1 failed (1)
+Tests       1 failed | 4 passed (5)
+Expected: parent_feed, parent_feedback, announcements
+Received: parent_feed, announcements, parent_feedback
+```
+
+Dashboard concurrency command:
+
+```text
+npm test -- src/app/(app)/dashboard/page.test.ts
+```
+
+Failing output before the fix:
+
+```text
+Test Files  1 failed (1)
+Tests       1 failed | 5 passed (6)
+starts independent parent loaders before activity or feedback finishes:
+  expected feedback queries [] to have a length of 1
+```
+
+### GREEN evidence
+
+Exact combined regression command:
+
+```text
+npm test -- src/components/parent/ParentExperienceFeedback.test.tsx src/lib/view-prefs/resolve.test.ts src/app/(app)/dashboard/page.test.ts
+```
+
+Passing output after all three fixes:
+
+```text
+Test Files  3 passed (3)
+Tests       16 passed (16)
+```
+
+Additional verification:
+
+```text
+npm run typecheck
+> tsc --noEmit
+exit 0
+
+npm run lint
+> eslint .
+exit 0
+
+git diff --check
+exit 0
+```
+
+### Fix-round concerns
+
+- No blocking functional concern remains in the three reported findings.
+- Real DOM interaction coverage required adding test-only `@testing-library/react`, `@testing-library/user-event`, and `jsdom` dependencies. `npm install` reports seven high-severity audit findings in the repository dependency tree; dependency remediation is outside this narrowly scoped fix round.

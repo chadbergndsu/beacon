@@ -31,6 +31,33 @@ describe('resolveScreenLayout', () => {
     expect(layout.hidden).toEqual(['teacher_today'])
   })
 
+  it('inserts a new catalog section beside its neighbor in a legacy saved layout', () => {
+    const present = [
+      'header',
+      'children',
+      'parent_feed',
+      'parent_feedback',
+      'announcements',
+    ]
+    const layout = resolveScreenLayout(
+      'dashboard',
+      present,
+      {
+        order: ['header', 'children', 'parent_feed', 'announcements'],
+        hidden: [],
+      },
+      catalog
+    )
+
+    expect(layout.order).toEqual([
+      'header',
+      'children',
+      'parent_feed',
+      'parent_feedback',
+      'announcements',
+    ])
+  })
+
   it('never hides locked sections', () => {
     const present = ['header', 'classes']
     const layout = resolveScreenLayout(

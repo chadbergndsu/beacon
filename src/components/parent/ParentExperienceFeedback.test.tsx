@@ -1,8 +1,29 @@
+/** @vitest-environment jsdom */
+
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const mocks = vi.hoisted(() => ({
+  submitParentExperienceFeedback: vi.fn(),
+}))
+
+vi.mock('@/app/actions/parent-feedback', () => ({
+  submitParentExperienceFeedback: mocks.submitParentExperienceFeedback,
+}))
+
 import { ParentExperienceFeedback } from './ParentExperienceFeedback'
 
 describe('ParentExperienceFeedback', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    cleanup()
+  })
+
   it('renders the one-tap prompt without showing the optional note before selection', () => {
     const html = renderToStaticMarkup(
       <ParentExperienceFeedback initialResponse={null} />
@@ -42,5 +63,57 @@ describe('ParentExperienceFeedback', () => {
     expect(html).toContain('role="alert"')
     expect(html).toContain('Weekly feedback is unavailable right now. Please try again later.')
     expect(html.match(/disabled=""/g)).toHaveLength(2)
+  })
+
+  it('preserves an edited comment after a failed update', async () => {
+    mocks.submitParentExperienceFeedback.mockResolvedValueOnce({
+      error: 'We could not save your feedback. Please try again.',
+    })
+    const user = userEvent.setup()
+    render(
+      <ParentExperienceFeedback
+        initialResponse={{ rating: 'helpful', comment: 'Saved note.' }}
+      />
+    )
+
+    const comment = screen.getByRole('textbox', {
+      name: 'Anything you want us to know?',
+    }) as HTMLTextAreaElement
+    await user.clear(comment)
+    await user.type(comment, 'Keep this draft after failure.')
+    await user.click(screen.getByRole('button', { name: 'Not yet' }))
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'We could not save your feedback. Please try again.'
+    )
+    expect(comment.value).toBe('Keep this draft after failure.')
+  })
+
+  it('keeps the edited comment and selected rating after a successful update', async () => {
+    mocks.submitParentExperienceFeedback.mockResolvedValueOnce({
+      ok: true,
+      rating: 'not_yet',
+    })
+    const user = userEvent.setup()
+    render(
+      <ParentExperienceFeedback
+        initialResponse={{ rating: 'helpful', comment: 'Saved note.' }}
+      />
+    )
+
+    const comment = screen.getByRole('textbox', {
+      name: 'Anything you want us to know?',
+    }) as HTMLTextAreaElement
+    await user.clear(comment)
+    await user.type(comment, 'Updated note.')
+    await user.click(screen.getByRole('button', { name: 'Not yet' }))
+
+    expect((await screen.findByRole('status')).textContent).toContain(
+      'Thank you - your school and the Beacon team can use this to improve the pilot.'
+    )
+    expect(comment.value).toBe('Updated note.')
+    expect(screen.getByRole('button', { name: 'Not yet' }).getAttribute('aria-pressed')).toBe(
+      'true'
+    )
   })
 })

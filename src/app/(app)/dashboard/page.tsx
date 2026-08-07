@@ -47,39 +47,117 @@ export default async function DashboardPage() {
   const schoolId = profile.school_id
   const firstName = profile.full_name?.trim().split(/\s+/)[0]
 
-  if (role === 'parent' && schoolId) {
-    await recordPilotActivity({
-      schoolId,
-      userId: user.id,
-      actorRole: role,
-      eventType: 'parent_portal',
-    })
+  type Child = {
+    id: string
+    first_name: string
+    last_name: string
+    grade_level: string | null
   }
+  type Announcement = {
+    id: string
+    title: string
+    body: string
+    audience: string
+    published_at: string | null
+  }
+  type ParentInvoices = Awaited<
+    ReturnType<typeof import('@/lib/billing/invoice-email').listOpenInvoicesForParentEmail>
+  >
+
+  const parentActivityPromise =
+    role === 'parent' && schoolId
+      ? recordPilotActivity({
+          schoolId,
+          userId: user.id,
+          actorRole: role,
+          eventType: 'parent_portal',
+        })
+      : Promise.resolve({ recorded: false })
+
+  const parentFeedbackPromise: Promise<{
+    response: {
+      rating: ParentExperienceRating
+      comment: string | null
+    } | null
+    unavailable: boolean
+  }> = role === 'parent' && schoolId
+    ? (async () => {
+        const { data, error } = await supabase
+          .from('parent_experience_feedback')
+          .select('rating, comment')
+          .eq('parent_id', user.id)
+          .eq('school_id', schoolId)
+          .eq('surface', 'parent_dashboard')
+          .eq('week_start', isoWeekStart(new Date()))
+          .maybeSingle()
+
+        if (error) return { response: null, unavailable: true }
+        if (data && (data.rating === 'helpful' || data.rating === 'not_yet')) {
+          return {
+            response: {
+              rating: data.rating,
+              comment: typeof data.comment === 'string' ? data.comment : null,
+            },
+            unavailable: false,
+          }
+        }
+        return { response: null, unavailable: false }
+      })()
+    : Promise.resolve({ response: null, unavailable: false })
+
+  const childrenPromise: Promise<Child[]> =
+    role === 'parent'
+      ? (async () => {
+          const { data: links } = await admin
+            .from('parent_students')
+            .select('student_id')
+            .eq('parent_id', user.id)
+          const ids = (links ?? []).map((link) => link.student_id)
+          if (!ids.length) return []
+
+          const { data } = await admin
+            .from('students')
+            .select('id, first_name, last_name, grade_level')
+            .in('id', ids)
+          return (data ?? []) as Child[]
+        })()
+      : Promise.resolve([])
+
+  const announcementsPromise: Promise<Announcement[]> = schoolId
+    ? (async () => {
+        let query = admin
+          .from('announcements')
+          .select('id, title, body, audience, published_at')
+          .eq('school_id', schoolId)
+          .order('published_at', { ascending: false })
+          .limit(5)
+        if (role === 'parent') {
+          query = query.in('audience', ['parents', 'all'])
+        }
+        const { data } = await query
+        return data ?? []
+      })()
+    : Promise.resolve([])
+
+  const parentInvoicesPromise: Promise<ParentInvoices> =
+    role === 'parent' && schoolId && user.email
+      ? (async () => {
+          try {
+            const { listOpenInvoicesForParentEmail } = await import(
+              '@/lib/billing/invoice-email'
+            )
+            return await listOpenInvoicesForParentEmail(schoolId, user.email!)
+          } catch {
+            return []
+          }
+        })()
+      : Promise.resolve([])
 
   let initialParentFeedback: {
     rating: ParentExperienceRating
     comment: string | null
   } | null = null
   let parentFeedbackUnavailable = false
-  if (role === 'parent' && schoolId) {
-    const { data, error } = await supabase
-      .from('parent_experience_feedback')
-      .select('rating, comment')
-      .eq('parent_id', user.id)
-      .eq('school_id', schoolId)
-      .eq('surface', 'parent_dashboard')
-      .eq('week_start', isoWeekStart(new Date()))
-      .maybeSingle()
-
-    if (error) {
-      parentFeedbackUnavailable = true
-    } else if (data && (data.rating === 'helpful' || data.rating === 'not_yet')) {
-      initialParentFeedback = {
-        rating: data.rating,
-        comment: typeof data.comment === 'string' ? data.comment : null,
-      }
-    }
-  }
 
   let classes: {
     id: string
@@ -123,48 +201,7 @@ export default async function DashboardPage() {
     }
   }
 
-  type Child = {
-    id: string
-    first_name: string
-    last_name: string
-    grade_level: string | null
-  }
-  let children: Child[] = []
-  if (role === 'parent') {
-    const { data: links } = await admin
-      .from('parent_students')
-      .select('student_id')
-      .eq('parent_id', user.id)
-    const ids = (links ?? []).map((l) => l.student_id)
-    if (ids.length) {
-      const { data } = await admin
-        .from('students')
-        .select('id, first_name, last_name, grade_level')
-        .in('id', ids)
-      children = (data ?? []) as Child[]
-    }
-  }
-
-  let announcements: {
-    id: string
-    title: string
-    body: string
-    audience: string
-    published_at: string | null
-  }[] = []
-  if (schoolId) {
-    let aq = admin
-      .from('announcements')
-      .select('id, title, body, audience, published_at')
-      .eq('school_id', schoolId)
-      .order('published_at', { ascending: false })
-      .limit(5)
-    if (role === 'parent') {
-      aq = aq.in('audience', ['parents', 'all'])
-    }
-    const { data } = await aq
-    announcements = data ?? []
-  }
+  const children = await childrenPromise
 
   const canPost = ['admin', 'staff', 'teacher', 'principal'].includes(role)
   const isPrincipal = role === 'principal'
@@ -183,18 +220,6 @@ export default async function DashboardPage() {
   const isStaffHome =
     role === 'teacher' || role === 'admin' || role === 'staff' || role === 'principal'
 
-  let parentInvoices: Awaited<
-    ReturnType<typeof import('@/lib/billing/invoice-email').listOpenInvoicesForParentEmail>
-  > = []
-  if (role === 'parent' && schoolId && user.email) {
-    try {
-      const { listOpenInvoicesForParentEmail } = await import('@/lib/billing/invoice-email')
-      parentInvoices = await listOpenInvoicesForParentEmail(schoolId, user.email)
-    } catch {
-      parentInvoices = []
-    }
-  }
-
   const presentSectionIds = [
     'header',
     ...(role === 'teacher' ? (['teacher_encouragement'] as const) : []),
@@ -211,7 +236,16 @@ export default async function DashboardPage() {
     ...(role === 'parent' && schoolId ? (['parent_feedback'] as const) : []),
   ]
 
-  const viewLayout = await loadScreenLayout(user.id, 'dashboard', [...presentSectionIds])
+  const viewLayoutPromise = loadScreenLayout(user.id, 'dashboard', [...presentSectionIds])
+  const [parentFeedbackResult, announcements, parentInvoices, viewLayout] = await Promise.all([
+    parentFeedbackPromise,
+    announcementsPromise,
+    parentInvoicesPromise,
+    viewLayoutPromise,
+    parentActivityPromise,
+  ])
+  initialParentFeedback = parentFeedbackResult.response
+  parentFeedbackUnavailable = parentFeedbackResult.unavailable
   const teacherEncouragement =
     role === 'teacher' ? teacherEncouragementForDay(user.id) : null
 

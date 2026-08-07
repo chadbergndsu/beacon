@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
     data: { rating: 'helpful', comment: 'A useful week.' },
     error: null,
   } as { data: unknown; error: unknown },
+  feedbackPromise: null as Promise<{ data: unknown; error: unknown }> | null,
+  loaderStarts: [] as string[],
   admin: null as ReturnType<typeof createMockAdmin> | null,
 }))
 
@@ -49,7 +51,7 @@ function sessionClient() {
         },
         async maybeSingle() {
           mocks.feedbackQueries.push(query)
-          return mocks.feedbackResult
+          return mocks.feedbackPromise ?? mocks.feedbackResult
         },
       }
     },
@@ -60,13 +62,21 @@ describe('parent dashboard pilot activity', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.feedbackQueries = []
+    mocks.feedbackPromise = null
+    mocks.loaderStarts = []
     mocks.feedbackResult = {
       data: { rating: 'helpful', comment: 'A useful week.' },
       error: null,
     }
     mocks.admin = createMockAdmin({
-      parent_students: () => ({ data: [], error: null }),
-      announcements: () => ({ data: [], error: null }),
+      parent_students: () => {
+        mocks.loaderStarts.push('children')
+        return { data: [], error: null }
+      },
+      announcements: () => {
+        mocks.loaderStarts.push('announcements')
+        return { data: [], error: null }
+      },
     })
     mocks.getProfile.mockResolvedValue({
       user,
@@ -115,6 +125,36 @@ describe('parent dashboard pilot activity', () => {
       'dashboard',
       expect.arrayContaining(['parent_feedback'])
     )
+  })
+
+  it('starts independent parent loaders before activity or feedback finishes', async () => {
+    let finishActivity!: (value: { recorded: boolean }) => void
+    let finishFeedback!: (value: { data: unknown; error: unknown }) => void
+    mocks.recordPilotActivity.mockReturnValue(
+      new Promise((resolve) => {
+        finishActivity = resolve
+      })
+    )
+    mocks.feedbackPromise = new Promise((resolve) => {
+      finishFeedback = resolve
+    })
+
+    const pagePromise = DashboardPage()
+
+    try {
+      await vi.waitFor(() => {
+        expect(mocks.feedbackQueries).toHaveLength(1)
+        expect(mocks.loaderStarts).toEqual(
+          expect.arrayContaining(['children', 'announcements'])
+        )
+        expect(mocks.loadScreenLayout).toHaveBeenCalledTimes(1)
+      })
+    } finally {
+      finishActivity({ recorded: true })
+      finishFeedback(mocks.feedbackResult)
+    }
+
+    await expect(pagePromise).resolves.toBeTruthy()
   })
 
   it('keeps the dashboard and exposes an unavailable card when the response query fails', async () => {
