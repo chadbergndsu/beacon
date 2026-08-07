@@ -463,3 +463,147 @@ export async function emailClassDinnerDigests(
     emailNote: `Class digests: ${emailed} sent, ${failed} failed, ${skipped} skipped across ${studentIds.length} student(s).`,
   }
 }
+
+export async function updateInboxStatus(
+  inboxId: string,
+  status: 'received' | 'reviewed' | 'archived' | 'spam'
+): Promise<CommsResult> {
+  const access = await requireStaff()
+  if (!access.ok) return access
+  if (!canSendSystemEmail(access.profile.role) && access.profile.role !== 'teacher') {
+    return { ok: false, error: 'Not allowed to update inbox.' }
+  }
+
+  const schoolId = access.profile.school_id!
+  const { data: row } = await access.admin
+    .from('email_inbox')
+    .select('id, school_id')
+    .eq('id', inboxId)
+    .maybeSingle()
+
+  if (!row || row.school_id !== schoolId) {
+    return { ok: false, error: 'Reply not found.' }
+  }
+
+  const { error } = await access.admin
+    .from('email_inbox')
+    .update({
+      status,
+      reviewed_at: status === 'received' ? null : new Date().toISOString(),
+      reviewed_by: status === 'received' ? null : access.user.id,
+    })
+    .eq('id', inboxId)
+    .eq('school_id', schoolId)
+
+  if (error) return { ok: false, error: 'Could not update reply status.' }
+
+  revalidatePath('/admin/emails')
+  return { ok: true }
+}
+
+/**
+ * Staff reply to a logged parent inbound message — sends email + new outbox row.
+ */
+export async function replyToInboxMessage(input: {
+  inboxId: string
+  body: string
+}): Promise<CommsResult> {
+  const access = await requireStaff()
+  if (!access.ok) return access
+  if (!canSendSystemEmail(access.profile.role)) {
+    return { ok: false, error: 'Only office leadership can reply from Comms.' }
+  }
+
+  const body = input.body?.trim() || ''
+  if (body.length < 2) return { ok: false, error: 'Write a short reply.' }
+  if (body.length > 8000) return { ok: false, error: 'Reply is too long.' }
+
+  const schoolId = access.profile.school_id!
+  const { data: inbox } = await access.admin
+    .from('email_inbox')
+    .select('*')
+    .eq('id', input.inboxId)
+    .eq('school_id', schoolId)
+    .maybeSingle()
+
+  if (!inbox) return { ok: false, error: 'Reply not found.' }
+
+  const brand = await loadSchoolBrand(schoolId)
+  const tag = subjectTag(brand)
+  const parentName = inbox.from_name || inbox.from_email
+  const subject = inbox.subject?.startsWith('Re:')
+    ? inbox.subject
+    : `Re: ${inbox.subject || 'your message'}`
+
+  const html = brandedEmailShell({
+    brand,
+    eyebrow: 'Reply from the office',
+    title: subject,
+    bodyHtml: `<p style="white-space:pre-wrap;margin:0 0 16px">${escapeHtml(body)}</p>
+      <blockquote style="margin:16px 0;padding:12px 14px;border-left:3px solid #cbd5e1;color:#64748b;font-size:13px">
+        <p style="margin:0 0 6px;font-weight:600">You wrote:</p>
+        <p style="margin:0;white-space:pre-wrap">${escapeHtml((inbox.body_text || '').slice(0, 2000))}</p>
+      </blockquote>`,
+    footerNote: brand.email
+      ? `This reply was sent from ${brand.name}. You can reply again to continue the conversation in Beacon.`
+      : undefined,
+  })
+
+  const result = await queueAndSendEmail(
+    {
+      school_id: schoolId,
+      kind: 'message',
+      to_email: inbox.from_email,
+      to_name: parentName,
+      subject: `[${tag}] ${subject}`,
+      body_text: `${body}\n\n---\nYou wrote:\n${(inbox.body_text || '').slice(0, 2000)}\n\n${plainFooter(brand)}`,
+      body_html: html,
+      related_table: 'email_inbox',
+      related_id: inbox.id,
+      meta: {
+        in_reply_to_inbox_id: inbox.id,
+        in_reply_to_outbox_id: inbox.outbox_id,
+        staff_reply: true,
+      },
+    },
+    { brand }
+  )
+
+  if (result.status === 'failed') {
+    return { ok: false, error: result.error || 'Send failed.' }
+  }
+
+  await access.admin
+    .from('email_inbox')
+    .update({
+      status: 'reviewed',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: access.user.id,
+      meta: {
+        ...((inbox.meta as Record<string, unknown>) || {}),
+        staff_replied_outbox_id: result.id,
+      },
+    })
+    .eq('id', inbox.id)
+    .eq('school_id', schoolId)
+
+  await access.admin.from('audit_logs').insert({
+    school_id: schoolId,
+    user_id: access.user.id,
+    action: 'comms.inbox_reply',
+    table_name: 'email_inbox',
+    record_id: inbox.id,
+    details: { outbox_id: result.id, to: inbox.from_email },
+  })
+
+  revalidatePath('/admin/emails')
+  return {
+    ok: true,
+    emailed: result.status === 'sent' ? 1 : 0,
+    skipped: result.status === 'skipped' ? 1 : 0,
+    emailNote:
+      result.status === 'skipped'
+        ? 'Reply logged only — configure RESEND_API_KEY for live delivery.'
+        : 'Reply sent and logged.',
+  }
+}

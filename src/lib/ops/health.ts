@@ -90,6 +90,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     ['classes', 'Classes'],
     ['grades', 'Grades'],
     ['email_outbox', 'Email outbox'],
+    ['email_inbox', 'Email inbox (023)'],
     ['attendance', 'Attendance (007)'],
     ['lesson_plans', 'Lesson plans (007)'],
     ['pulse_entries', 'Pulse entries (007)'],
@@ -123,6 +124,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
       'pulse_entries',
       'school_videos',
       'attendance',
+      'email_inbox',
     ].includes(table)
     checks.push({
       id: `table_${table}`,

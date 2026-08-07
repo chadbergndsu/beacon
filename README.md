@@ -12,7 +12,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 |-------|--------|--------|
 | App | Next.js 16 App Router + React 19 + TypeScript + Tailwind 4 | Portable web frontend |
 | Auth edge | `src/proxy.ts` → Supabase SSR session | Public routes listed below; fail-closed without Supabase env on prod/preview |
-| DB | Supabase Postgres | Schema owned in `supabase/migrations/` (**001–018**) |
+| DB | Supabase Postgres | Schema owned in `supabase/migrations/` (**001–023**) |
 | Auth | Supabase Auth | App code uses `getUser()` before service-role; edge refreshes cookies via `getClaims()` |
 | Host | Vercel + HTTPS | Default per Solid Systems |
 | Email | Resend and/or SMTP (cascade) | Log-only outbox without live transport; never use `onboarding@resend.dev` in prod |
@@ -27,12 +27,12 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 - **Academics:** core tables (`classes`, `assignments`, `grades`, …)
 - **Suite modules (007):** prefer tables for attendance, lessons, pulse, videos; **JSON fallback** only if those tables are missing. **Cameras always stay in settings JSON.**
 - **Billing (006 + 017):** `billing_products` / `billing_invoices` / `billing_payments` / `quickbooks_connections` only — **no** `schools.settings.billing` money path
-- **Communications:** `email_outbox` + Resend→SMTP→log cascade; every attempt recorded
+- **Communications:** `email_outbox` + `email_inbox` (parent replies) + Resend→SMTP→log cascade; every send and reply recorded
 - **Ops:** Principal Go-live UI (`probeOpsHealth`) + public `GET /api/health` (see Health below)
 
 ### Public (unauthenticated) routes
 
-Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/privacy`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/pay/*` (family invoice portal), `/api/stripe/*` (webhook), `/api/health`.
+Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/privacy`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/pay/*` (family invoice portal), `/api/stripe/*` (webhook), `/api/email/*` (inbound reply webhook), `/api/health`.
 
 **Not public:** `/api/quickbooks/callback` requires an existing principal/admin session (Intuit redirect after Connect).
 
@@ -47,7 +47,7 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 | **Conference Brief** | One-page PTC sheet from grades + pulse + attendance (unique) |
 | **Beacon Signal** | Principal school climate heart-rate + pastoral watch list (unique) |
 | **BeaconCraft** | Voxel digital twin at `/craft` — multi-floor campus, live badge presence (Realtime + poll), layout editor on Go-live |
-| **Communications** | Compose to families, announcements, Dinner Table Digest email, grade/attendance notices, outbox + resend |
+| **Communications** | Compose to families, announcements, Dinner Table Digest email, grade/attendance notices, outbox + **inbox (parent replies)**, staff reply-from-Comms |
 | **Principal office** | Tuition, family billing portal, QuickBooks, videos, **cameras**, pulse, **Go-live** |
 | **Family billing** | Pay portal `/pay/[token]`, email reminders, payment plans, recurring schedules, optional Stripe + QBO push — **school-owned** (not BillerGenie/third-party biller) |
 | **Campus cameras** | Principal live wall — EasyCamera LiveGrid pattern + go2rtc/MediaMTX HLS + hls.js simulator fallback |
@@ -103,7 +103,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth + client |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server actions / admin client (never expose to browser) |
 
-Then apply **migrations 001–022** (see below) and:
+Then apply **migrations 001–023** (see below) and:
 
 ```bash
 npm run dev
@@ -137,7 +137,7 @@ Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, securit
 
 ### Database migrations
 
-**Source of truth:** `supabase/migrations/` files **001–022** in filename order.
+**Source of truth:** `supabase/migrations/` files **001–023** in filename order.
 
 ```bash
 # Preferred
@@ -166,8 +166,11 @@ POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate -- 017
 | **020** | Stripe payment columns (`stripe_checkout_session_id`, payment intent) |
 | **021** | P0 money settle: one succeeded payment per invoice |
 | **022** | BeaconCraft Realtime: `badge_scans` on `supabase_realtime` publication |
+| **023** | Family email inbox: `email_inbox` + `email_outbox.reply_token` for parent reply capture |
 
 **Billing money path** uses tables only. Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`.
+
+**Family email replies:** when `EMAIL_INBOUND_DOMAIN` + webhook secret are set, outbound mail uses `Reply-To: reply+{token}@inbound-domain`. Resend (or Beacon HMAC) posts to `/api/email/inbound`; replies land in Comms → Inbox and on the parent **Messages** page (`/messages`).
 
 **Kiosk / device tokens** expire (fail closed on resolve). TTL default **90 days** (`BEACON_ACCESS_TOKEN_TTL_DAYS`). Opening Principal → Badges regenerates expired halves; tablets/ESP32 must re-open the kiosk link or update the device token.
 
@@ -198,7 +201,8 @@ Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user when th
 |------|----------|
 | No Resend **and** no SMTP | Emails **log-only** (outbox `skipped`) — safe dry-run |
 | Resend and/or SMTP | Cascade: Resend → SMTP → log; `EMAIL_FROM` must be a **verified domain** (not `onboarding@resend.dev` in production) |
-| School brand email | Used as **Reply-To** so parents can answer the office |
+| School brand email | Office contact (footer + `meta.office_reply_to`). When inbound capture is **off**, also used as **Reply-To**. |
+| Inbound capture on | `Reply-To: reply+{token}@EMAIL_INBOUND_DOMAIN` → `/api/email/inbound` logs parent replies in `email_inbox` |
 | No Intuit keys | QuickBooks **demo** status only (not “connected”) |
 | Intuit OAuth set | Tokens vaulted on `quickbooks_connections`; **Push to QuickBooks** (and auto-push on create when sync prefs on) writes customers/invoices/payments via QBO API. Local rows stay canonical if push fails. |
 
@@ -207,8 +211,9 @@ Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user when th
 1. Verify domain (Resend and/or SMTP)  
 2. Vercel → `RESEND_API_KEY` and/or SMTP_* + `EMAIL_FROM=School Name <office@yourdomain.org>`  
 3. Optional: `BEACON_HEALTH_SECRET` for readiness probes (`x-beacon-health-secret` header)  
-4. Principal → Go-live → school contact email (Reply-To)  
+4. Principal → Go-live → school contact email (office Reply-To / footer)  
 5. **Comms** → delivery test → confirm inbox  
+6. **Parent reply logging:** apply migration **023**; set `EMAIL_INBOUND_DOMAIN` + `EMAIL_INBOUND_WEBHOOK_SECRET` (or `RESEND_WEBHOOK_SECRET`); Resend webhook `email.received` → `https://<host>/api/email/inbound`  
 
 Leadership (and teachers for email) see a trust banner until transports are honest-live. Details on **Go-live**.
 

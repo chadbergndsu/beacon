@@ -64,6 +64,7 @@ export function buildNav(role: Profile['role'] | null): NavItem[] {
   return [
     { href: '/dashboard', label: 'Home' },
     { href: '/announcements', label: 'News' },
+    { href: '/messages', label: 'Messages' },
     { href: '/settings', label: 'Settings' },
     { href: '/school', label: 'School site' },
     { href: '/about', label: 'About' },

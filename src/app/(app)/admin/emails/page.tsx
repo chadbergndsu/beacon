@@ -1,15 +1,18 @@
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { redirect } from 'next/navigation'
-import { Mail, Radio, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { Mail, Radio, ShieldCheck, AlertTriangle, Inbox } from 'lucide-react'
 import { SystemEmailForm } from '@/components/announcements/SystemEmailForm'
 import { ComposeMessageForm } from '@/components/comms/ComposeMessageForm'
 import { TestEmailButton } from '@/components/comms/TestEmailButton'
 import { ResendEmailButton } from '@/components/comms/ResendEmailButton'
+import { InboxRepliesPanel } from '@/components/comms/InboxRepliesPanel'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
 import { ViewSection } from '@/components/view-prefs/ViewSection'
 import { getProfile } from '@/lib/auth'
 import { getEmailDeliveryStats, isEmailLive, listEmailOutbox } from '@/lib/email/send'
+import { countUnreadInbox, listEmailInbox } from '@/lib/email/inbound'
+import { isEmailInboundConfigured, inboundDomain } from '@/lib/email/reply-routing'
 import { loadSchoolBrand } from '@/lib/school-brand'
 import { canSendSystemEmail } from '@/lib/roles'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -30,10 +33,12 @@ export default async function CommunicationsPage() {
   }
   const schoolId = profile.school_id
 
-  const [emails, stats, brand] = await Promise.all([
+  const [emails, stats, brand, inbox, unreadInbox] = await Promise.all([
     listEmailOutbox(schoolId, 100),
     getEmailDeliveryStats(schoolId),
     loadSchoolBrand(schoolId),
+    listEmailInbox(schoolId, 40),
+    countUnreadInbox(schoolId),
   ])
 
   const admin = createAdminClient()
@@ -58,10 +63,13 @@ export default async function CommunicationsPage() {
   const canManual = canSendSystemEmail(profile.role)
   const live = isEmailLive()
   const replyTo = brand.email || process.env.EMAIL_REPLY_TO || null
+  const inboundOn = isEmailInboundConfigured()
+  const inboundHost = inboundDomain()
 
   const viewLayout = await loadScreenLayout(user.id, 'admin_comms', [
     'header',
     'test_email',
+    'inbox',
     'compose',
     ...(canManual ? (['tips'] as const) : []),
     'outbox',
@@ -76,9 +84,10 @@ export default async function CommunicationsPage() {
           description={
             <>
               Schools hated the last system because messages disappeared into a black hole. Beacon
-              composes, brands as <strong>{brand.name}</strong>, logs every send, and lets you resend
-              failures. Live delivery uses Resend when configured. Use <strong>Edit view</strong> to
-              hide sections you rarely need.
+              composes, brands as <strong>{brand.name}</strong>, logs every send{' '}
+              <em>and</em> every parent reply, and lets you resend failures. Live delivery uses
+              Resend when configured. Use <strong>Edit view</strong> to hide sections you rarely
+              need.
             </>
           }
         />
@@ -105,7 +114,13 @@ export default async function CommunicationsPage() {
                 </p>
                 <p className="mt-1 text-xs opacity-90 leading-relaxed">
                   From: <code className="rounded bg-black/5 px-1">{stats.fromAddress}</code>
-                  {replyTo ? (
+                  {inboundOn && inboundHost ? (
+                    <>
+                      {' '}
+                      · Reply-To capture:{' '}
+                      <code className="rounded bg-black/5 px-1">reply+…@{inboundHost}</code>
+                    </>
+                  ) : replyTo ? (
                     <>
                       {' '}
                       · Reply-To: <code className="rounded bg-black/5 px-1">{replyTo}</code>
@@ -119,6 +134,11 @@ export default async function CommunicationsPage() {
                       </Link>
                     </>
                   )}
+                </p>
+                <p className="mt-1 text-xs opacity-90 leading-relaxed">
+                  {inboundOn
+                    ? 'Parent replies to system email are logged in the Inbox below (migration 023 + inbound webhook).'
+                    : 'To log parent replies in Beacon: set EMAIL_INBOUND_DOMAIN + EMAIL_INBOUND_WEBHOOK_SECRET (or RESEND_WEBHOOK_SECRET), apply migration 023, and point Resend inbound webhooks at /api/email/inbound.'}
                 </p>
                 {!live && (
                   <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs">
@@ -154,13 +174,19 @@ export default async function CommunicationsPage() {
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           {[
             { label: 'In outbox', value: stats.total, icon: Mail },
             { label: 'Sent', value: stats.sent, tone: 'ok' as const },
             { label: 'Failed', value: stats.failed, tone: 'bad' as const },
             { label: 'Log-only', value: stats.skipped, tone: 'warn' as const },
             { label: 'Last 24h', value: stats.last24h, icon: Radio },
+            {
+              label: 'Unread replies',
+              value: unreadInbox,
+              tone: unreadInbox > 0 ? ('warn' as const) : ('ok' as const),
+              icon: Inbox,
+            },
           ].map((s) => (
             <Card key={s.label}>
               <CardContent className="pt-4 pb-4">
@@ -184,6 +210,29 @@ export default async function CommunicationsPage() {
             </Card>
           ))}
         </div>
+      </ViewSection>
+
+      <ViewSection id="inbox" title="Family replies">
+        <section>
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="text-[13px] font-medium text-foreground">
+                Inbox · parent replies ({inbox.length})
+                {unreadInbox > 0 ? (
+                  <span className="ml-2 text-amber-700">· {unreadInbox} new</span>
+                ) : null}
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Every reply to a Beacon system email is stored here with a link back to the original
+                send when the reply-token matches.
+              </p>
+            </div>
+            <Badge variant={inboundOn ? 'success' : 'warning'}>
+              {inboundOn ? 'Inbound capture on' : 'Inbound off'}
+            </Badge>
+          </div>
+          <InboxRepliesPanel items={inbox} canReply={canManual} />
+        </section>
       </ViewSection>
 
       <ViewSection id="compose" title="Compose message">

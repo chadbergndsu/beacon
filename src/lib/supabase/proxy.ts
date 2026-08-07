@@ -47,6 +47,7 @@ export async function updateSession(request: NextRequest) {
       path.startsWith('/api/kiosk/') ||
       path.startsWith('/pay/') ||
       path.startsWith('/api/stripe/') ||
+      path.startsWith('/api/email/') ||
       path.startsWith('/api/cron/') ||
       path === '/api/health'
     if (prodLike && !isPublicPath) {
@@ -85,6 +86,7 @@ export async function updateSession(request: NextRequest) {
   const isHealth = path === '/api/health'
   const isFamilyPay = path.startsWith('/pay/')
   const isStripeWebhook = path.startsWith('/api/stripe/')
+  const isEmailInbound = path.startsWith('/api/email/')
   const isCron = path.startsWith('/api/cron/')
   const isPublic =
     PUBLIC_EXACT.has(path) ||
@@ -93,6 +95,7 @@ export async function updateSession(request: NextRequest) {
     isHealth ||
     isFamilyPay ||
     isStripeWebhook ||
+    isEmailInbound ||
     isCron ||
     path === '/privacy'
 

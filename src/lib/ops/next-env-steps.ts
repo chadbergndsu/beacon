@@ -66,7 +66,7 @@ export function buildLaunchSuggestions(input: {
       group: 'env',
       label: 'Database migrations applied',
       detail:
-        'Migrations 001–021 on Supabase (family portal, token expiry, Stripe cols, money settle).',
+        'Migrations 001–023 on Supabase (craft realtime, family email inbox, portal, Stripe, money settle).',
       done: migrationsDone,
     },
     {

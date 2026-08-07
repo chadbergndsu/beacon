@@ -36,6 +36,6 @@ describe('buildNav role separation', () => {
 
   it('parent nav is minimal', () => {
     const labels = buildNav('parent').map((n) => n.label)
-    expect(labels).toEqual(['Home', 'News', 'Settings', 'School site', 'About'])
+    expect(labels).toEqual(['Home', 'News', 'Messages', 'Settings', 'School site', 'About'])
   })
 })
