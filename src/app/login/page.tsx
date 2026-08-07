@@ -461,7 +461,7 @@ export default async function LoginPage({
                     <span aria-hidden>·</span>
                     <Link href="/about">About</Link>
                     <span aria-hidden>·</span>
-                    <Link href="/privacy">Privacy</Link>
+                    <Link href="/privacy">Trust &amp; data practices</Link>
                   </div>
                 </div>
               )}

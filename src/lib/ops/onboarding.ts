@@ -18,8 +18,16 @@ export type OnboardingStatus = {
   total: number
   percent: number
   steps: OnboardingStep[]
-  readyForParents: boolean
 }
+
+export const PARENT_PILOT_APPROVAL_CHECKS = [
+  'teacher_login',
+  'parent_login',
+  'phone_smoke',
+  'email_mode',
+  'ferpa_review',
+  'soft_launch',
+] as const
 
 export async function loadSchoolOnboarding(schoolId: string): Promise<OnboardingStatus> {
   const admin = createAdminClient()
@@ -197,18 +205,21 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
   const complete = steps.filter((s) => s.done).length
   const total = steps.length
   const percent = Math.round((complete / total) * 100)
-  const readyForParents =
-    brandOk && (students ?? 0) > 0 && (classes ?? 0) > 0 && schoolParentLinks > 0
 
-  return { complete, total, percent, steps, readyForParents }
+  return { complete, total, percent, steps }
 }
 
-/** Pure gate used by tests and docs — keep in sync with loadSchoolOnboarding. */
+/**
+ * Parent invitations require the complete ordered pilot path plus explicit
+ * confirmation of every human trust check. Record counts alone are setup
+ * progress and must never approve a parent-facing launch.
+ */
 export function isParentPilotReady(input: {
-  brandOk: boolean
-  students: number
-  classes: number
-  parentLinks: number
+  pilotPathComplete: boolean
+  checklist: Record<string, boolean>
 }) {
-  return input.brandOk && input.students > 0 && input.classes > 0 && input.parentLinks > 0
+  return (
+    input.pilotPathComplete &&
+    PARENT_PILOT_APPROVAL_CHECKS.every((id) => input.checklist[id] === true)
+  )
 }
