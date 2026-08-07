@@ -67,6 +67,8 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 
 **Primary fight: FACTS** — they own tuition scale (~15k+ schools claimed). FACTS is **Nelnet (NYSE: NNI)**, not a Christian ministry — it sells into faith schools. Beacon attacks family communications and portal fatigue, not aid/collections depth. Honest compare: [`/vs/facts`](https://beacon.commoncentsip.com/vs/facts) · RenWeb SEO: [`/vs/renweb`](https://beacon.commoncentsip.com/vs/renweb).
 
+**Future marketing / blog plan:** `docs/marketing-plan.md` (draft posts in `docs/marketing/blog-drafts/`).
+
 | Competitor pattern | Beacon response |
 |--------------------|-----------------|
 | FACTS Family App + two portals | Family Desk + Notes from school + logged email replies |
