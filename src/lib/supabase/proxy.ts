@@ -2,9 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { safeInternalPath } from '@/lib/safe-redirect'
 import { KIOSK_COOKIE, KIOSK_COOKIE_MAX_AGE_SEC } from '@/lib/badge/kiosk-cookie'
-
-/** Unauthenticated allowlist — keep in sync with README “Public routes” + proxy-public.test.ts */
-const PUBLIC_EXACT = new Set(['/', '/login', '/about', '/school'])
+import { isPublicPath } from '@/lib/supabase/public-paths'
 
 export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname
@@ -39,17 +37,7 @@ export async function updateSession(request: NextRequest) {
       process.env.NODE_ENV === 'production' ||
       process.env.VERCEL_ENV === 'production' ||
       process.env.VERCEL_ENV === 'preview'
-    const isPublicPath =
-      PUBLIC_EXACT.has(path) ||
-      path === '/privacy' ||
-      path === '/kiosk' ||
-      path.startsWith('/kiosk/') ||
-      path.startsWith('/api/kiosk/') ||
-      path.startsWith('/pay/') ||
-      path.startsWith('/api/stripe/') ||
-      path.startsWith('/api/cron/') ||
-      path === '/api/health'
-    if (prodLike && !isPublicPath) {
+    if (prodLike && !isPublicPath(path)) {
       return new NextResponse(
         'Beacon is misconfigured (missing Supabase URL or anon key).',
         { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
@@ -77,24 +65,7 @@ export async function updateSession(request: NextRequest) {
   const user = data?.claims
 
   const isAuthRoute = path === '/login'
-  // Kiosk tablets: secret token URL or cookie session — no staff login
-  const isKiosk = path === '/kiosk' || path.startsWith('/kiosk/')
-  // ESP32 / RFID hardware posts with a device token (not a user session)
-  const isDeviceApi = path.startsWith('/api/kiosk/')
-  // Public liveness probe (detailed checks still require BEACON_HEALTH_SECRET)
-  const isHealth = path === '/api/health'
-  const isFamilyPay = path.startsWith('/pay/')
-  const isStripeWebhook = path.startsWith('/api/stripe/')
-  const isCron = path.startsWith('/api/cron/')
-  const isPublic =
-    PUBLIC_EXACT.has(path) ||
-    isKiosk ||
-    isDeviceApi ||
-    isHealth ||
-    isFamilyPay ||
-    isStripeWebhook ||
-    isCron ||
-    path === '/privacy'
+  const isPublic = isPublicPath(path)
 
   if (!user && !isPublic) {
     const redirectUrl = request.nextUrl.clone()

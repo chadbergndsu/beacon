@@ -4,6 +4,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isQuickBooksConfigured } from '@/lib/billing/quickbooks'
+import { resolveFeedbackOwnerEmail } from '@/lib/pilot-feedback/owner'
 
 export type CheckStatus = 'ok' | 'warn' | 'fail' | 'info'
 
@@ -20,6 +21,8 @@ export type OpsHealth = {
   readyScore: number // 0–100
   checks: HealthCheck[]
   emailLive: boolean
+  /** Parent reply capture env (domain + webhook secret) */
+  emailInboundConfigured: boolean
   qbLiveConfigured: boolean
 }
 
@@ -90,6 +93,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     ['classes', 'Classes'],
     ['grades', 'Grades'],
     ['email_outbox', 'Email outbox'],
+    ['email_inbox', 'Email inbox (023)'],
     ['attendance', 'Attendance (007)'],
     ['lesson_plans', 'Lesson plans (007)'],
     ['pulse_entries', 'Pulse entries (007)'],
@@ -123,6 +127,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
       'pulse_entries',
       'school_videos',
       'attendance',
+      'email_inbox',
     ].includes(table)
     checks.push({
       id: `table_${table}`,
@@ -249,6 +254,22 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     category: 'integrations',
   })
 
+  const { isEmailInboundConfigured, inboundDomain } = await import('@/lib/email/reply-routing')
+  const inboundOn = isEmailInboundConfigured()
+  const inboundHost = inboundDomain()
+  const inboxTableOk = await tableExists('email_inbox')
+  checks.push({
+    id: 'email_inbound',
+    label: 'Parent reply capture',
+    status: inboundOn && inboxTableOk ? 'ok' : inboundOn && !inboxTableOk ? 'warn' : 'info',
+    detail: inboundOn
+      ? inboxTableOk
+        ? `Inbound on · reply+…@${inboundHost || 'domain'} → /api/email/inbound`
+        : 'Inbound env set but email_inbox missing — apply migration 023'
+      : 'Optional: EMAIL_INBOUND_DOMAIN + webhook secret; or Comms → Simulate parent reply',
+    category: 'integrations',
+  })
+
   const { isNtfyConfigured } = await import('@/lib/notify/ntfy')
   const ntfyOn = isNtfyConfigured()
   checks.push({
@@ -261,14 +282,17 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     category: 'integrations',
   })
 
-  const feedbackTo = envSet('BEACON_FEEDBACK_TO') || envSet('BEACON_OWNER_EMAIL')
+  const feedbackTo = resolveFeedbackOwnerEmail()
+  const feedbackEnvSet = envSet('BEACON_FEEDBACK_TO') || envSet('BEACON_OWNER_EMAIL')
   checks.push({
     id: 'feedback_owner',
-    label: 'Pilot owner email',
+    label: 'Pilot / inquiry owner email',
     status: feedbackTo ? 'ok' : 'warn',
     detail: feedbackTo
-      ? 'BEACON_FEEDBACK_TO configured'
-      : 'Set BEACON_FEEDBACK_TO so suggestions email you (not the principal)',
+      ? feedbackEnvSet
+        ? `Owner inbox resolved (${feedbackTo})`
+        : `Using default owner inbox (${feedbackTo}) — set BEACON_FEEDBACK_TO to override`
+      : 'Set BEACON_FEEDBACK_TO so inquiries and suggestions email you (not the principal)',
     category: 'integrations',
   })
 
@@ -390,6 +414,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     readyScore,
     checks,
     emailLive: emailStack.live,
+    emailInboundConfigured: inboundOn,
     qbLiveConfigured,
   }
 }

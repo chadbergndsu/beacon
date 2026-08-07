@@ -10,9 +10,12 @@ export type EmailKind =
   | 'welcome'
   | 'test'
   | 'pilot_feedback'
+  | 'school_inquiry'
   | 'invoice'
 
 export type EmailStatus = 'queued' | 'sent' | 'failed' | 'skipped'
+
+export type InboxStatus = 'received' | 'reviewed' | 'archived' | 'spam'
 
 export type OutboundEmail = {
   school_id: string | null
@@ -27,6 +30,8 @@ export type OutboundEmail = {
   related_table?: string | null
   related_id?: string | null
   meta?: Record<string, unknown>
+  /** Set by send path when inbound capture is configured */
+  reply_token?: string | null
 }
 
 export type EmailOutboxRow = OutboundEmail & {
@@ -36,6 +41,42 @@ export type EmailOutboxRow = OutboundEmail & {
   error: string | null
   created_at: string
   sent_at: string | null
+}
+
+export type EmailInboxRow = {
+  id: string
+  school_id: string
+  outbox_id: string | null
+  from_email: string
+  from_name: string | null
+  to_email: string
+  subject: string
+  body_text: string
+  body_html: string | null
+  status: InboxStatus
+  provider: string | null
+  provider_message_id: string | null
+  reply_token: string | null
+  meta: Record<string, unknown>
+  created_at: string
+  reviewed_at: string | null
+  reviewed_by: string | null
+}
+
+/** Normalized inbound payload after webhook parse */
+export type InboundEmailPayload = {
+  from: string
+  fromName?: string | null
+  to: string | string[]
+  receivedFor?: string[]
+  subject: string
+  bodyText: string
+  bodyHtml?: string | null
+  provider?: string
+  providerMessageId?: string | null
+  replyToken?: string | null
+  schoolId?: string | null
+  meta?: Record<string, unknown>
 }
 
 export type EmailDeliveryStats = {

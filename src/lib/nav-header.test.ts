@@ -28,7 +28,7 @@ describe('buildNav role separation', () => {
       'Settings',
     ])
     expect(more.map((n) => n.label)).toEqual(
-      expect.arrayContaining(['Lessons', 'Calendar', 'Printables', 'Scan', 'School site'])
+      expect.arrayContaining(['Lessons', 'Calendar', 'Printables', 'Scan', 'Desk', 'School site'])
     )
     expect(primary.map((n) => n.label)).not.toContain('Office')
     expect(buildNav('teacher').map((n) => n.label)).not.toContain('Approvals')
@@ -36,6 +36,6 @@ describe('buildNav role separation', () => {
 
   it('parent nav is minimal', () => {
     const labels = buildNav('parent').map((n) => n.label)
-    expect(labels).toEqual(['Home', 'News', 'Settings', 'School site', 'About'])
+    expect(labels).toEqual(['Home', 'News', 'Messages', 'Settings', 'School site', 'About'])
   })
 })

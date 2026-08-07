@@ -10,7 +10,7 @@ export type ChecklistItem = {
 export const RELEASE_CHECKLIST: ChecklistItem[] = [
   {
     id: 'migrations',
-    label: 'Database migrations 001–021 applied',
+    label: 'Database migrations 001–023 applied',
     help: 'Prefer: npm run db:migrate. Includes family portal (019), Stripe cols (020), money settle unique (021).',
     group: 'ops',
   },
@@ -91,6 +91,18 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
     label: 'Email delivery path ready',
     help: 'Resend and/or SMTP configured (cascade). Domain verified or school SMTP. Test from Comms.',
     group: 'trust',
+  },
+  {
+    id: 'email_inbound',
+    label: 'Parent email reply capture ready (or N/A)',
+    help: 'Migration 023; EMAIL_INBOUND_DOMAIN + EMAIL_INBOUND_WEBHOOK_SECRET (or RESEND_WEBHOOK_SECRET); Resend email.received → /api/email/inbound. Or use Comms → Simulate parent reply to smoke-test Inbox without MX.',
+    group: 'trust',
+  },
+  {
+    id: 'store_shells',
+    label: 'Mobile / store shells ready (or N/A)',
+    help: 'PWA install smoke + docs/store-launch.md. Capacitor ios/android when submitting to App Store / Play. Privacy + Terms URLs live.',
+    group: 'launch',
   },
   {
     id: 'pilot_owner_alerts',

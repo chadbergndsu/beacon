@@ -8,6 +8,11 @@ import {
   describeEmailStack,
   isEmailLive as transportIsEmailLive,
 } from '@/lib/email/transport'
+import {
+  buildInboundReplyTo,
+  generateReplyToken,
+  isEmailInboundConfigured,
+} from '@/lib/email/reply-routing'
 import type {
   EmailDeliveryStats,
   EmailOutboxRow,
@@ -22,6 +27,16 @@ const FALLBACK_FROM = 'Beacon <onboarding@resend.dev>'
 /** True when from-address is Resend's shared onboarding sender (not production-safe). */
 export function isInsecureEmailFrom(from: string): boolean {
   return /onboarding@resend\.dev/i.test(from)
+}
+
+/**
+ * Owner-bound mail (school inquiry, pilot feedback) must keep the human Reply-To.
+ * Family/outbound kinds may rewrite Reply-To to inbound capture when configured.
+ */
+export function shouldRewriteReplyToInbound(
+  kind: OutboundEmail['kind']
+): boolean {
+  return kind !== 'school_inquiry' && kind !== 'pilot_feedback'
 }
 
 function buildFromHeader(brand?: Pick<SchoolBrand, 'name' | 'shortName'> | null): string {
@@ -51,7 +66,17 @@ export async function queueAndSendEmail(
 ): Promise<{ id: string; status: EmailStatus; error?: string; providerId?: string; provider?: string }> {
   const admin = createAdminClient()
   const brand = opts?.brand
-  const replyTo = email.reply_to || (brand ? resolveReplyTo(brand) : undefined) || undefined
+  const officeReplyTo =
+    email.reply_to || (brand ? resolveReplyTo(brand) : undefined) || undefined
+
+  let replyToken: string | null = email.reply_token ?? null
+  let replyTo = officeReplyTo
+  if (shouldRewriteReplyToInbound(email.kind) && isEmailInboundConfigured()) {
+    replyToken = replyToken || generateReplyToken()
+    const inbound = buildInboundReplyTo(replyToken)
+    if (inbound) replyTo = inbound
+  }
+
   const from = buildFromHeader(brand)
   const safeEmail = {
     ...email,
@@ -76,11 +101,13 @@ export async function queueAndSendEmail(
     ...(safeEmail.meta ?? {}),
     ...(sendResult.providerId ? { provider_id: sendResult.providerId } : {}),
     ...(replyTo ? { reply_to: replyTo } : {}),
+    ...(officeReplyTo ? { office_reply_to: officeReplyTo } : {}),
+    ...(replyToken ? { reply_token: replyToken } : {}),
     from,
     transport_attempts: sendResult.attempts,
   }
 
-  const row = {
+  const row: Record<string, unknown> = {
     school_id: safeEmail.school_id,
     kind: safeEmail.kind,
     to_email: safeEmail.to_email,
@@ -96,6 +123,8 @@ export async function queueAndSendEmail(
     meta,
     sent_at: sendResult.status === 'sent' ? new Date().toISOString() : null,
   }
+  // Column added in migration 023 — only write when inbound capture minted a token
+  if (replyToken) row.reply_token = replyToken
 
   const { data, error } = await admin
     .from('email_outbox')

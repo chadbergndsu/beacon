@@ -9,11 +9,15 @@ This file embeds the full standards so agents enforce them without needing netwo
 ### Beacon project notes (this repo)
 
 - **Runbook / setup truth:** `README.md` + `.env.example` (not this file).
-- **Migrations:** `supabase/migrations/` **001–022**; apply with `npm run db:migrate`.
+- **Migrations:** `supabase/migrations/` **001–023**; apply with `npm run db:migrate`.
 - **Billing money:** first-class tables only (`billing_*`, plans/schedules, `quickbooks_connections`) — not `schools.settings.billing`. Family portal is school-owned (no BillerGenie).
 - **Health:** public liveness `{ status, generatedAt }`; readiness via header `x-beacon-health-secret` (not `?detail=1`).
 - **Auth break-glass:** Beacon does **not** implement `AUTH_OPEN` / `AUTH_AUTO_JOIN`. Production/preview fail closed without Supabase public env.
 - **CI:** GitHub Actions runs typecheck, lint, coverage, build, Playwright e2e separately — local `npm run ci` skips e2e.
+- **Family email replies:** inbound webhook `/api/email/inbound` + `email_inbox` (migration **023**); Reply-To uses `reply+{token}@EMAIL_INBOUND_DOMAIN` when configured.
+- **Family Desk:** staff daily driver at `/desk` (alias of `/admin/emails`) — intention compose + reply inbox; parents use **Notes from school** at `/messages`.
+- **App stores:** PWA manifest + icons; Capacitor shells (`capacitor.config.cjs`) load production HTTPS — runbook `docs/store-launch.md`.
+- **Acquisition SEO:** product landing at `/` (logged-out) + Fun Facts tab, `/vs/facts`, `/vs/renweb`, sitemap/robots/OG (public in proxy), school inquiry → `BEACON_FEEDBACK_TO` (defaults to `office@commoncentsip.com`).
 
 ---
 

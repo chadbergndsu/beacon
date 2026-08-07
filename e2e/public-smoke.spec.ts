@@ -43,4 +43,30 @@ test.describe('public smoke', () => {
     await page.waitForURL(/\/login/, { timeout: 15_000 })
     expect(page.url()).toMatch(/\/login/)
   })
+
+  test('product landing and FACTS compare are public', async ({ page }) => {
+    const home = await page.goto('/')
+    expect(home?.ok()).toBeTruthy()
+    await expect(page.getByRole('tab', { name: 'Fun Facts' })).toBeVisible({ timeout: 15_000 })
+
+    const facts = await page.goto('/vs/facts')
+    expect(facts?.ok()).toBeTruthy()
+    await expect(page.getByRole('heading', { name: /Beacon vs FACTS/i })).toBeVisible()
+
+    const renweb = await page.goto('/vs/renweb')
+    expect(renweb?.ok()).toBeTruthy()
+    await expect(page.getByRole('heading', { name: /RenWeb/i })).toBeVisible()
+  })
+
+  test('robots and sitemap are reachable', async ({ request }) => {
+    const robots = await request.get('/robots.txt')
+    expect(robots.ok()).toBeTruthy()
+    const robotsBody = await robots.text()
+    expect(robotsBody.toLowerCase()).toContain('sitemap')
+
+    const sitemap = await request.get('/sitemap.xml')
+    expect(sitemap.ok()).toBeTruthy()
+    const map = await sitemap.text()
+    expect(map).toContain('/vs/facts')
+  })
 })

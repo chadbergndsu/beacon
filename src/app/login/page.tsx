@@ -1,10 +1,16 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { ExternalLink, Shield } from 'lucide-react'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { demoPrincipalEmail } from '@/lib/roles'
 import { safeInternalPath } from '@/lib/safe-redirect'
 import { loadSchoolBrand } from '@/lib/school-brand'
 import { beaconCraftBaseUrl, beaconCraftTourUrl } from '@/lib/beaconcraft-url'
+
+export const metadata: Metadata = {
+  title: 'Sign in',
+  robots: { index: false, follow: false },
+}
 
 /**
  * Critical CSS keeps the login usable even if the Tailwind chunk fails.
@@ -170,7 +176,8 @@ const LOGIN_CRITICAL_CSS = `
     color: #5b6b7c;
   }
   .login-card input[type="email"],
-  .login-card input[type="password"] {
+  .login-card input[type="password"],
+  .login-card input[type="text"] {
     width: 100%;
     min-height: 2.75rem;
     border-radius: 0.75rem;
@@ -179,6 +186,9 @@ const LOGIN_CRITICAL_CSS = `
     padding: 0.65rem 0.9rem;
     font-size: 16px;
     color: #0b1220;
+  }
+  .login-card input[name="password"] {
+    padding-right: 2.75rem;
   }
   .login-card button[type="submit"] {
     width: 100%;
