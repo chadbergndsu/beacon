@@ -11,13 +11,19 @@ import { organizationJsonLd, softwareApplicationJsonLd } from '@/lib/seo/json-ld
 export const metadata: Metadata = {
   title: 'About Beacon',
   description:
-    'Beacon is the full school suite for independent schools — Dinner Table Digests, Family Desk, grades, and honest tuition. Stewarded by Common Cents IP.',
+    'Beacon is a ministry-stewarded FACTS alternative for Christian schools — Dinner Table Digests, Family Desk, grades, and honest tuition. Created by Common Cents IP.',
   alternates: { canonical: '/about' },
   openGraph: {
-    title: 'About Beacon',
+    title: 'About Beacon — FACTS alternative, ministry-stewarded',
     description: 'The operating system for schools that outgrew portal chaos.',
     url: '/about',
   },
+  keywords: [
+    'About Beacon school software',
+    'Common Cents IP',
+    'Christian school software ministry',
+    'FACTS alternative',
+  ],
 }
 
 export default async function AboutPage() {

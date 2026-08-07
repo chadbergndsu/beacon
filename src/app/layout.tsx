@@ -20,11 +20,11 @@ export const metadata: Metadata = {
   ),
   applicationName: 'Beacon',
   title: {
-    default: 'Beacon · School Suite',
+    default: 'Beacon · FACTS Alternative for Christian Schools',
     template: '%s · Beacon',
   },
   description:
-    'Beacon — the full school suite for independent schools: academics, Family Desk communications, Dinner Table Digests, payments, and principal operations.',
+    'Beacon — FACTS & RenWeb alternative for Christian and independent schools: Family Desk, Dinner Table Digests, grades, and principal operations. Ministry-stewarded by Common Cents IP.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,

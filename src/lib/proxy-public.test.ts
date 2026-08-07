@@ -24,7 +24,8 @@ function isPublicPath(path: string): boolean {
     isCron ||
     path === '/privacy' ||
     path === '/terms' ||
-    path === '/vs/facts'
+    path === '/vs/facts' ||
+    path === '/vs/renweb'
   )
 }
 
@@ -38,6 +39,7 @@ describe('proxy public paths', () => {
     expect(isPublicPath('/privacy')).toBe(true)
     expect(isPublicPath('/terms')).toBe(true)
     expect(isPublicPath('/vs/facts')).toBe(true)
+    expect(isPublicPath('/vs/renweb')).toBe(true)
     expect(isPublicPath('/pay/tok_abc')).toBe(true)
     expect(isPublicPath('/api/stripe/webhook')).toBe(true)
     expect(isPublicPath('/api/email/inbound')).toBe(true)

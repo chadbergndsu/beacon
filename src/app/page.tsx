@@ -4,29 +4,33 @@ import { createClient } from '@/lib/supabase/server'
 import { ProductLanding } from '@/components/marketing/ProductLanding'
 
 export const metadata: Metadata = {
-  title: 'Beacon · School suite for any school',
+  title: 'Beacon · FACTS Alternative for Christian Schools',
   description:
-    'Beacon is the full school suite for independent schools — Family Desk communications, Dinner Table Digests, grades, and honest tuition. Talk with us about bringing Beacon to your school.',
+    'Beacon is a FACTS & RenWeb alternative for Christian and independent schools — Family Desk, Dinner Table Digests, grades, and honest tuition. FACTS is Nelnet commercial software; Beacon is ministry-stewarded.',
   alternates: { canonical: '/' },
   openGraph: {
-    title: 'Beacon · The school suite families actually open',
+    title: 'Beacon · The FACTS alternative families actually open',
     description:
-      'Academics, family notes, and principal operations — built for schools that outgrew portal chaos.',
+      'Leave the portal black hole. Family Desk communications for faith-based schools — ministry-stewarded by Common Cents IP.',
     url: '/',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Beacon · School suite for any school',
-    description: 'Family Desk, Dinner Table Digests, grades, and honest ops.',
+    title: 'Beacon · FACTS alternative for Christian schools',
+    description: 'Family Desk, Dinner Table Digests, grades — not another Nelnet portal.',
   },
   keywords: [
-    'school management software',
-    'private school SIS',
-    'family communication school',
-    'school gradebook',
+    'FACTS alternative',
+    'FACTS alternative for Christian schools',
+    'RenWeb alternative',
+    'Christian school management software',
+    'Christian school SIS',
+    'faith-based school software',
+    'Beacon vs FACTS',
+    'school family communication',
     'Dinner Table Digest',
+    'private school SIS',
     'independent school software',
-    'school tuition portal',
   ],
 }
 

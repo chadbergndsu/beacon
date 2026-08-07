@@ -41,10 +41,11 @@ export async function updateSession(request: NextRequest) {
       process.env.VERCEL_ENV === 'preview'
     const isPublicPath =
       PUBLIC_EXACT.has(path) ||
-      path === '/privacy' ||
-      path === '/terms' ||
-      path === '/vs/facts' ||
-      path === '/kiosk' ||
+    path === '/privacy' ||
+    path === '/terms' ||
+    path === '/vs/facts' ||
+    path === '/vs/renweb' ||
+    path === '/kiosk' ||
       path.startsWith('/kiosk/') ||
       path.startsWith('/api/kiosk/') ||
       path.startsWith('/pay/') ||
@@ -101,7 +102,8 @@ export async function updateSession(request: NextRequest) {
     isCron ||
     path === '/privacy' ||
     path === '/terms' ||
-    path === '/vs/facts'
+    path === '/vs/facts' ||
+    path === '/vs/renweb'
 
   if (!user && !isPublic) {
     const redirectUrl = request.nextUrl.clone()

@@ -140,10 +140,10 @@ export function ProductLanding() {
             They won on tuition scale. We’re winning on whether families open anything.
           </h2>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-sky-100/85 sm:text-[15px]">
-            FACTS claims 15,000+ schools. Fine. Independent schools still tell us the same story:
-            two portals, a tired family app, and an office that can’t prove a message landed. Beacon
-            is the communications-first suite — school-owned tuition when you want it, not a
-            third-party black hole.
+            FACTS claims 15,000+ schools. Fine. FACTS is Nelnet (NYSE: NNI) — a commercial brand that
+            sells into Christian schools, not a Christian ministry. Independent schools still tell us
+            the same story: two portals, a tired family app, and an office that can’t prove a message
+            landed. Beacon is ministry-stewarded and communications-first.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
@@ -201,6 +201,9 @@ export function ProductLanding() {
           <div className="flex flex-wrap gap-4 text-navy-foreground/80">
             <Link href="/vs/facts" className="hover:text-white">
               vs FACTS
+            </Link>
+            <Link href="/vs/renweb" className="hover:text-white">
+              RenWeb alt
             </Link>
             <Link href="/about" className="hover:text-white">
               About

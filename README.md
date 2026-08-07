@@ -32,7 +32,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 
 ### Public (unauthenticated) routes
 
-Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/vs/facts`, `/privacy`, `/terms`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/pay/*` (family invoice portal), `/api/stripe/*` (webhook), `/api/email/*` (inbound reply webhook), `/api/health`.
+Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/vs/facts`, `/vs/renweb`, `/privacy`, `/terms`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/pay/*` (family invoice portal), `/api/stripe/*` (webhook), `/api/email/*` (inbound reply webhook), `/api/health`.
 
 **Product home (`/`):** logged-out visitors see the Beacon marketing landing + school inquiry form. Logged-in users go to `/dashboard`. Tenant school site remains at `/school`.
 
@@ -65,7 +65,7 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 
 ### Market positioning (why not FACTS / Jupiter / PowerSchool)
 
-**Primary fight: FACTS** — they own tuition scale (~15k+ schools claimed). Beacon attacks family communications and portal fatigue, not aid/collections depth. Honest compare: [`/vs/facts`](https://beacon.commoncentsip.com/vs/facts).
+**Primary fight: FACTS** — they own tuition scale (~15k+ schools claimed). FACTS is **Nelnet (NYSE: NNI)**, not a Christian ministry — it sells into faith schools. Beacon attacks family communications and portal fatigue, not aid/collections depth. Honest compare: [`/vs/facts`](https://beacon.commoncentsip.com/vs/facts) · RenWeb SEO: [`/vs/renweb`](https://beacon.commoncentsip.com/vs/renweb).
 
 | Competitor pattern | Beacon response |
 |--------------------|-----------------|
@@ -83,6 +83,7 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 
 **Production:** https://beacon.commoncentsip.com  
 **Beacon vs FACTS:** https://beacon.commoncentsip.com/vs/facts  
+**RenWeb alternative:** https://beacon.commoncentsip.com/vs/renweb  
 **School site:** https://beacon.commoncentsip.com/school  
 **Campus twin:** https://beaconcraft.vercel.app · tour `/?tour=1`  
 **Go-live (principal):** https://beacon.commoncentsip.com/principal/release  
