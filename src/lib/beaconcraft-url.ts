@@ -9,7 +9,15 @@ function normalizeBase(raw: string | undefined): string | null {
   if (!trimmed || trimmed === LEGACY_LOCAL_PLACEHOLDER) {
     return null
   }
-  return trimmed
+  try {
+    const url = new URL(trimmed)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+    if (url.username || url.password) return null
+    if (url.pathname !== '/' || url.search || url.hash) return null
+    return url.origin
+  } catch {
+    return null
+  }
 }
 
 /**

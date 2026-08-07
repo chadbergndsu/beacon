@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { headers } from 'next/headers'
 import { loadSchoolBrand, loadSchoolBrandByPublicKey, locationLine } from '@/lib/school-brand'
 import { beaconCraftAppHref, beaconCraftTourUrl } from '@/lib/beaconcraft-url'
+import { buildSchoolContextLinks } from '@/lib/marketing/design-partner'
 import { CraftHref } from '@/components/craft/CraftHref'
 
 export default async function SchoolWebsitePage({
@@ -31,6 +32,7 @@ export default async function SchoolWebsitePage({
   const hostSlug =
     sub && !['www', 'beacon', 'app', 'localhost', '127'].includes(sub) ? sub : null
   const key = sp.school || sp.slug || hostSlug
+  const { schoolHref, beaconHref, trustHref } = buildSchoolContextLinks(sp)
   const brand = key ? await loadSchoolBrandByPublicKey(key) : await loadSchoolBrand(null)
   const location = locationLine(brand)
   const craftHref = beaconCraftAppHref()
@@ -38,7 +40,12 @@ export default async function SchoolWebsitePage({
 
   return (
     <div className="min-h-screen min-h-[100dvh] overflow-x-hidden beacon-shell text-foreground">
-      <SchoolSiteHeader schoolName={brand.name} websiteUrl={brand.websiteUrl} />
+      <SchoolSiteHeader
+        schoolName={brand.name}
+        websiteUrl={brand.websiteUrl}
+        schoolHref={schoolHref}
+        beaconHref={beaconHref}
+      />
 
       <section className="relative min-h-[70vh] overflow-hidden sm:min-h-[78vh]">
         <div className="absolute inset-0 bg-[#0a1628]" />
@@ -277,11 +284,11 @@ export default async function SchoolWebsitePage({
         <p className="font-semibold text-foreground">{brand.name}</p>
         <p className="mt-1">
           Powered by Beacon ·{' '}
-          <Link href="/about" className="text-primary hover:underline">
-            About the suite
+          <Link href={beaconHref} className="text-primary hover:underline">
+            About Beacon
           </Link>
           {' · '}
-          <Link href="/privacy" className="text-primary hover:underline">
+          <Link href={trustHref} className="text-primary hover:underline">
             Trust &amp; data practices
           </Link>
           {brand.websiteUrl && (

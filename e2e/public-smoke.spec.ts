@@ -13,6 +13,93 @@ test.describe('public smoke', () => {
     await expect(email.first()).toBeVisible({ timeout: 15_000 })
   })
 
+  test('Beacon vendor page presents the bounded buyer journey', async ({ page }) => {
+    await page.goto('/about')
+    await expect(
+      page.getByRole('heading', {
+        name: 'A calmer path from classroom work to family understanding.',
+      })
+    ).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Review Trust & Data Practices' })).toHaveAttribute(
+      'href',
+      '/privacy'
+    )
+    await expect(page.getByText('Current stage · design-partner program')).toBeVisible()
+    const formButton = page.getByRole('button', { name: 'Send design-partner inquiry' })
+    await expect(formButton).toBeVisible()
+    const conversation = page.getByRole('link', {
+      name: 'Ask about a design-partner conversation',
+    })
+    await expect(conversation).toHaveAttribute('href', '#contact')
+  })
+
+  test('school query selection survives the header home link', async ({ page }) => {
+    await page.goto('/school?school=missing-school-test')
+    const schoolHome = page.locator('header a[href="/school?school=missing-school-test"]')
+    await expect(schoolHome).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Powered by Beacon' })).toHaveAttribute(
+      'href',
+      '/about?school=missing-school-test'
+    )
+    await expect(
+      page.getByRole('contentinfo').getByRole('link', { name: 'About Beacon' })
+    ).toHaveAttribute('href', '/about?school=missing-school-test')
+    await expect(
+      page.getByRole('contentinfo').getByRole('link', { name: 'Trust & data practices' })
+    ).toHaveAttribute('href', '/privacy?school=missing-school-test')
+    await page.getByRole('link', { name: 'Powered by Beacon' }).click()
+    await expect(page).toHaveURL(/\/about\?school=missing-school-test$/)
+    await expect(page.getByRole('link', { name: 'School site' })).toHaveAttribute(
+      'href',
+      '/school?school=missing-school-test'
+    )
+    await expect(page.getByRole('link', { name: 'Beacon company home' })).toHaveAttribute(
+      'href',
+      '/about?school=missing-school-test'
+    )
+    await page.getByRole('link', { name: 'Review Trust & Data Practices' }).click()
+    await expect(page).toHaveURL(/\/privacy\?school=missing-school-test$/)
+    await expect(page.getByRole('link', { name: 'About Beacon' })).toHaveAttribute(
+      'href',
+      '/about?school=missing-school-test'
+    )
+    await expect(page.getByRole('link', { name: 'School site' })).toHaveAttribute(
+      'href',
+      '/school?school=missing-school-test'
+    )
+  })
+
+  test('mobile school-to-Beacon journey reaches an accessible inquiry form', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.goto('/school?school=missing-school-test')
+    await page.getByRole('button', { name: 'Open menu' }).click()
+    await page
+      .locator('#school-mobile-navigation')
+      .getByRole('link', { name: 'About Beacon' })
+      .click()
+    await expect(page).toHaveURL(/\/about\?school=missing-school-test$/)
+
+    const priority = page.getByRole('textbox', {
+      name: 'What workflow would you most like to improve?',
+    })
+    await expect(priority).toBeVisible()
+    await expect(priority).toHaveAttribute('aria-describedby', 'design-partner-priority-hint')
+    await expect(page.locator('#design-partner-priority-hint')).toContainText(
+      'Do not include student names'
+    )
+    await page.getByLabel('Name').fill('Jordan Lee')
+    await page.getByLabel('Role').fill('Head of school')
+    await page.getByLabel('Work email').fill('jordan@example.org')
+    await page.getByLabel('School').fill('Example Academy')
+    await priority.fill('Short')
+    await page.getByRole('button', { name: 'Send design-partner inquiry' }).click()
+    await expect(priority).toHaveJSProperty('validity.valid', false)
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    )
+    expect(overflow).toBe(false)
+  })
+
   test('health returns bare ok JSON', async ({ request }) => {
     const res = await request.get('/api/health')
     expect(res.ok()).toBeTruthy()

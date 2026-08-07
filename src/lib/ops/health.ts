@@ -265,6 +265,21 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     optional: true,
   })
 
+  const { isDesignPartnerInquiryReady } = await import(
+    '@/lib/marketing/inquiry-readiness'
+  )
+  const inquiryReady = await isDesignPartnerInquiryReady()
+  checks.push({
+    id: 'design_partner_inquiry',
+    label: 'Public design-partner inquiry',
+    status: inquiryReady ? 'ok' : 'info',
+    detail: inquiryReady
+      ? 'Owner inbox, live email transport and durable database limiter are ready'
+      : 'Optional: requires a valid owner inbox, enabled live email transport and current limiter migration',
+    category: 'integrations',
+    optional: true,
+  })
+
   const { isSlackConfigured, slackConfigMode } = await import('@/lib/notify/slack')
   const slackOn = isSlackConfigured()
   const slackMode = slackConfigMode()

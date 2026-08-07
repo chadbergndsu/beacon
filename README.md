@@ -264,7 +264,7 @@ Full list of names lives in **`.env.example`**. Summary:
 
 | Integration | Env | Purpose |
 |-------------|-----|---------|
-| Pilot owner email | `BEACON_FEEDBACK_TO` / `BEACON_OWNER_EMAIL` | Suggestion button inbox (**not** the principal) |
+| Product owner email | `BEACON_FEEDBACK_TO` / `BEACON_OWNER_EMAIL` | Server-only destination for public design-partner inquiries and pilot suggestions (**not** the principal); required for the commercial CTA |
 | ntfy push | `BEACON_NTFY_*` | Owner phone alerts |
 | Slack | `BEACON_SLACK_WEBHOOK_URL` (or `BEACON_SLACK_BOT_TOKEN` + `BEACON_SLACK_CHANNEL`) | Office channel: announcement posts, pilot alerts, Comms test |
 | Twilio SMS | `TWILIO_*` | Aftercare parent SMS |

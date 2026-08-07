@@ -12,6 +12,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { buttonClassName } from '@/components/ui/button'
+import { buildSchoolContextLinks } from '@/lib/marketing/design-partner'
 
 export const metadata: Metadata = {
   title: 'Trust & Data Practices | Beacon',
@@ -39,6 +40,7 @@ const accessRoles = [
 ] as const
 
 const dataCategories = [
+  ['Product inquiries', 'Name, work email, role, school and workflow notes submitted through the design-partner form.'],
   ['Identity & contact', 'Names, dates of birth, photos, family links, contact and emergency information.'],
   ['Learning records', 'Classes, enrollment, assignments, grades, attendance, report cards and teacher notes.'],
   ['Student support', 'Allergies, medical notes, discipline records and whole-child check-ins when a school uses them.'],
@@ -57,12 +59,17 @@ const providerGroups = [
  * Factual product documentation for school diligence. This is intentionally
  * not represented as a legal privacy notice, DPA, or compliance certification.
  */
-export default function PrivacyPage() {
+export default async function PrivacyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ school?: string; slug?: string }>
+}) {
+  const { schoolHref, beaconHref } = buildSchoolContextLinks(await searchParams)
   return (
     <div className="min-h-screen beacon-shell">
       <header className="border-b border-border/80 bg-navy text-navy-foreground">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
-          <Link href="/login" className="flex items-center gap-2.5 font-semibold">
+          <Link href={beaconHref} className="flex items-center gap-2.5 font-semibold">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm text-primary-foreground">
               B
             </span>
@@ -279,10 +286,10 @@ export default function PrivacyPage() {
             accessibility review.
           </p>
           <p className="flex flex-wrap justify-center gap-3 text-center text-sm">
-            <Link href="/about" className={buttonClassName('ghost', 'sm', 'text-primary')}>
+            <Link href={beaconHref} className={buttonClassName('ghost', 'sm', 'text-primary')}>
               About Beacon
             </Link>
-            <Link href="/school" className={buttonClassName('ghost', 'sm', 'text-primary')}>
+            <Link href={schoolHref} className={buttonClassName('ghost', 'sm', 'text-primary')}>
               School site
             </Link>
             <Link href="/login" className={buttonClassName('primary', 'sm')}>

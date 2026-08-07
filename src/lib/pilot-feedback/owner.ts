@@ -24,6 +24,7 @@ export function resolveFeedbackOwnerEmail(): string | null {
   // Allow "Name <email@x.com>" or bare email
   const angle = raw.match(/<([^>]+)>/)
   const email = (angle?.[1] || raw).trim().toLowerCase()
+  if (/[\u0000-\u001f\u007f?&#,%]/.test(email)) return null
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
   // Never treat demo domains as a real owner inbox
   if (email.endsWith('.test') || email.endsWith('.example') || email.endsWith('.invalid')) {
