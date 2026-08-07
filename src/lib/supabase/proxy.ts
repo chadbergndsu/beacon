@@ -43,6 +43,7 @@ export async function updateSession(request: NextRequest) {
       PUBLIC_EXACT.has(path) ||
       path === '/privacy' ||
       path === '/terms' ||
+      path === '/vs/facts' ||
       path === '/kiosk' ||
       path.startsWith('/kiosk/') ||
       path.startsWith('/api/kiosk/') ||
@@ -99,7 +100,8 @@ export async function updateSession(request: NextRequest) {
     isEmailInbound ||
     isCron ||
     path === '/privacy' ||
-    path === '/terms'
+    path === '/terms' ||
+    path === '/vs/facts'
 
   if (!user && !isPublic) {
     const redirectUrl = request.nextUrl.clone()

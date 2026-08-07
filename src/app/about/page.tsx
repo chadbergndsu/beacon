@@ -61,6 +61,13 @@ export default async function AboutPage() {
             family communications, principal operations, and tuition payments — familiar where
             teachers need speed, clearer where families need calm.
           </p>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            Going after FACTS on family experience — not on aid/collections depth. See{' '}
+            <Link href="/vs/facts" className="font-medium text-primary hover:underline">
+              Beacon vs FACTS
+            </Link>
+            .
+          </p>
         </div>
 
         <Card className="overflow-hidden border-border/80 shadow-[var(--shadow-soft)]">
@@ -176,6 +183,9 @@ export default async function AboutPage() {
         <p className="flex flex-wrap justify-center gap-4 text-center text-sm">
           <Link href="/" className={buttonClassName('ghost', 'sm', 'text-primary')}>
             Product home
+          </Link>
+          <Link href="/vs/facts" className={buttonClassName('ghost', 'sm', 'text-primary')}>
+            vs FACTS
           </Link>
           <Link href="/school" className={buttonClassName('ghost', 'sm', 'text-primary')}>
             {brand.shortName} school site

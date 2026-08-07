@@ -101,7 +101,7 @@ export function SchoolInquiryForm({ compact }: { compact?: boolean }) {
           required
           rows={compact ? 4 : 5}
           maxLength={4000}
-          placeholder="Grades + family notes, replacing our current portal, tuition, aftercare…"
+          placeholder="We’re on FACTS / RenWeb — need Family Desk + grades parents open. Or tuition later…"
         />
       </Field>
 

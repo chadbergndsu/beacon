@@ -22,6 +22,12 @@ export function ProductLanding() {
           </Link>
           <nav className="flex items-center gap-3 text-sm">
             <Link
+              href="/vs/facts"
+              className="hidden text-navy-foreground/75 transition hover:text-navy-foreground sm:inline"
+            >
+              vs FACTS
+            </Link>
+            <Link
               href="/about"
               className="hidden text-navy-foreground/75 transition hover:text-navy-foreground sm:inline"
             >
@@ -64,24 +70,24 @@ export function ProductLanding() {
             Beacon
           </p>
           <h1 className="animate-beacon-in mt-3 max-w-2xl text-4xl font-semibold tracking-tight text-white sm:text-5xl sm:leading-[1.08]">
-            The school suite families actually open
+            The FACTS alternative families actually open
           </h1>
           <p className="animate-beacon-in mt-4 max-w-xl text-base leading-relaxed text-sky-100/90 sm:text-lg">
-            Academics, Family Desk notes, Dinner Table Digests, and honest tuition — built for
-            independent schools that outgrew portal chaos.
+            FACTS owns tuition scale. Beacon owns calm family communications — Family Desk, Dinner
+            Table Digests, and logged replies — without the portal black hole.
           </p>
           <div className="animate-beacon-in mt-8 flex flex-wrap gap-3">
             <a
               href="#inquiry"
               className="inline-flex h-11 items-center justify-center rounded-md bg-white px-5 text-sm font-semibold text-navy transition hover:bg-sky-50"
             >
-              Talk with us
+              Leave the black hole
             </a>
             <Link
-              href="/about"
+              href="/vs/facts"
               className="inline-flex h-11 items-center justify-center rounded-md border border-white/30 bg-white/5 px-5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10"
             >
-              See how it works
+              Beacon vs FACTS
             </Link>
           </div>
         </div>
@@ -124,6 +130,38 @@ export function ProductLanding() {
         </ul>
       </section>
 
+      {/* FACTS fight */}
+      <section className="border-y border-border bg-navy text-navy-foreground">
+        <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-300/90">
+            Going after FACTS
+          </p>
+          <h2 className="mt-2 max-w-2xl text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            They won on tuition scale. We’re winning on whether families open anything.
+          </h2>
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-sky-100/85 sm:text-[15px]">
+            FACTS claims 15,000+ schools. Fine. Independent schools still tell us the same story:
+            two portals, a tired family app, and an office that can’t prove a message landed. Beacon
+            is the communications-first suite — school-owned tuition when you want it, not a
+            third-party black hole.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              href="/vs/facts"
+              className="inline-flex h-11 items-center justify-center rounded-md bg-white px-5 text-sm font-semibold text-navy transition hover:bg-sky-50"
+            >
+              Full Beacon vs FACTS compare
+            </Link>
+            <a
+              href="#inquiry"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-white/30 px-5 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              We’re on FACTS — talk to us
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* Inquiry */}
       <section className="border-t border-border bg-muted/30">
         <div className="mx-auto grid max-w-5xl gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-16">
@@ -135,15 +173,15 @@ export function ProductLanding() {
               Ready when you are
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-              Tell us about your school. We’ll reply by email — no sales theater, no spam list.
-              Pilots start with academics and family communications; money tools stay optional until
-              you’re ready.
+              Tell us about your school — especially if you’re on FACTS / RenWeb and want a calmer
+              family layer. We’ll reply by email — no sales theater, no spam list. Pilots start with
+              academics and Family Desk; money tools stay optional until you’re ready.
             </p>
             <p className="mt-6 text-sm text-muted-foreground">
               Prefer email?{' '}
               <a
                 className="font-medium text-primary hover:underline"
-                href="mailto:office@commoncentsip.com?subject=Beacon%20for%20our%20school"
+                href="mailto:office@commoncentsip.com?subject=Leaving%20FACTS%20%2F%20Beacon%20for%20our%20school"
               >
                 office@commoncentsip.com
               </a>
@@ -161,6 +199,9 @@ export function ProductLanding() {
             © {new Date().getFullYear()} Beacon · Common Cents IP
           </p>
           <div className="flex flex-wrap gap-4 text-navy-foreground/80">
+            <Link href="/vs/facts" className="hover:text-white">
+              vs FACTS
+            </Link>
             <Link href="/about" className="hover:text-white">
               About
             </Link>

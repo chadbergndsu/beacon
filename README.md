@@ -32,7 +32,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 
 ### Public (unauthenticated) routes
 
-Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/privacy`, `/terms`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/pay/*` (family invoice portal), `/api/stripe/*` (webhook), `/api/email/*` (inbound reply webhook), `/api/health`.
+Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/vs/facts`, `/privacy`, `/terms`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/pay/*` (family invoice portal), `/api/stripe/*` (webhook), `/api/email/*` (inbound reply webhook), `/api/health`.
 
 **Product home (`/`):** logged-out visitors see the Beacon marketing landing + school inquiry form. Logged-in users go to `/dashboard`. Tenant school site remains at `/school`.
 
@@ -65,18 +65,24 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 
 ### Market positioning (why not FACTS / Jupiter / PowerSchool)
 
+**Primary fight: FACTS** — they own tuition scale (~15k+ schools claimed). Beacon attacks family communications and portal fatigue, not aid/collections depth. Honest compare: [`/vs/facts`](https://beacon.commoncentsip.com/vs/facts).
+
 | Competitor pattern | Beacon response |
 |--------------------|-----------------|
+| FACTS Family App + two portals | Family Desk + Notes from school + logged email replies |
+| Message delivery black hole | Comms outbox/inbox with live vs log-only honesty |
 | Portals of tables | Dinner Table Digest + conversation starters |
 | Missing work buried | Missing Work Radar (past-due ≠ future-due) |
 | District analytics | Beacon Signal + Teacher Today (small-school scale) |
 | Slow PTC prep | Conference Brief one-pager |
 | Grades only | Beacon Pulse whole-child |
 | Teacher desktop-only | Quick Mode phone-first |
+| Third-party tuition lock-in | School-owned invoices + optional Stripe / QuickBooks |
 
 ## Live
 
 **Production:** https://beacon.commoncentsip.com  
+**Beacon vs FACTS:** https://beacon.commoncentsip.com/vs/facts  
 **School site:** https://beacon.commoncentsip.com/school  
 **Campus twin:** https://beaconcraft.vercel.app · tour `/?tour=1`  
 **Go-live (principal):** https://beacon.commoncentsip.com/principal/release  
@@ -385,7 +391,7 @@ npm run store:check      # in-repo readiness
 |-------|--------|
 | Manifest | `src/app/manifest.ts` → `/manifest.webmanifest` |
 | Icons / Play feature | `public/icons/` |
-| Privacy / Terms | `/privacy`, `/terms` (public) |
+| Privacy / Terms / vs FACTS | `/privacy`, `/terms`, `/vs/facts` (public) |
 | Capacitor config | `capacitor.config.cjs` |
 | Runbook | `docs/store-launch.md` · ADR `docs/adr/002-store-shells-capacitor.md` |
 
