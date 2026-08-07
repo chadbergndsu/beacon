@@ -147,6 +147,50 @@ export async function saveAttendance(
     }
   }
 
+  // Soft office Slack digest — never blocks attendance save
+  try {
+    const exceptions = filtered.filter((r) => r.status === 'absent' || r.status === 'tardy')
+    if (exceptions.length) {
+      const { isSlackConfigured, publishSlack } = await import('@/lib/notify/slack')
+      if (isSlackConfigured()) {
+        const brand = await loadSchoolBrand(access.classRow.school_id)
+        const ids = exceptions.map((r) => r.studentId)
+        const { data: students } = await admin
+          .from('students')
+          .select('id, first_name, last_name')
+          .in('id', ids)
+        const nameById = new Map(
+          (students ?? []).map((s) => [s.id as string, `${s.first_name} ${s.last_name}`])
+        )
+        const lines = exceptions.map((r) => {
+          const name = nameById.get(r.studentId) || 'Student'
+          return `• ${name} — ${ATTENDANCE_LABEL[r.status]}`
+        })
+        const slack = await publishSlack({
+          title: `${brand.shortName} · Attendance · ${access.classRow.name}`,
+          text: `*${date}*\n${lines.slice(0, 20).join('\n')}${
+            lines.length > 20 ? `\n…+${lines.length - 20} more` : ''
+          }`,
+          fields: [
+            { label: 'Absent/tardy', value: String(exceptions.length) },
+            { label: 'Class', value: access.classRow.name },
+          ],
+          link: {
+            label: 'Open class',
+            url: `${appBaseUrl()}/classes/${classId}?tab=attendance`,
+          },
+        })
+        if (slack.ok) {
+          notifyNote = notifyNote
+            ? `${notifyNote} Posted summary to Slack.`
+            : 'Saved. Posted absent/tardy summary to Slack.'
+        }
+      }
+    }
+  } catch {
+    /* Slack best-effort */
+  }
+
   revalidatePath(`/classes/${classId}`)
   revalidatePath('/dashboard')
   revalidatePath('/admin/emails')

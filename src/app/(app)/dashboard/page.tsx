@@ -15,6 +15,8 @@ import { TeacherTodayCard } from '@/components/insights/TeacherTodayCard'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
 import { ViewSection } from '@/components/view-prefs/ViewSection'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
+import { TeacherEncouragementBanner } from '@/components/teacher/TeacherEncouragementBanner'
+import { teacherEncouragementForDay } from '@/lib/teacher/encouragement'
 import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
@@ -157,6 +159,7 @@ export default async function DashboardPage() {
 
   const presentSectionIds = [
     'header',
+    ...(role === 'teacher' ? (['teacher_encouragement'] as const) : []),
     'announcements',
     ...(showQuick ? (['quick_mobile'] as const) : []),
     ...(teacherToday ? (['teacher_today'] as const) : []),
@@ -170,6 +173,8 @@ export default async function DashboardPage() {
   ]
 
   const viewLayout = await loadScreenLayout(user.id, 'dashboard', [...presentSectionIds])
+  const teacherEncouragement =
+    role === 'teacher' ? teacherEncouragementForDay(user.id) : null
 
   const welcomeDescription =
     role === 'parent'
@@ -243,6 +248,15 @@ export default async function DashboardPage() {
           }
         />
       </ViewSection>
+
+      {teacherEncouragement ? (
+        <ViewSection id="teacher_encouragement" title="Encouragement" locked>
+          <TeacherEncouragementBanner
+            initial={teacherEncouragement.item}
+            initialIndex={teacherEncouragement.index}
+          />
+        </ViewSection>
+      ) : null}
 
       {teacherToday ? (
         <ViewSection id="teacher_today" title="Today's focus">

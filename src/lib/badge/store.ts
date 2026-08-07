@@ -1095,6 +1095,7 @@ export async function processBadgeScan(input: {
   try {
     const { notifyCampusTwin } = await import('@/lib/badge/campus-twin')
     notifyCampusTwin({
+      schoolId: input.schoolId,
       studentId: student.id as string,
       studentName,
       roomId: room.id,

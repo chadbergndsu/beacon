@@ -18,10 +18,10 @@ export function LoginForm({
   nextPath?: string
   defaultEmail?: string
   submitLabel?: string
-  variant?: 'default' | 'principal'
+  variant?: 'default' | 'principal' | 'office'
 }) {
   const [state, formAction, pending] = useActionState(login, initial)
-  const isPrincipal = variant === 'principal'
+  const isLeadership = variant === 'principal' || variant === 'office'
 
   return (
     <form action={formAction} className="space-y-4">
@@ -54,7 +54,7 @@ export function LoginForm({
         type="submit"
         disabled={pending}
         size="lg"
-        variant={isPrincipal ? 'navy' : 'primary'}
+        variant={isLeadership ? 'navy' : 'primary'}
         className="w-full"
       >
         {pending ? 'Signing in…' : submitLabel}

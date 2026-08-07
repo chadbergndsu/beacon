@@ -10,7 +10,7 @@ export function TouchLookZone() {
   return (
     <div className="pointer-events-none absolute inset-0 z-10 sm:hidden">
       <div
-        className="pointer-events-auto absolute bottom-24 right-3 top-16 w-[42%] rounded-xl border border-white/10 bg-sky-900/10 backdrop-blur-[1px]"
+        className="pointer-events-auto absolute bottom-14 right-2 top-14 w-[38%] max-w-[9rem] rounded-xl border border-white/10 bg-sky-900/10 backdrop-blur-[1px] sm:bottom-24 sm:right-3 sm:top-16 sm:w-[42%] sm:max-w-none"
         onTouchStart={(e) => e.stopPropagation()}
         onTouchMove={(e) => {
           e.preventDefault()

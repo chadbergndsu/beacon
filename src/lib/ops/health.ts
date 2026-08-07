@@ -261,6 +261,19 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     category: 'integrations',
   })
 
+  const { isSlackConfigured, slackConfigMode } = await import('@/lib/notify/slack')
+  const slackOn = isSlackConfigured()
+  const slackMode = slackConfigMode()
+  checks.push({
+    id: 'slack_office',
+    label: 'Slack office channel',
+    status: slackOn ? 'ok' : 'info',
+    detail: slackOn
+      ? `Slack live (${slackMode === 'bot' ? 'bot API' : 'incoming webhook'}) — announcements, compose, attendance digests, pilot alerts`
+      : 'Optional: BEACON_SLACK_WEBHOOK_URL or BEACON_SLACK_BOT_TOKEN + BEACON_SLACK_CHANNEL',
+    category: 'integrations',
+  })
+
   const feedbackTo = envSet('BEACON_FEEDBACK_TO') || envSet('BEACON_OWNER_EMAIL')
   checks.push({
     id: 'feedback_owner',

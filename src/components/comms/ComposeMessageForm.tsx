@@ -26,6 +26,7 @@ export function ComposeMessageForm({
   const [ok, setOk] = useState<string | null>(null)
   const [audience, setAudience] = useState('parents')
   const [classId, setClassId] = useState(canSchoolWide ? '' : classes[0]?.id || '')
+  const [alsoSlack, setAlsoSlack] = useState(false)
   const [preview, setPreview] = useState<{
     count: number
     sample: string[]
@@ -75,6 +76,7 @@ export function ComposeMessageForm({
             body: String(fd.get('body') || ''),
             audience: String(fd.get('audience') || 'parents'),
             class_id: String(fd.get('class_id') || '') || null,
+            also_slack: alsoSlack,
           })
           if (!result.ok) {
             setError(result.error)
@@ -89,6 +91,7 @@ export function ComposeMessageForm({
           e.currentTarget.reset()
           setAudience('parents')
           setClassId(canSchoolWide ? '' : classes[0]?.id || '')
+          setAlsoSlack(false)
         })
       }}
     >
@@ -182,6 +185,23 @@ export function ComposeMessageForm({
           placeholder="Write what families need to know in plain language…"
         />
       </Field>
+
+      {canSchoolWide ? (
+        <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={alsoSlack}
+            onChange={(e) => setAlsoSlack(e.target.checked)}
+          />
+          <span>
+            <span className="font-medium text-foreground">Also post to Slack</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              Mirrors this message to the office Slack channel when BEACON_SLACK_WEBHOOK_URL is set.
+            </span>
+          </span>
+        </label>
+      ) : null}
 
       <FieldError>{error}</FieldError>
       {ok ? (

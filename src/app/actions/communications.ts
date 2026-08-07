@@ -92,6 +92,7 @@ export async function composeFamilyMessage(input: {
   body: string
   audience: string
   class_id?: string | null
+  also_slack?: boolean
 }): Promise<CommsResult> {
   const access = await requireStaff()
   if (!access.ok) return access
@@ -178,6 +179,32 @@ export async function composeFamilyMessage(input: {
 
   const result = await queueAndSendBatch(batch, { brand })
 
+  let slackNote: string | undefined
+  if (input.also_slack && canSendSystemEmail(access.profile.role)) {
+    try {
+      const { isSlackConfigured, publishSlack } = await import('@/lib/notify/slack')
+      if (isSlackConfigured()) {
+        const slack = await publishSlack({
+          title: `${brand.shortName} · Family message`,
+          text: `*${subject}*\n${body.slice(0, 500)}${body.length > 500 ? '…' : ''}`,
+          fields: [
+            { label: 'Audience', value: audience },
+            { label: 'Recipients', value: String(recipients.length) },
+            { label: 'Author', value: author },
+          ],
+          link: { label: 'Open Comms', url: `${base}/admin/emails` },
+        })
+        slackNote = slack.ok
+          ? 'Also posted to Slack.'
+          : slack.skipped
+            ? undefined
+            : `Slack: ${slack.error || 'failed'}`
+      }
+    } catch {
+      /* Slack best-effort */
+    }
+  }
+
   await access.admin.from('audit_logs').insert({
     school_id: access.profile.school_id,
     user_id: access.user.id,
@@ -191,6 +218,7 @@ export async function composeFamilyMessage(input: {
       sent: result.sent,
       failed: result.failed,
       skipped: result.skipped,
+      also_slack: Boolean(input.also_slack),
     },
   })
 
@@ -200,11 +228,7 @@ export async function composeFamilyMessage(input: {
     emailed: result.sent,
     failed: result.failed,
     skipped: result.skipped,
-    emailNote:
-      result.note ||
-      (result.failed
-        ? `${result.failed} failed — check outbox errors and resend.`
-        : undefined),
+    emailNote: [result.note, slackNote].filter(Boolean).join(' ') || undefined,
   }
 }
 
@@ -286,6 +310,47 @@ export async function sendTestEmail(): Promise<CommsResult> {
       result.status === 'skipped'
         ? 'Logged to outbox only. Set RESEND_API_KEY for real delivery.'
         : `Sent to ${to}. Check inbox (and spam) in the next minute.`,
+  }
+}
+
+/** Prove Slack webhook/bot delivery from Comms (leadership / office admin). */
+export async function sendTestSlack(): Promise<CommsResult> {
+  const access = await requireStaff()
+  if (!access.ok) return access
+  if (!canSendSystemEmail(access.profile.role)) {
+    return { ok: false, error: 'Only leadership can send Slack tests.' }
+  }
+
+  const { isSlackConfigured, publishSlack, slackConfigMode } = await import(
+    '@/lib/notify/slack'
+  )
+  if (!isSlackConfigured()) {
+    return {
+      ok: false,
+      error:
+        'Slack is not configured. Set BEACON_SLACK_WEBHOOK_URL (or BEACON_SLACK_BOT_TOKEN + BEACON_SLACK_CHANNEL) on Vercel.',
+    }
+  }
+
+  const brand = await loadSchoolBrand(access.profile.school_id)
+  const mode = slackConfigMode()
+  const who = access.profile.full_name || access.profile.email || 'Staff'
+  const result = await publishSlack({
+    title: `${brand.shortName} · Slack delivery test`,
+    text: `Beacon Slack is working for *${brand.name}*.\nSent by ${who}.`,
+    fields: [
+      { label: 'Mode', value: mode || 'unknown' },
+      { label: 'School', value: brand.name },
+    ],
+  })
+
+  if (!result.ok) {
+    return { ok: false, error: result.error || 'Slack test failed.' }
+  }
+
+  return {
+    ok: true,
+    emailNote: `Posted to Slack (${mode}). Check your office channel.`,
   }
 }
 

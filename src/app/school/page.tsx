@@ -15,7 +15,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { headers } from 'next/headers'
 import { loadSchoolBrand, loadSchoolBrandByPublicKey, locationLine } from '@/lib/school-brand'
-import { beaconCraftBaseUrl, beaconCraftTourUrl } from '@/lib/beaconcraft-url'
+import { beaconCraftAppHref, beaconCraftTourUrl } from '@/lib/beaconcraft-url'
+import { CraftHref } from '@/components/craft/CraftHref'
 
 export default async function SchoolWebsitePage({
   searchParams,
@@ -32,8 +33,8 @@ export default async function SchoolWebsitePage({
   const key = sp.school || sp.slug || hostSlug
   const brand = key ? await loadSchoolBrandByPublicKey(key) : await loadSchoolBrand(null)
   const location = locationLine(brand)
-  const craftBase = beaconCraftBaseUrl()
-  const tourUrl = beaconCraftTourUrl()
+  const craftHref = beaconCraftAppHref()
+  const tourHref = beaconCraftTourUrl()
 
   return (
     <div className="min-h-screen min-h-[100dvh] overflow-x-hidden beacon-shell text-foreground">
@@ -58,7 +59,7 @@ export default async function SchoolWebsitePage({
                 Sign in
               </Button>
             </Link>
-            <a href={tourUrl} target="_blank" rel="noopener noreferrer">
+            <CraftHref href={tourHref}>
               <Button
                 size="lg"
                 variant="outline"
@@ -66,7 +67,7 @@ export default async function SchoolWebsitePage({
               >
                 Campus tour
               </Button>
-            </a>
+            </CraftHref>
           </div>
           <p className="mt-8 text-sm text-white/60">
             {[brand.gradesServed, location, brand.curriculumNote].filter(Boolean).join(' · ') ||
@@ -160,7 +161,7 @@ export default async function SchoolWebsitePage({
                 Explore campus in 3D
               </h2>
               <p className="mt-3 text-muted-foreground leading-relaxed">
-                Take a guided tour of {brand.name} — entrance, classrooms, chapel, gym, and yard —
+                Take a guided tour of {brand.name} — entrance, hall, classrooms, office, and gym —
                 in a live digital twin. No login required for the public tour.
               </p>
               <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
@@ -176,14 +177,14 @@ export default async function SchoolWebsitePage({
                 ))}
               </ul>
               <div className="mt-6 flex flex-wrap gap-3">
-                <a href={tourUrl} target="_blank" rel="noopener noreferrer">
+                <CraftHref href={tourHref}>
                   <Button size="lg">Start virtual tour</Button>
-                </a>
-                <a href={craftBase} target="_blank" rel="noopener noreferrer">
+                </CraftHref>
+                <CraftHref href={craftHref}>
                   <Button size="lg" variant="outline">
                     Open campus twin
                   </Button>
-                </a>
+                </CraftHref>
               </div>
             </div>
             <Card className="overflow-hidden shadow-[var(--shadow-lift)]">
@@ -194,11 +195,15 @@ export default async function SchoolWebsitePage({
                   </p>
                   <p className="mt-1 text-lg font-semibold tracking-tight">Live campus twin</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    Classroom blocks, course glow, and a step-by-step walkthrough of the property.
+                    Guided stops through the property, classroom blocks, and free orbit when you want to explore.
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Opens in a new tab · works on laptop and phone · privacy-first public tour mode
+                  Public tour opens in a new tab. Staff signed into Beacon: use{' '}
+                  <Link href="/craft" className="font-semibold text-primary hover:underline">
+                    Craft
+                  </Link>{' '}
+                  in the app for live badge presence and person search.
                 </p>
               </CardContent>
             </Card>

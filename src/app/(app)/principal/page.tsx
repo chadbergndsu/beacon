@@ -12,9 +12,49 @@ import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
 import { ViewSection } from '@/components/view-prefs/ViewSection'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
+import { isOfficeAdmin } from '@/lib/roles'
+
+const OFFICE_ADMIN_TASKS = [
+  {
+    href: '/principal/roster',
+    label: 'Roster',
+    hint: 'Classes, students, enrollments',
+  },
+  {
+    href: '/announcements/new',
+    label: 'Announcement',
+    hint: 'Post news to families',
+  },
+  {
+    href: '/principal/invoices',
+    label: 'Invoices',
+    hint: 'Tuition and family billing',
+  },
+  {
+    href: '/principal/badges',
+    label: 'Badges',
+    hint: 'Kiosk, RFID, attendance',
+  },
+  {
+    href: '/admin/emails',
+    label: 'Comms',
+    hint: 'Email outbox, Slack test',
+  },
+  {
+    href: '/principal/release',
+    label: 'Go-live',
+    hint: 'Brand, Craft room map, checklist',
+  },
+  {
+    href: '/craft',
+    label: 'Craft',
+    hint: 'Campus twin and presence',
+  },
+] as const
 
 export default async function PrincipalOverviewPage() {
-  const { schoolId, user } = await requirePrincipal()
+  const { schoolId, user, profile } = await requirePrincipal()
+  const officeAdmin = isOfficeAdmin(profile.role)
   const admin = createAdminClient()
   const [billing, signal] = await Promise.all([
     loadBillingState(schoolId),
@@ -48,16 +88,29 @@ export default async function PrincipalOverviewPage() {
   const openCents = openInvoices.reduce((s, i) => s + i.amountCents, 0)
 
   const qb = billing.quickbooks
-  const viewLayout = await loadScreenLayout(user.id, 'principal_overview', [
-    'beacon_signal',
-    'stats',
-    'quickbooks',
-    'announcements',
-    'shortcuts',
-  ])
+  const defaultLayout = officeAdmin
+    ? ['daily_tasks', 'beacon_signal', 'stats', 'quickbooks', 'announcements', 'shortcuts']
+    : ['beacon_signal', 'stats', 'quickbooks', 'announcements', 'shortcuts']
+  const viewLayout = await loadScreenLayout(user.id, 'principal_overview', defaultLayout)
 
   return (
     <ConfigurableView screenId="principal_overview" initialLayout={viewLayout}>
+      {officeAdmin ? (
+        <ViewSection id="daily_tasks" title="Daily tasks" description="Most-used office updates">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {OFFICE_ADMIN_TASKS.map((task) => (
+              <Link
+                key={task.href}
+                href={task.href}
+                className="rounded-lg border border-border bg-card px-3 py-3 transition hover:border-primary/40 hover:bg-muted/30"
+              >
+                <p className="text-sm font-semibold text-foreground">{task.label}</p>
+                <p className="mt-0.5 text-[12px] leading-snug text-muted-foreground">{task.hint}</p>
+              </Link>
+            ))}
+          </div>
+        </ViewSection>
+      ) : null}
       <ViewSection id="beacon_signal" title="Beacon Signal">
         <BeaconSignalCard signal={signal} />
       </ViewSection>
@@ -205,6 +258,9 @@ export default async function PrincipalOverviewPage() {
           </Link>
           <Link href="/principal/release" className={buttonClassName('outline', 'sm')}>
             Go-live
+          </Link>
+          <Link href="/craft" className={buttonClassName('outline', 'sm')}>
+            Craft
           </Link>
           <Link href="/principal/roster" className={buttonClassName('outline', 'sm')}>
             Roster

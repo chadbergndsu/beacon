@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterPresenceForViewer, canUseFlyMode, pickTeacherFocusRoom } from './presence'
+import { filterPresenceForViewer, canUseFlyMode, matchMarkerByName, pickTeacherFocusRoom } from './presence'
 import type { CraftPresenceRecord } from './types'
 
 const records: CraftPresenceRecord[] = [
@@ -81,5 +81,22 @@ describe('pickTeacherFocusRoom', () => {
     expect(
       pickTeacherFocusRoom(['craft-demo-room-101'], ['craft-demo-hall', 'craft-demo-room-101'])
     ).toBe('craft-demo-room-101')
+  })
+})
+
+describe('matchMarkerByName', () => {
+  const markers = filterPresenceForViewer(records, {
+    role: 'admin',
+    teacherRoomIds: [],
+    parentStudentIds: [],
+    anonymizeOthers: false,
+  })
+
+  it('matches full and partial names case-insensitively', () => {
+    expect(matchMarkerByName(markers, 'easton berg')).toBeUndefined()
+    expect(matchMarkerByName(markers, 'alex rivera')?.id).toBe('stu-a')
+    expect(matchMarkerByName(markers, 'berg')).toBeUndefined()
+    expect(matchMarkerByName(markers, 'alex')?.id).toBe('stu-a')
+    expect(matchMarkerByName(markers, 'Blake Chen')?.id).toBe('stu-b')
   })
 })

@@ -100,19 +100,22 @@ export function CraftClient({
           canFly={canUseFlyMode(role)}
           canMockScan={canTriggerMockScans(role)}
           markerCount={markers.length}
+          markers={markers}
           schoolId={schoolId}
           onRefresh={() => void refresh()}
         />
         {role === 'teacher' ? (
-          <TeacherRoomPanel roster={teacherRoster} roomIds={teacherRoomIds} />
+          <div className="hidden sm:block">
+            <TeacherRoomPanel roster={teacherRoster} roomIds={teacherRoomIds} />
+          </div>
         ) : null}
         {canTriggerMockScans(role) ? (
-          <div className="rounded-lg border border-border bg-card/60 p-3">
+          <div className="hidden rounded-lg border border-border bg-card/60 p-3 lg:block">
             <p className="text-sm font-medium">Admin badge trails</p>
             <TrailPanel trails={trails} />
           </div>
         ) : null}
-        <div className="rounded-lg border border-border bg-card/60 p-3">
+        <div className="hidden rounded-lg border border-border bg-card/60 p-3 md:block">
           <p className="text-sm font-medium">Live presence</p>
           <MarkerLegend markers={markers} />
         </div>

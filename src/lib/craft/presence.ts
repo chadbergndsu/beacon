@@ -95,3 +95,27 @@ export function pickTeacherFocusRoom(
   const hit = teacherRoomIds.find((id) => layoutRoomIds.includes(id))
   return hit ?? teacherRoomIds[0] ?? layoutRoomIds[0] ?? null
 }
+
+/** Fuzzy match a visible marker by display name (supports "easton berg", "berg", etc.). */
+export function matchMarkerByName(
+  markers: CraftVisibleMarker[],
+  query: string
+): CraftVisibleMarker | undefined {
+  const q = query.trim().toLowerCase()
+  if (!q) return undefined
+
+  const tokens = q.split(/\s+/).filter(Boolean)
+  const scored = markers
+    .map((m) => {
+      const label = m.label.toLowerCase()
+      const exact = label === q
+      const contains = label.includes(q)
+      const tokenHit = tokens.every((t) => label.includes(t))
+      const score = exact ? 100 : contains ? 50 : tokenHit ? 40 : 0
+      return { marker: m, score }
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+
+  return scored[0]?.marker
+}

@@ -1,19 +1,24 @@
 /**
- * Beacon → BeaconCraft presence bridge (ADR 001).
+ * Beacon → campus twin presence bridge (ADR 001).
  *
- * After a successful badge scan, optionally POST to the 3D twin so kids
- * appear in the matching room. Never throws; never blocks attendance.
+ * After a successful badge scan:
+ * 1. Integrated `/craft` — upsert mock presence using school room map (same-origin).
+ * 2. Optional legacy external twin — POST when BEACONCRAFT_URL is an absolute
+ *    external host and BEACONCRAFT_SCAN_API_KEY is set.
  *
- * Configure on Beacon:
- *   BEACONCRAFT_URL=https://beaconcraft.vercel.app
- *   BEACONCRAFT_SCAN_API_KEY=<same as craft SCAN_API_KEY>
- * Optional:
- *   BEACONCRAFT_ROOM_MAP={"<beacon-room-uuid>":"room-a101"}
+ * Never throws; never blocks attendance.
+ *
+ * Configure:
+ *   (preferred) Go-live room mapping + integrated /craft — no extra env
+ *   BEACONCRAFT_ROOM_MAP={"<beacon-room-uuid>":"craft-demo-room-101"}
+ *   BEACONCRAFT_URL=https://beaconcraft.vercel.app  # legacy external only
+ *   BEACONCRAFT_SCAN_API_KEY=<craft SCAN_API_KEY>
  */
 
-import { BEACONCRAFT_PRODUCTION_URL } from '@/lib/beaconcraft-url'
+import { CRAFT_DEMO_ROOM_IDS } from '@/lib/craft/demo-ids'
 
 export type TwinScanNotify = {
+  schoolId: string
   studentId: string
   studentName: string
   roomId: string
@@ -21,21 +26,21 @@ export type TwinScanNotify = {
   direction: 'in' | 'out'
 }
 
-/** Heuristic: "A101" / "Room A-101" → room-a101; known labels from craft layout. */
+/** Heuristic: room names → integrated craft demo layout ids. */
 const NAME_HINTS: { re: RegExp; craftId: string }[] = [
-  { re: /\ba\s*[-]?\s*101\b/i, craftId: 'room-a101' },
-  { re: /\ba\s*[-]?\s*102\b/i, craftId: 'room-a102' },
-  { re: /\bb\s*[-]?\s*203\b/i, craftId: 'room-b203' },
-  { re: /\bgym|multipurpose/i, craftId: 'room-gym' },
-  { re: /\bchapel/i, craftId: 'room-chapel' },
-  { re: /\boffice|admin/i, craftId: 'room-office' },
-  { re: /\bentrance|lobby|check.?in/i, craftId: 'room-entrance' },
-  { re: /\bhall/i, craftId: 'room-hallway' },
-  { re: /\blibrary|media/i, craftId: 'room-library' },
-  { re: /\bart|maker/i, craftId: 'room-art' },
-  { re: /\bplay|recess|yard/i, craftId: 'room-playground' },
-  { re: /\bpark|drop.?off/i, craftId: 'room-parking' },
-  { re: /\baftercare|extended/i, craftId: 'room-yard' },
+  { re: /\b101\b/, craftId: CRAFT_DEMO_ROOM_IDS.room101 },
+  { re: /\b102\b/, craftId: CRAFT_DEMO_ROOM_IDS.room102 },
+  { re: /\b103\b/, craftId: CRAFT_DEMO_ROOM_IDS.room103 },
+  { re: /\ba\s*[-]?\s*101\b/i, craftId: CRAFT_DEMO_ROOM_IDS.room101 },
+  { re: /\ba\s*[-]?\s*102\b/i, craftId: CRAFT_DEMO_ROOM_IDS.room102 },
+  { re: /\bgym|multipurpose/i, craftId: CRAFT_DEMO_ROOM_IDS.gym },
+  { re: /\boffice|admin|front\s*desk/i, craftId: CRAFT_DEMO_ROOM_IDS.office },
+  { re: /\bentrance|lobby|check.?in/i, craftId: CRAFT_DEMO_ROOM_IDS.entrance },
+  { re: /\bhall/i, craftId: CRAFT_DEMO_ROOM_IDS.hall },
+  { re: /\b201\b/, craftId: 'craft-demo-room-201' },
+  { re: /\b202\b/, craftId: 'craft-demo-room-202' },
+  { re: /\b203|media/i, craftId: 'craft-demo-room-203' },
+  { re: /\bstaff\s*lounge/i, craftId: 'craft-demo-room-204' },
 ]
 
 function parseRoomMap(): Record<string, string> {
@@ -63,11 +68,39 @@ export function resolveCraftRoomId(roomId: string, roomName: string): string | n
   return null
 }
 
-function craftBaseUrl(): string | null {
+/** True when BEACONCRAFT_URL points at a separate host (legacy twin). */
+export function isExternalCraftUrl(url: string | null | undefined): boolean {
+  const raw = url?.trim()
+  if (!raw) return false
+  if (raw.startsWith('/')) return false
+  try {
+    const u = new URL(raw)
+    const host = u.hostname.toLowerCase()
+    if (host === 'localhost' || host === '127.0.0.1') return false
+    const app =
+      process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : '')
+    if (app) {
+      try {
+        if (new URL(app).hostname.toLowerCase() === host) return false
+      } catch {
+        /* ignore */
+      }
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
+function externalCraftBaseUrl(): string | null {
   const raw =
     process.env.BEACONCRAFT_URL?.trim() ||
     process.env.NEXT_PUBLIC_BEACONCRAFT_URL?.trim() ||
-    BEACONCRAFT_PRODUCTION_URL
+    ''
+  if (!raw || !isExternalCraftUrl(raw)) return null
   return raw.replace(/\/$/, '')
 }
 
@@ -80,18 +113,51 @@ function craftScanKey(): string | null {
  * Fire-and-forget. Safe to call after attendance is already committed.
  */
 export function notifyCampusTwin(scan: TwinScanNotify): void {
-  const base = craftBaseUrl()
-  const key = craftScanKey()
-  if (!base || !key) return
+  void notifyCampusTwinAsync(scan)
+}
 
-  const craftRoom =
+async function notifyCampusTwinAsync(scan: TwinScanNotify): Promise<void> {
+  let craftRoom =
     scan.direction === 'out'
-      ? resolveCraftRoomId(scan.roomId, scan.roomName) || 'room-parking'
+      ? resolveCraftRoomId(scan.roomId, scan.roomName) || CRAFT_DEMO_ROOM_IDS.entrance
       : resolveCraftRoomId(scan.roomId, scan.roomName)
 
-  // IN requires a mapped room; unmapped rooms skip silently until map is set.
+  // Prefer Go-live saved mapping (db room uuid → layout room id)
+  try {
+    const { loadCraftRoomMapping } = await import('@/lib/craft/rooms')
+    const { dbToLayout } = await loadCraftRoomMapping(scan.schoolId)
+    const mapped = dbToLayout[scan.roomId]
+    if (mapped) craftRoom = mapped
+  } catch {
+    /* mapping optional */
+  }
+
   if (scan.direction === 'in' && !craftRoom) return
   if (!craftRoom) return
+
+  // Integrated twin: in-memory overlay so /craft updates immediately
+  try {
+    const { upsertMockPresence, clearMockPresenceForStudent } = await import(
+      '@/lib/craft/presence-store'
+    )
+    if (scan.direction === 'out') {
+      clearMockPresenceForStudent(scan.schoolId, scan.studentId)
+    } else {
+      upsertMockPresence({
+        schoolId: scan.schoolId,
+        studentId: scan.studentId,
+        studentName: scan.studentName,
+        roomId: craftRoom,
+      })
+    }
+  } catch {
+    /* ignore */
+  }
+
+  // Legacy external BeaconCraft deploy
+  const base = externalCraftBaseUrl()
+  const key = craftScanKey()
+  if (!base || !key) return
 
   const body = {
     userId: scan.studentId,

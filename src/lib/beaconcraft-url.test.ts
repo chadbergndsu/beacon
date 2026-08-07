@@ -1,8 +1,10 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import {
-  BEACONCRAFT_PRODUCTION_URL,
+  BEACONCRAFT_EXTERNAL_URL,
+  beaconCraftAppHref,
   beaconCraftBaseUrl,
   beaconCraftTourUrl,
+  isExternalCraftUrl,
 } from './beaconcraft-url'
 
 describe('beaconCraftBaseUrl', () => {
@@ -17,14 +19,25 @@ describe('beaconCraftBaseUrl', () => {
     else process.env.NEXT_PUBLIC_BEACONCRAFT_URL = prev
   })
 
-  it('defaults to production when env unset', () => {
-    expect(beaconCraftBaseUrl()).toBe(BEACONCRAFT_PRODUCTION_URL)
-    expect(beaconCraftTourUrl()).toBe(`${BEACONCRAFT_PRODUCTION_URL}/?tour=1`)
+  it('defaults to same-origin integrated craft when env unset', () => {
+    expect(beaconCraftBaseUrl()).toBe('')
+    expect(beaconCraftAppHref()).toBe('/craft')
+    expect(beaconCraftTourUrl()).toBe('/craft/tour')
+    expect(isExternalCraftUrl('/craft/tour')).toBe(false)
   })
 
   it('ignores legacy localhost:3001 placeholder from old .env.local', () => {
     process.env.NEXT_PUBLIC_BEACONCRAFT_URL = 'http://localhost:3001'
-    expect(beaconCraftBaseUrl()).toBe(BEACONCRAFT_PRODUCTION_URL)
+    expect(beaconCraftBaseUrl()).toBe('')
+    expect(beaconCraftTourUrl()).toBe('/craft/tour')
+  })
+
+  it('respects explicit external craft URL override', () => {
+    process.env.NEXT_PUBLIC_BEACONCRAFT_URL = BEACONCRAFT_EXTERNAL_URL
+    expect(beaconCraftBaseUrl()).toBe(BEACONCRAFT_EXTERNAL_URL)
+    expect(beaconCraftAppHref()).toBe(BEACONCRAFT_EXTERNAL_URL)
+    expect(beaconCraftTourUrl()).toBe(`${BEACONCRAFT_EXTERNAL_URL}/?tour=1`)
+    expect(isExternalCraftUrl(BEACONCRAFT_EXTERNAL_URL)).toBe(true)
   })
 
   it('respects explicit local craft URL override', () => {

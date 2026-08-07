@@ -17,7 +17,7 @@ export default async function CraftPage() {
   const layout = await loadCraftLayoutForSchool(profile.school_id)
 
   return (
-    <div>
+    <div className="-mx-4 sm:-mx-6">
       <CraftLoader layout={layout} role={profile.role} schoolId={profile.school_id} />
     </div>
   )

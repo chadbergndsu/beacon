@@ -24,6 +24,8 @@ import { loadAttendanceForClassDate } from '@/lib/attendance/store'
 import { loadTeacherClassMissing } from '@/lib/insights/load-missing-work'
 import { EmailClassDigestButton } from '@/components/insights/EmailClassDigestButton'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
+import { TeacherEncouragementBanner } from '@/components/teacher/TeacherEncouragementBanner'
+import { teacherEncouragementForDay } from '@/lib/teacher/encouragement'
 import { Badge } from '@/components/ui/badge'
 import { PageHeader } from '@/components/ui/page-header'
 import { buttonClassName } from '@/components/ui/button'
@@ -100,9 +102,19 @@ export default async function ClassGradebookPage({
   ]
 
   const viewLayout = await loadScreenLayout(user.id, 'class_gradebook', [...present])
+  const teacherEncouragement =
+    profile?.role === 'teacher' ? teacherEncouragementForDay(user.id) : null
 
   return (
     <ConfigurableView screenId="class_gradebook" initialLayout={viewLayout}>
+      {teacherEncouragement ? (
+        <div className="mb-3">
+          <TeacherEncouragementBanner
+            initial={teacherEncouragement.item}
+            initialIndex={teacherEncouragement.index}
+          />
+        </div>
+      ) : null}
       <ViewSection id="header" title="Class header" locked>
         <PageHeader
           eyebrow={

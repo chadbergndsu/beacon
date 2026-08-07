@@ -10,8 +10,8 @@ export type ChecklistItem = {
 export const RELEASE_CHECKLIST: ChecklistItem[] = [
   {
     id: 'migrations',
-    label: 'Database migrations 001–021 applied',
-    help: 'Prefer: npm run db:migrate. Includes family portal (019), Stripe cols (020), money settle unique (021).',
+    label: 'Database migrations 001–023 applied',
+    help: 'Prefer: npm run db:migrate. Includes craft realtime (022), office admin seed (023), family portal, Stripe, money settle.',
     group: 'ops',
   },
   {
@@ -60,6 +60,12 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
     id: 'craft_smoke',
     label: 'BeaconCraft twin smoke test',
     help: 'Go-live → sync twin rooms, open /craft, trigger a test scan, confirm marker appears in the correct room.',
+    group: 'launch',
+  },
+  {
+    id: 'slack',
+    label: 'Slack office channel configured (or N/A)',
+    help: 'BEACON_SLACK_WEBHOOK_URL on Vercel (Incoming Webhook), or bot token + channel. Test from Comms → Slack.',
     group: 'launch',
   },
   {

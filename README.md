@@ -12,13 +12,14 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 |-------|--------|--------|
 | App | Next.js 16 App Router + React 19 + TypeScript + Tailwind 4 | Portable web frontend |
 | Auth edge | `src/proxy.ts` → Supabase SSR session | Public routes listed below; fail-closed without Supabase env on prod/preview |
-| DB | Supabase Postgres | Schema owned in `supabase/migrations/` (**001–018**) |
+| DB | Supabase Postgres | Schema owned in `supabase/migrations/` (**001–023**) |
 | Auth | Supabase Auth | App code uses `getUser()` before service-role; edge refreshes cookies via `getClaims()` |
 | Host | Vercel + HTTPS | Default per Solid Systems |
 | Email | Resend and/or SMTP (cascade) | Log-only outbox without live transport; never use `onboarding@resend.dev` in prod |
 | Billing | QuickBooks OAuth (optional) | Tokens on `quickbooks_connections`; **Push to QuickBooks** posts customers/invoices/payments via Accounting API when connected |
 | Cameras | hls.js + go2rtc/MediaMTX URLs | Stored in `schools.settings` modules JSON (no dedicated camera table) |
 | SMS | Twilio (optional) | Aftercare parent notify |
+| Slack | Incoming webhook / bot (optional) | Office channel alerts |
 | Rate limits | In-memory; Upstash optional | Kiosk / device / login |
 
 ## Architecture (short)
@@ -76,7 +77,7 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 
 **Production:** https://beacon.commoncentsip.com  
 **School site:** https://beacon.commoncentsip.com/school  
-**Campus twin:** https://beaconcraft.vercel.app · tour `/?tour=1`  
+**Campus twin:** `/craft` (staff) · public tour `/craft/tour` · optional external override via `NEXT_PUBLIC_BEACONCRAFT_URL`  
 **Go-live (principal):** https://beacon.commoncentsip.com/principal/release  
 **Health (liveness):** https://beacon.commoncentsip.com/api/health  
 
@@ -103,7 +104,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth + client |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server actions / admin client (never expose to browser) |
 
-Then apply **migrations 001–022** (see below) and:
+Then apply **migrations 001–023** (see below) and:
 
 ```bash
 npm run dev
@@ -137,7 +138,7 @@ Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, securit
 
 ### Database migrations
 
-**Source of truth:** `supabase/migrations/` files **001–022** in filename order.
+**Source of truth:** `supabase/migrations/` files **001–023** in filename order.
 
 ```bash
 # Preferred
@@ -166,6 +167,9 @@ POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate -- 017
 | **020** | Stripe payment columns (`stripe_checkout_session_id`, payment intent) |
 | **021** | P0 money settle: one succeeded payment per invoice |
 | **022** | BeaconCraft Realtime: `badge_scans` on `supabase_realtime` publication |
+| **023** | Office admin / principal pilot profile seed (Marian Gordon, Chris Cowan emails) |
+
+**Soft pilot:** ordered runbook in [`docs/pilot-go-live.md`](docs/pilot-go-live.md) · `npm run pilot:check` · account bind SQL in `scripts/seed-pilot-accounts.sql` · Go-live **Pilot path** card.
 
 **Billing money path** uses tables only. Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`.
 
@@ -191,6 +195,8 @@ Password-only apply **requires** `SUPABASE_PROJECT_REF` (scripts exit with an er
 4. Public `/school`, login, headers, and emails use that brand  
 
 Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user when their profile role is already **admin, staff, or principal** (not parent/teacher). Alias: `BEACON_DEMO_PRINCIPAL_EMAIL`.
+
+**Office admin (secretary / power user):** give the account `profiles.role = 'admin'` and `school_id` set to the school. Sign-in at `/login?as=office` (prefill via `BEACON_OFFICE_ADMIN_EMAIL`). Admins land on **Principal office** with a **Daily tasks** overview — roster, billing, announcements, badges, comms, and Craft. Pilot seed: migration **023** sets `office@lighthouse.test` → admin with display name **Marian Gordon** when that auth user exists.
 
 ### Email & QuickBooks
 
@@ -258,6 +264,7 @@ Full list of names lives in **`.env.example`**. Summary:
 |-------------|-----|---------|
 | Pilot owner email | `BEACON_FEEDBACK_TO` / `BEACON_OWNER_EMAIL` | Suggestion button inbox (**not** the principal) |
 | ntfy push | `BEACON_NTFY_*` | Owner phone alerts |
+| Slack | `BEACON_SLACK_WEBHOOK_URL` (or `BEACON_SLACK_BOT_TOKEN` + `BEACON_SLACK_CHANNEL`) | Office channel: announcement posts, pilot alerts, Comms test |
 | Twilio SMS | `TWILIO_*` | Aftercare parent SMS |
 | Stripe (family pay) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Card Checkout on `/pay/[token]`; webhook `/api/stripe/webhook`; success-page confirm; migration **020** |
 | Cron | `CRON_SECRET` | Daily recurring tuition (`/api/cron/billing-schedules`) |
@@ -288,7 +295,7 @@ Platform-provided (do not put secrets in git): `VERCEL_URL`, `VERCEL_ENV`, `VERC
 
 - Parents only access students linked in `parent_students`
 - Staff scoped by `school_id`
-- Principal office requires principal or admin role
+- Principal office requires principal or **admin** role (office secretary / power user)
 - Service role used only after a verified session in app code; edge session refresh is cookie-based in `src/proxy.ts`
 - Production/preview without Supabase public env returns **503** on non-public routes (fail closed)
 - No hard-coded single-school principal identity

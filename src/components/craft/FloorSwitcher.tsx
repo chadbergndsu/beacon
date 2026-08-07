@@ -9,7 +9,7 @@ export function FloorSwitcher() {
   if (layout.floors.length <= 1) return null
 
   return (
-    <div className="absolute left-3 top-3 z-20 flex flex-wrap gap-1.5">
+    <div className="absolute left-2 top-12 z-20 flex max-w-[calc(100%-7rem)] flex-wrap gap-1 sm:left-3 sm:top-3 sm:max-w-none sm:gap-1.5">
       {layout.floors.map((floor) => {
         const active = floor.floorId === activeFloorId
         return (

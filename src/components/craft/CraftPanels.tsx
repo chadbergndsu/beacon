@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { CraftFloorLayout, CraftStudentOption } from '@/lib/craft/types'
+import type { CraftFloorLayout, CraftStudentOption, CraftVisibleMarker } from '@/lib/craft/types'
 import { getRoomByName, allRooms } from '@/lib/craft/layout'
+import { matchMarkerByName } from '@/lib/craft/presence'
 import { broadcastCraftPresenceRefresh } from '@/lib/craft/realtime-client'
 import { useCraftUi } from './CraftUiContext'
 
@@ -117,6 +118,62 @@ export function MockScanPanel({
         {busy ? 'Sending…' : 'Trigger scan'}
       </button>
       {message ? <p className="mt-2 text-xs">{message}</p> : null}
+    </div>
+  )
+}
+
+export function PersonSearch({
+  markers,
+  onSelectPerson,
+}: {
+  markers: CraftVisibleMarker[]
+  onSelectPerson: (marker: CraftVisibleMarker) => void
+}) {
+  const { setHighlightMarkerId } = useCraftUi()
+  const [query, setQuery] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+
+  function go() {
+    const marker = matchMarkerByName(markers, query)
+    if (!marker) {
+      setMessage('No visible person matches that name.')
+      setHighlightMarkerId(null)
+      return
+    }
+    setMessage(null)
+    setHighlightMarkerId(marker.id)
+    onSelectPerson(marker)
+  }
+
+  return (
+    <div className="grid gap-1">
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="grid min-w-0 flex-1 gap-1 text-xs text-slate-700">
+          Find person
+          <input
+            className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+            placeholder="Easton Berg"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setMessage(null)
+              const hit = matchMarkerByName(markers, e.target.value)
+              setHighlightMarkerId(hit?.id ?? null)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') go()
+            }}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={go}
+          className="rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-800"
+        >
+          Go
+        </button>
+      </div>
+      {message ? <p className="text-[11px] text-amber-800">{message}</p> : null}
     </div>
   )
 }

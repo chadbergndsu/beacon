@@ -66,7 +66,7 @@ export function buildLaunchSuggestions(input: {
       group: 'env',
       label: 'Database migrations applied',
       detail:
-        'Migrations 001–021 on Supabase (family portal, token expiry, Stripe cols, money settle).',
+        'Migrations 001–023 on Supabase (craft realtime, office admin, family portal, Stripe, money settle).',
       done: migrationsDone,
     },
     {
@@ -135,6 +135,17 @@ export function buildLaunchSuggestions(input: {
       done: craftOk,
       optional: true,
       href: '/craft',
+    },
+    {
+      id: 'env_slack',
+      group: 'env',
+      label: 'Slack office channel (or N/A)',
+      detail:
+        'BEACON_SLACK_WEBHOOK_URL (or bot token + channel). Test from Comms → Slack.',
+      done:
+        Boolean(checklist.slack) || checkStatus(health, 'slack_office') === 'ok',
+      optional: true,
+      href: '/admin/emails',
     },
   ]
 

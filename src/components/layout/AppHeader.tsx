@@ -46,6 +46,15 @@ export function buildNav(role: Profile['role'] | null): NavItem[] {
   const staffComms = canAccessEmailOutbox(role)
 
   if (isPrincipal) {
+    if (role === 'admin') {
+      return [
+        { href: '/principal', label: 'Home' },
+        { href: '/announcements', label: 'News' },
+        ...(staffComms ? [{ href: '/admin/emails', label: 'Comms' }] : []),
+        { href: '/settings', label: 'Settings' },
+        { href: '/school', label: 'School site' },
+      ]
+    }
     return [
       { href: '/dashboard', label: 'Home' },
       { href: '/principal', label: 'Office' },
@@ -143,7 +152,7 @@ function MoreMenu({
       {open ? (
         <div
           role="menu"
-          className="absolute left-0 top-full z-50 mt-1 min-w-[10.5rem] rounded-xl border border-chrome-border bg-chrome-elevated py-1 shadow-lg"
+          className="absolute left-0 top-full z-[60] mt-1 min-w-[10.5rem] rounded-xl border border-chrome-border bg-chrome-elevated py-1 shadow-lg"
         >
           {items.map((item) => {
             const active = item.href === activeHref
@@ -193,15 +202,17 @@ export function AppHeader({
   const roleText = roleLabel(role)
   const initial = displayName.charAt(0).toUpperCase()
 
-  // Mobile: keep a short primary rail; secondary tools stay in More on desktop
-  const mobileNav = staffGroups
-    ? [...staffGroups.primary, ...staffGroups.more]
-    : nav
+  // Mobile: primary rail + More overflow (same as desktop — avoid 12-tab scroll)
+  const mobilePrimary = staffGroups?.primary ?? nav
+  const mobileMore = staffGroups?.more ?? []
 
   return (
     <header className="sticky top-0 z-50 border-b border-chrome-border bg-chrome/95 text-chrome-foreground backdrop-blur-xl pt-safe">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-3 py-2.5 sm:gap-4 sm:px-6">
-        <Link href="/dashboard" className="flex min-w-0 shrink-0 items-center gap-2.5">
+        <Link
+          href={role === 'admin' ? '/principal' : '/dashboard'}
+          className="flex min-w-0 shrink-0 items-center gap-2.5"
+        >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-chrome-border bg-chrome-elevated text-sm font-semibold text-chrome-foreground">
             B
           </span>
@@ -260,10 +271,10 @@ export function AppHeader({
       </div>
 
       <nav
-        className="flex gap-0.5 overflow-x-auto border-t border-chrome-border px-2 py-1.5 md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="nav-scroll-mask flex items-center gap-0.5 overflow-x-auto border-t border-chrome-border px-2 py-1.5 pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         aria-label="Main navigation"
       >
-        {mobileNav.map((item) => (
+        {mobilePrimary.map((item) => (
           <NavLink
             key={item.href}
             item={item}
@@ -271,6 +282,7 @@ export function AppHeader({
             className="text-xs"
           />
         ))}
+        {mobileMore.length > 0 ? <MoreMenu items={mobileMore} activeHref={activeHref} /> : null}
       </nav>
     </header>
   )

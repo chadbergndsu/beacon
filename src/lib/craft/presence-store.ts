@@ -79,3 +79,7 @@ export function clearMockPresence(schoolId: string): void {
     if (key.startsWith(prefix)) mockStore.delete(key)
   }
 }
+
+export function clearMockPresenceForStudent(schoolId: string, studentId: string): void {
+  mockStore.delete(storeKey(schoolId, studentId))
+}

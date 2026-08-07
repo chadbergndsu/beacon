@@ -19,7 +19,7 @@ export async function submitPilotFeedbackAction(input: {
   pageTitle?: string | null
   userAgent?: string | null
 }): Promise<
-  | { ok: true; emailed: boolean; pushed: boolean; note: string }
+  | { ok: true; emailed: boolean; pushed: boolean; slacked: boolean; note: string }
   | { ok: false; error: string }
 > {
   const supabase = await createClient()
@@ -72,6 +72,7 @@ export async function submitPilotFeedbackAction(input: {
     ok: true,
     emailed: notify.emailed,
     pushed: notify.pushed,
+    slacked: notify.slacked,
     note: notify.note,
   }
 }

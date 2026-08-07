@@ -11,14 +11,16 @@ import { useCraftUi } from './CraftUiContext'
 function PresenceAvatar({
   marker,
   position,
+  highlighted,
 }: {
   marker: CraftVisibleMarker
   position: [number, number, number]
+  highlighted: boolean
 }) {
   const group = useRef<THREE.Group>(null)
   const ring = useRef<THREE.Mesh>(null)
-  const color = marker.anonymized ? '#94a3b8' : '#22c55e'
-  const emissive = marker.anonymized ? '#64748b' : '#16a34a'
+  const color = marker.anonymized ? '#94a3b8' : highlighted ? '#fbbf24' : '#22c55e'
+  const emissive = marker.anonymized ? '#64748b' : highlighted ? '#d97706' : '#16a34a'
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime()
@@ -46,7 +48,11 @@ function PresenceAvatar({
         <meshStandardMaterial color={color} transparent opacity={0.4} emissive={emissive} emissiveIntensity={0.5} />
       </mesh>
       <Html center distanceFactor={11} style={{ pointerEvents: 'none' }}>
-        <div className="rounded-full border border-white/20 bg-black/65 px-2 py-0.5 text-[9px] font-medium text-white whitespace-nowrap shadow-lg backdrop-blur-sm">
+        <div
+          className={`rounded-full border px-2 py-0.5 text-[9px] font-medium text-white whitespace-nowrap shadow-lg backdrop-blur-sm ${
+            highlighted ? 'border-amber-300 bg-amber-600/90' : 'border-white/20 bg-black/65'
+          }`}
+        >
           {marker.label}
         </div>
       </Html>
@@ -82,7 +88,7 @@ export function RoomLabels() {
 }
 
 export function PresenceMarkers() {
-  const { layout, markers, activeFloorId } = useCraftUi()
+  const { layout, markers, activeFloorId, highlightMarkerId } = useCraftUi()
   const floorRoomIds = new Set(getFloor(layout, activeFloorId)?.rooms.map((r) => r.roomId))
   const visible = markers.filter((m) => floorRoomIds.has(m.roomId))
 
@@ -113,7 +119,12 @@ export function PresenceMarkers() {
   return (
     <>
       {positioned.map(({ marker, position }) => (
-        <PresenceAvatar key={marker.id} marker={marker} position={position} />
+        <PresenceAvatar
+          key={marker.id}
+          marker={marker}
+          position={position}
+          highlighted={marker.id === highlightMarkerId}
+        />
       ))}
     </>
   )

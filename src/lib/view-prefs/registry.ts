@@ -25,6 +25,11 @@ export const SCREEN_CATALOG: Record<ScreenId, { title: string; sections: Section
         locked: true,
       },
       {
+        id: 'teacher_encouragement',
+        label: 'Teacher encouragement',
+        description: 'Random saying or scripture — tap for another',
+      },
+      {
         id: 'teacher_today',
         label: "Today's focus",
         description: 'Missing work rollup for your classes',
@@ -116,6 +121,7 @@ export const SCREEN_CATALOG: Record<ScreenId, { title: string; sections: Section
   principal_overview: {
     title: 'Principal office',
     sections: [
+      { id: 'daily_tasks', label: 'Daily tasks' },
       { id: 'beacon_signal', label: 'Beacon Signal' },
       { id: 'stats', label: 'School stats' },
       { id: 'quickbooks', label: 'QuickBooks card' },
@@ -129,6 +135,7 @@ export const SCREEN_CATALOG: Record<ScreenId, { title: string; sections: Section
       { id: 'header', label: 'Comms header', locked: true },
       { id: 'compose', label: 'Compose message' },
       { id: 'test_email', label: 'Test email' },
+      { id: 'test_slack', label: 'Slack test' },
       { id: 'outbox', label: 'Email outbox' },
       { id: 'tips', label: 'Delivery tips' },
     ],

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import type { Role } from '@/lib/types'
 import type { CraftVisibleMarker } from '@/lib/craft/types'
@@ -7,7 +8,7 @@ import { roleLabel } from '@/lib/roles'
 import { useCraftUi } from './CraftUiContext'
 import { FloorSwitcher } from './FloorSwitcher'
 import { Minimap, Crosshair } from './Minimap'
-import { MockScanPanel, RoomSearch } from './CraftPanels'
+import { MockScanPanel, PersonSearch, RoomSearch } from './CraftPanels'
 import { TouchMovePad } from './TouchMovePad'
 import { TouchLookZone } from './TouchLookZone'
 import { VoxelScene } from './VoxelScene'
@@ -17,6 +18,7 @@ export function CraftHud({
   canFly,
   canMockScan,
   markerCount,
+  markers,
   schoolId,
   onRefresh,
 }: {
@@ -24,39 +26,65 @@ export function CraftHud({
   canFly: boolean
   canMockScan: boolean
   markerCount: number
+  markers: CraftVisibleMarker[]
   schoolId: string
   onRefresh: () => void
 }) {
-  const { flyMode, setFlyMode, requestTeleport, layout, pointerLocked } = useCraftUi()
+  const {
+    flyMode,
+    setFlyMode,
+    requestTeleport,
+    layout,
+    pointerLocked,
+    setHighlightMarkerId,
+    setFollowMarkerId,
+  } = useCraftUi()
+  const [toolsOpen, setToolsOpen] = useState(false)
+
+  function focusPerson(marker: CraftVisibleMarker) {
+    setHighlightMarkerId(marker.id)
+    setFollowMarkerId(marker.id)
+    requestTeleport(marker.roomId)
+  }
 
   return (
-    <div className="relative flex h-[calc(100dvh-8rem)] min-h-[420px] flex-col overflow-hidden rounded-xl border border-border bg-slate-100 shadow-inner">
-      <div className="z-10 flex flex-wrap items-start justify-between gap-3 border-b border-border/80 bg-white/90 px-3 py-2 backdrop-blur">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">BeaconCraft</h1>
-          <p className="text-xs text-muted-foreground">
-            {layout.name} · {roleLabel(role)} view · {markerCount} visible on campus
+    <div className="relative flex h-[calc(100dvh-4.5rem)] min-h-[360px] flex-col overflow-hidden rounded-xl border border-border bg-slate-950 shadow-inner sm:h-[calc(100dvh-8rem)] sm:min-h-[420px]">
+      <div className="z-20 flex items-center justify-between gap-2 border-b border-white/10 bg-slate-900/90 px-2 py-1.5 backdrop-blur sm:gap-3 sm:px-3 sm:py-2">
+        <div className="min-w-0">
+          <h1 className="truncate text-sm font-bold text-white sm:text-lg">BeaconCraft</h1>
+          <p className="truncate text-[10px] text-slate-300 sm:text-xs">
+            {layout.name} · {roleLabel(role)} · {markerCount} visible
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div className="flex shrink-0 items-center gap-1 text-xs sm:gap-2">
           {canFly ? (
-            <label className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1">
+            <label className="hidden items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2 py-1 text-white sm:inline-flex">
               <input
                 type="checkbox"
                 checked={flyMode}
                 onChange={(e) => setFlyMode(e.target.checked)}
               />
-              Fly mode
+              Fly
             </label>
           ) : null}
           <button
             type="button"
             onClick={onRefresh}
-            className="rounded-full border border-slate-200 bg-white px-3 py-1 hover:bg-slate-50"
+            className="rounded-full border border-white/15 bg-white/10 px-2 py-1 text-[11px] text-white hover:bg-white/15 sm:px-3"
           >
-            Refresh presence
+            Refresh
           </button>
-          <Link href="/dashboard" className="rounded-full border border-slate-200 bg-white px-3 py-1 hover:bg-slate-50">
+          <button
+            type="button"
+            className="rounded-full border border-white/15 bg-white/10 px-2 py-1 text-[11px] text-white hover:bg-white/15 sm:hidden"
+            onClick={() => setToolsOpen((v) => !v)}
+          >
+            {toolsOpen ? 'Hide' : 'Search'}
+          </button>
+          <Link
+            href="/dashboard"
+            className="rounded-full border border-white/15 bg-white/10 px-2 py-1 text-[11px] text-white hover:bg-white/15 sm:px-3"
+          >
             Exit
           </Link>
         </div>
@@ -67,9 +95,9 @@ export function CraftHud({
         <Crosshair />
         <FloorSwitcher />
         {!pointerLocked ? (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="rounded-lg bg-black/50 px-4 py-2 text-sm text-white shadow-lg backdrop-blur-sm">
-              Click to capture mouse · WASD · Shift sprint · Space/Shift fly (admin) · Mobile pads
+          <div className="pointer-events-none absolute inset-x-0 top-12 flex justify-center px-3 sm:top-16">
+            <div className="max-w-xs rounded-lg bg-black/55 px-3 py-1.5 text-center text-[11px] text-white shadow-lg backdrop-blur-sm sm:text-sm">
+              Tap look zone · move pad · Search to find people
             </div>
           </div>
         ) : null}
@@ -78,9 +106,18 @@ export function CraftHud({
         <TouchLookZone />
       </div>
 
-      <div className="z-10 grid gap-3 border-t border-border/80 bg-white/95 p-3 sm:grid-cols-2">
+      <div
+        className={`z-20 grid gap-2 border-t border-white/10 bg-white/95 p-2 sm:grid-cols-2 sm:gap-3 sm:p-3 ${
+          toolsOpen ? 'block' : 'hidden sm:grid'
+        }`}
+      >
+        <PersonSearch markers={markers} onSelectPerson={focusPerson} />
         <RoomSearch layout={layout} onSelectRoom={requestTeleport} />
-        {canMockScan ? <MockScanPanel layout={layout} schoolId={schoolId} onScan={onRefresh} /> : null}
+        {canMockScan ? (
+          <div className="sm:col-span-2">
+            <MockScanPanel layout={layout} schoolId={schoolId} onScan={onRefresh} />
+          </div>
+        ) : null}
       </div>
     </div>
   )

@@ -37,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <main className="mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 py-4 sm:px-6 sm:py-6">
           <div className="animate-beacon-in min-w-0">{children}</div>
         </main>
-        <footer className="border-t border-border/70 px-4 py-3 pb-safe text-center text-[11px] text-muted-foreground">
+        <footer className="border-t border-border/80 px-4 py-3 pb-safe text-center text-[11px] text-muted-foreground">
           Beacon · {brand.name}
           {brand.websiteUrl ? (
             <>

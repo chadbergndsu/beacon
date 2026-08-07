@@ -602,9 +602,26 @@ svg {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
+  padding-left: max(0.25rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.25rem, env(safe-area-inset-right, 0px));
 }
 .mobile-scroll-x::-webkit-scrollbar {
   display: none;
+}
+
+/* Fade hint when horizontal nav overflows (mobile toolbars) */
+.nav-scroll-mask {
+  position: relative;
+}
+.nav-scroll-mask::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1.75rem;
+  background: linear-gradient(to left, var(--chrome) 15%, transparent);
+  pointer-events: none;
 }
 
 /* Sticky safe padding under fixed headers */
@@ -613,4 +630,29 @@ svg {
 }
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Principal lobby — leadership quote ticker */
+@keyframes leadership-quote-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.leadership-quote-track {
+  animation: leadership-quote-scroll 38s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leadership-quote-track {
+    animation: none;
+    width: 100%;
+    white-space: normal;
+  }
+  .leadership-quote-track span:last-child {
+    display: none;
+  }
 }
