@@ -7,12 +7,13 @@ import { canTriggerMockScans, canUseFlyMode } from '@/lib/craft/presence'
 import { useCraftPresenceRealtime } from '@/lib/craft/realtime-client'
 import { CraftUiProvider } from '@/components/craft/CraftUiContext'
 import { CraftHud, MarkerLegend } from '@/components/craft/CraftHud'
-import { TeacherRoomPanel, TrailPanel } from '@/components/craft/CraftSidePanels'
+import { ParentWherePanel, TeacherRoomPanel, TrailPanel } from '@/components/craft/CraftSidePanels'
 
 type PresenceResponse = {
   ok: boolean
   markers?: CraftVisibleMarker[]
   trails?: CraftTrailPoint[]
+  enrollmentByRoom?: Record<string, number>
   teacherRoster?: { id: string; name: string; gradeLevel: string | null }[]
   meta?: { teacherRoomIds?: string[]; roomsMapped?: number; roomsTotal?: number }
   error?: string
@@ -29,6 +30,7 @@ export function CraftClient({
 }) {
   const [markers, setMarkers] = useState<CraftVisibleMarker[]>([])
   const [trails, setTrails] = useState<CraftTrailPoint[]>([])
+  const [enrollmentByRoom, setEnrollmentByRoom] = useState<Record<string, number>>({})
   const [teacherRoster, setTeacherRoster] = useState<
     { id: string; name: string; gradeLevel: string | null }[]
   >([])
@@ -44,6 +46,7 @@ export function CraftClient({
     setError(null)
     setMarkers(data.markers ?? [])
     setTrails(data.trails ?? [])
+    setEnrollmentByRoom(data.enrollmentByRoom ?? {})
     setTeacherRoster(data.teacherRoster ?? [])
     setTeacherRoomIds(data.meta?.teacherRoomIds ?? [])
   }, [])
@@ -86,6 +89,7 @@ export function CraftClient({
       layout={layout}
       markers={markers}
       trails={trails}
+      enrollmentByRoom={enrollmentByRoom}
       flyMode={flyMode}
       setFlyMode={setFlyMode}
     >
@@ -95,6 +99,7 @@ export function CraftClient({
             {error}
           </div>
         ) : null}
+        {role === 'parent' ? <ParentWherePanel markers={markers} /> : null}
         <CraftHud
           role={role}
           canFly={canUseFlyMode(role)}

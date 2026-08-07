@@ -32,7 +32,7 @@ function room(
 export const DEMO_SCHOOL_LAYOUT: CraftCampusLayout = {
   version: 2,
   id: 'demo-pilot-campus',
-  name: 'Pilot Elementary',
+  name: 'Lighthouse Christian Academy',
   blockSize: 1,
   floors: [
     {

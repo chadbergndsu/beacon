@@ -1,6 +1,6 @@
 'use client'
 
-import type { CraftTrailPoint } from '@/lib/craft/types'
+import type { CraftTrailPoint, CraftVisibleMarker } from '@/lib/craft/types'
 import { allRooms, getRoomById } from '@/lib/craft/campus'
 import { useCraftUi } from './CraftUiContext'
 
@@ -58,8 +58,10 @@ export function TeacherRoomPanel({
   roster: { id: string; name: string; gradeLevel: string | null }[]
   roomIds: string[]
 }) {
-  const { layout, markers, requestTeleport } = useCraftUi()
+  const { layout, markers, requestTeleport, enrollmentByRoom } = useCraftUi()
   const focusRoom = allRooms(layout).find((r) => roomIds.includes(r.roomId))
+  const enrolled = focusRoom ? enrollmentByRoom[focusRoom.roomId] : undefined
+  const presentCount = markers.filter((m) => m.kind !== 'teacher' && roomIds.includes(m.roomId)).length
 
   return (
     <div className="rounded-lg border border-border bg-card/60 p-3">
@@ -76,12 +78,22 @@ export function TeacherRoomPanel({
         ) : null}
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
-        {markers.length} student{markers.length === 1 ? '' : 's'} visible in your room(s) right now.
+        {typeof enrolled === 'number' ? (
+          <>
+            {enrolled} enrolled
+            {presentCount ? ` · ${presentCount} present on twin` : ''}
+          </>
+        ) : (
+          <>
+            {presentCount} student{presentCount === 1 ? '' : 's'} visible in your room(s) right now.
+          </>
+        )}
       </p>
       {roster.length ? (
         <ul className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
           {roster.map((s) => {
-            const present = markers.some((m) => m.id === s.id && !m.anonymized)
+            // Match by id even when twin labels are anonymized to "Student"
+            const present = markers.some((m) => m.id === s.id)
             return (
               <li
                 key={s.id}
@@ -98,8 +110,40 @@ export function TeacherRoomPanel({
         <p className="mt-2 text-xs text-muted-foreground">Link a class to a room for roster hints.</p>
       )}
       <p className="mt-2 text-[11px] text-muted-foreground">
-        Attendance desk actions coming next — for now use Scan or kiosk.
+        Twin labels stay anonymous for minors; your roster still shows real names for your class.
       </p>
+    </div>
+  )
+}
+
+/** Parent-only: real name + room for linked children. */
+export function ParentWherePanel({ markers }: { markers: CraftVisibleMarker[] }) {
+  const { layout } = useCraftUi()
+  const kids = markers.filter((m) => m.kind !== 'teacher' && !m.anonymized)
+  if (!kids.length) {
+    return (
+      <div className="rounded-lg border border-sky-200 bg-sky-50/90 px-3 py-2 text-sm text-sky-950">
+        <p className="font-medium">Where is my child?</p>
+        <p className="mt-1 text-xs text-sky-800">
+          No linked student is on campus right now. When they scan in, you’ll see their name and room
+          here.
+        </p>
+      </div>
+    )
+  }
+  return (
+    <div className="rounded-lg border border-sky-200 bg-sky-50/90 px-3 py-2 text-sm text-sky-950">
+      <p className="font-medium">Where is my child?</p>
+      <ul className="mt-2 space-y-1 text-xs">
+        {kids.map((m) => {
+          const room = getRoomById(layout, m.roomId)
+          return (
+            <li key={m.id}>
+              <strong>{m.label}</strong> is in {room?.name ?? m.roomId}
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }

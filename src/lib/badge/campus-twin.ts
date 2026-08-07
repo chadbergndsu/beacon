@@ -96,7 +96,8 @@ export function notifyCampusTwin(scan: TwinScanNotify): void {
   const body = {
     userId: scan.studentId,
     roomId: craftRoom,
-    displayName: scan.studentName,
+    // Public twin must never receive real minor names
+    displayName: 'Student',
     role: 'student' as const,
     timestamp: new Date().toISOString(),
   }

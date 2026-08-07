@@ -28,6 +28,8 @@ type CraftUiContextValue = {
   switchFloor: (floorId: string, roomId?: string | null) => void
   markers: CraftVisibleMarker[]
   trails: CraftTrailPoint[]
+  /** Active enrollments per layout room (real counts; no names). */
+  enrollmentByRoom: Record<string, number>
   player: PlayerSnapshot
   setPlayer: (p: PlayerSnapshot) => void
   flyMode: boolean
@@ -58,6 +60,7 @@ export function CraftUiProvider({
   layout,
   markers,
   trails = [],
+  enrollmentByRoom = {},
   flyMode,
   setFlyMode,
   children,
@@ -65,6 +68,7 @@ export function CraftUiProvider({
   layout: CraftCampusLayout
   markers: CraftVisibleMarker[]
   trails?: CraftTrailPoint[]
+  enrollmentByRoom?: Record<string, number>
   flyMode: boolean
   setFlyMode: (v: boolean) => void
   children: ReactNode
@@ -103,6 +107,7 @@ export function CraftUiProvider({
       switchFloor,
       markers,
       trails,
+      enrollmentByRoom,
       player,
       setPlayer,
       flyMode,
@@ -124,6 +129,7 @@ export function CraftUiProvider({
       switchFloor,
       markers,
       trails,
+      enrollmentByRoom,
       player,
       flyMode,
       setFlyMode,

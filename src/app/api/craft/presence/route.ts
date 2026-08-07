@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server'
 import { requireCraftProfile } from '@/lib/craft/auth-api'
 import { allRooms } from '@/lib/craft/campus'
 import { loadCampusPresence } from '@/lib/craft/presence-store'
-import { filterPresenceForViewer, defaultAnonymizeForRole, mergePresenceWithStaff } from '@/lib/craft/presence'
+import {
+  filterPresenceForViewer,
+  defaultAnonymizeForRole,
+  mergePresenceWithStaff,
+  anonymizeTrailsForDisplay,
+} from '@/lib/craft/presence'
+import { loadEnrollmentByLayoutRoom, loadTeacherNamesByLayoutRoom } from '@/lib/craft/staff-enrollment'
+import { lighthouseEnrollmentByRoom } from '@/lib/craft/lighthouse-staff'
 import { isLeadership } from '@/lib/roles'
 import { loadCraftRoomMapping } from '@/lib/craft/rooms'
 import { loadCraftLayoutForSchool } from '@/lib/craft/settings'
@@ -80,6 +87,13 @@ export async function GET() {
     parentStudentIds = (links ?? []).map((l) => l.student_id as string)
   }
 
+  const [teacherNameByRoom, dbEnrollment] = await Promise.all([
+    loadTeacherNamesByLayoutRoom(schoolId, layout, layoutToDb, dbToLayout),
+    loadEnrollmentByLayoutRoom(schoolId, dbToLayout),
+  ])
+  // ~110 enrolled (younger-heavy) until real class enrollments are mapped
+  const enrollmentByRoom = lighthouseEnrollmentByRoom(dbEnrollment)
+
   const markers = mergePresenceWithStaff(
     filterPresenceForViewer(records, {
       role: profile.role,
@@ -87,16 +101,19 @@ export async function GET() {
       parentStudentIds,
       anonymizeOthers: defaultAnonymizeForRole(profile.role),
     }),
-    layout
+    layout,
+    teacherNameByRoom
   )
 
   let trails: Awaited<ReturnType<typeof loadPresenceTrails>> = []
   if (isLeadership(profile.role)) {
-    trails = await loadPresenceTrails({
+    const raw = await loadPresenceTrails({
       schoolId,
       layoutToDbRoom: layoutToDb,
       dbToLayoutRoom: dbToLayout,
     })
+    // Twin / shared screens: never show minor names on trail strip
+    trails = anonymizeTrailsForDisplay(raw)
   }
 
   return NextResponse.json(
@@ -107,12 +124,14 @@ export async function GET() {
       markers,
       trails,
       teacherRoster,
+      enrollmentByRoom,
       meta: {
         role: profile.role,
         teacherRoomIds,
         roomsMapped: allRooms(layout).filter((r) => layoutToDb[r.roomId]).length,
         roomsTotal: allRooms(layout).length,
         flyMode: isLeadership(profile.role),
+        privacy: 'minors_anonymized_on_twin_except_linked_parent_children',
       },
     },
     { headers: { 'Cache-Control': 'no-store' } }

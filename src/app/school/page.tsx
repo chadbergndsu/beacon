@@ -161,7 +161,8 @@ export default async function SchoolWebsitePage({
               </h2>
               <p className="mt-3 text-muted-foreground leading-relaxed">
                 Take a guided tour of {brand.name} — entrance, classrooms, chapel, gym, and yard —
-                in a live digital twin. No login required for the public tour.
+                in a live digital twin. Public tour mode uses <strong>fictional student names</strong>{' '}
+                only (kids are minors).
               </p>
               <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
                 {[
@@ -198,7 +199,8 @@ export default async function SchoolWebsitePage({
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Opens in a new tab · works on laptop and phone · privacy-first public tour mode
+                  Opens in a new tab · fictional student names on the public tour · staff twin uses
+                  real teachers + enrollment counts; parents see where their linked child is
                 </p>
               </CardContent>
             </Card>

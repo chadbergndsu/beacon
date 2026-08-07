@@ -8,6 +8,7 @@ import { useCraftUi } from './CraftUiContext'
 /**
  * Kid-friendly low-poly people — no glowing capsules / blank sphere heads.
  * Olivia: “people to not look so creepy.”
+ * Named staff looks: Jen Berg blond, Chris Cowan bigger, etc.
  */
 function PresenceAvatar({
   marker,
@@ -17,17 +18,22 @@ function PresenceAvatar({
   position: [number, number, number]
 }) {
   const isTeacher = marker.kind === 'teacher'
-  const skin = marker.anonymized ? '#cbd5e1' : '#f2c4a0'
+  const look = marker.look
+  const scale = look?.scale && look.scale > 0 ? look.scale : 1
+  const skin = marker.anonymized ? '#cbd5e1' : look?.skin || '#f2c4a0'
   const shirt = marker.anonymized
     ? '#94a3b8'
-    : isTeacher
-      ? '#1e3a5f'
-      : '#3b82f6'
-  const pants = marker.anonymized ? '#64748b' : isTeacher ? '#0f172a' : '#1d4ed8'
-  const hair = marker.anonymized ? '#94a3b8' : isTeacher ? '#4b5563' : '#78350f'
+    : look?.shirt || (isTeacher ? '#1e3a5f' : '#3b82f6')
+  const pants = marker.anonymized
+    ? '#64748b'
+    : look?.pants || (isTeacher ? '#0f172a' : '#1d4ed8')
+  const hair = marker.anonymized
+    ? '#94a3b8'
+    : look?.hair || (isTeacher ? '#4b5563' : '#78350f')
+  const roleHint = look?.roleLabel || (isTeacher ? 'teacher' : '')
 
   return (
-    <group position={position}>
+    <group position={position} scale={scale}>
       {/* Soft ground shadow — no pulsing ring */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <circleGeometry args={[0.32, 20]} />
@@ -66,13 +72,19 @@ function PresenceAvatar({
         <meshStandardMaterial color={skin} roughness={0.75} />
       </mesh>
 
-      {/* Hair cap */}
+      {/* Hair cap — longer blond volume for Jen Berg */}
       <mesh position={[0, 1.26, 0]}>
-        <boxGeometry args={[0.3, 0.1, 0.3]} />
+        <boxGeometry args={[0.32, look?.hair === '#f5d76e' ? 0.14 : 0.1, 0.32]} />
         <meshStandardMaterial color={hair} roughness={0.9} />
       </mesh>
+      {look?.hair === '#f5d76e' ? (
+        <mesh position={[0, 1.18, -0.12]}>
+          <boxGeometry args={[0.28, 0.22, 0.12]} />
+          <meshStandardMaterial color={hair} roughness={0.9} />
+        </mesh>
+      ) : null}
 
-      {/* Simple face — eyes + smile (always faces +Z; good enough for twin) */}
+      {/* Simple face — eyes + smile */}
       <mesh position={[-0.07, 1.14, 0.15]}>
         <boxGeometry args={[0.05, 0.05, 0.02]} />
         <meshBasicMaterial color="#1e293b" />
@@ -95,7 +107,7 @@ function PresenceAvatar({
           }
         >
           {marker.label}
-          {isTeacher ? ' · teacher' : ''}
+          {roleHint ? ` · ${roleHint}` : ''}
         </div>
       </Html>
     </group>
@@ -103,7 +115,7 @@ function PresenceAvatar({
 }
 
 export function RoomLabels() {
-  const { layout, activeFloorId } = useCraftUi()
+  const { layout, activeFloorId, enrollmentByRoom } = useCraftUi()
   const floor = getFloor(layout, activeFloorId)
   if (!floor) return null
 
@@ -111,6 +123,7 @@ export function RoomLabels() {
     <>
       {floor.rooms.map((room) => {
         const [x, y, z] = getRoomCenter(layout, room)
+        const enrolled = enrollmentByRoom[room.roomId]
         return (
           <Html
             key={room.roomId}
@@ -121,6 +134,9 @@ export function RoomLabels() {
           >
             <div className="rounded-md border border-white/10 bg-slate-900/70 px-2 py-1 text-[10px] font-semibold tracking-wide text-white whitespace-nowrap shadow-md backdrop-blur-sm">
               {room.name}
+              {typeof enrolled === 'number' ? (
+                <span className="ml-1 font-normal text-sky-200/90">· {enrolled} enrolled</span>
+              ) : null}
             </div>
           </Html>
         )
@@ -146,7 +162,6 @@ export function PresenceMarkers() {
       const room = getRoomById(layout, roomId)
       if (!room) continue
       const [cx, cy, cz] = getRoomCenter(layout, room)
-      // Teachers stand nearer the front of the room; students fan around
       const teachers = list.filter((m) => m.kind === 'teacher')
       const students = list.filter((m) => m.kind !== 'teacher')
       teachers.forEach((marker, i) => {

@@ -62,6 +62,16 @@ export type CraftPresenceRecord = {
   source: 'mock' | 'badge'
 }
 
+/** Optional avatar tint/scale for named staff (Jen blond, Chris bigger, etc.). */
+export type CraftPersonLook = {
+  hair?: string
+  skin?: string
+  shirt?: string
+  pants?: string
+  scale?: number
+  roleLabel?: string
+}
+
 export type CraftVisibleMarker = {
   id: string
   label: string
@@ -70,6 +80,7 @@ export type CraftVisibleMarker = {
   anonymized: boolean
   /** Student presence vs staff NPC / teacher-in-room */
   kind?: 'student' | 'teacher'
+  look?: CraftPersonLook
 }
 
 export type CraftTrailPoint = {

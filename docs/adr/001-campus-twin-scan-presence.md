@@ -12,7 +12,7 @@ When a student **scans in** at a room kiosk (or RFID device):
 3. Beacon **fans out** a presence event to **BeaconCraft** so the 3D twin places that student **in the matching room** (live markers / glow).
 4. Scan-out moves them out of the room (twin room → exit/off-campus or cleared).
 
-Public marketing tour (`/?tour=1`) stays privacy-first (no real student names). Staff twin views can show real first names once SSO/session is wired.
+Public marketing tour (`/?tour=1`) stays privacy-first (fictional student names only). Staff twin: real **teacher** names + enrollment counts; student markers anonymized (`Student`). Parents see real name + room for **linked** children only.
 
 ## Why separate apps
 
@@ -100,7 +100,9 @@ Kid review of the School Digital Twin asked for:
 
 1. **Two floors** — already in demo layout (`Floor 1` / `Floor 2` + stairs/elevator)
 2. **Walk with arrow keys** — WASD **and** arrows in in-app `/craft` (`PlayerController`)
-3. **Teachers in rooms** — demo staff markers in every classroom/office/gym (`staffMarkersForLayout`)
+3. **Teachers in rooms** — staff markers (prefer **real** teacher names from roster mapping)
 4. **People not creepy** — low-poly block people with faces (no glowing capsules / blank spheres)
+
+**Minor privacy (follow-up):** public/tour surfaces use fictional student names only. Staff twin shows real teachers + enrollment counts (~110 at Lighthouse, heavier younger); parents see where their linked child is. Public twin fan-out never sends real `displayName`s. Named staff: Leigh Evans (1st), Debbie (2–3), Jen Berg (4–5, blond), John/Lexie Lynn (middle/HS), Frank (HS), Marian (secretary), Chris Cowan (principal, larger avatar).
 
 In-app BeaconCraft at `/craft` is the primary surface for this feedback; external `beaconcraft.vercel.app` remains the marketing tour host.
