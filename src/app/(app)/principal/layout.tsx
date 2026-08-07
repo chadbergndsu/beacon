@@ -1,11 +1,14 @@
 import Link from 'next/link'
 import { PrincipalNav } from '@/components/principal/PrincipalNav'
+import { LeadershipQuoteTicker } from '@/components/principal/LeadershipQuoteTicker'
 import { buttonClassName } from '@/components/ui/button'
 import { requirePrincipal } from '@/lib/principal'
+import { leadershipQuoteForDate } from '@/lib/principal/leadership-quotes'
 
 export default async function PrincipalLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await requirePrincipal()
   const first = profile.full_name?.trim().split(/\s+/)[0]
+  const leadershipQuote = leadershipQuoteForDate()
 
   return (
     <div className="page-stack animate-beacon-in">
@@ -36,6 +39,9 @@ export default async function PrincipalLayout({ children }: { children: React.Re
         </div>
         <div className="bg-muted/30 px-4 py-3.5 sm:px-6">
           <PrincipalNav />
+        </div>
+        <div className="border-t border-border/70 bg-card px-4 py-3 sm:px-6">
+          <LeadershipQuoteTicker quote={leadershipQuote} />
         </div>
       </div>
       {children}
