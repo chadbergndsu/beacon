@@ -46,6 +46,15 @@ export function buildNav(role: Profile['role'] | null): NavItem[] {
   const staffComms = canAccessEmailOutbox(role)
 
   if (isPrincipal) {
+    if (role === 'admin') {
+      return [
+        { href: '/principal', label: 'Home' },
+        { href: '/announcements', label: 'News' },
+        ...(staffComms ? [{ href: '/admin/emails', label: 'Comms' }] : []),
+        { href: '/settings', label: 'Settings' },
+        { href: '/school', label: 'School site' },
+      ]
+    }
     return [
       { href: '/dashboard', label: 'Home' },
       { href: '/principal', label: 'Office' },
@@ -200,7 +209,10 @@ export function AppHeader({
   return (
     <header className="sticky top-0 z-50 border-b border-chrome-border bg-chrome/95 text-chrome-foreground backdrop-blur-xl pt-safe">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-3 py-2.5 sm:gap-4 sm:px-6">
-        <Link href="/dashboard" className="flex min-w-0 shrink-0 items-center gap-2.5">
+        <Link
+          href={role === 'admin' ? '/principal' : '/dashboard'}
+          className="flex min-w-0 shrink-0 items-center gap-2.5"
+        >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-chrome-border bg-chrome-elevated text-sm font-semibold text-chrome-foreground">
             B
           </span>

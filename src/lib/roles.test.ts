@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   canEnterGrades,
   demoPrincipalEmail,
+  demoOfficeAdminEmail,
   effectiveRole,
   homePathForRole,
   isLeadership,
@@ -11,6 +12,8 @@ describe('effectiveRole', () => {
   afterEach(() => {
     delete process.env.BEACON_PRINCIPAL_EMAIL
     delete process.env.BEACON_DEMO_PRINCIPAL_EMAIL
+    delete process.env.BEACON_OFFICE_ADMIN_EMAIL
+    delete process.env.BEACON_DEMO_OFFICE_ADMIN_EMAIL
   })
 
   it('uses profile role by default', () => {
@@ -62,9 +65,15 @@ describe('permissions', () => {
     expect(canEnterGrades('teacher', 't1', 't2')).toBe(false)
     expect(canEnterGrades('parent', 't1', 'p1')).toBe(false)
   })
-  it('routes principal home', () => {
+  it('routes principal and office admin home', () => {
     expect(homePathForRole('principal')).toBe('/principal')
+    expect(homePathForRole('admin')).toBe('/principal')
     expect(homePathForRole('teacher')).toBe('/dashboard')
+  })
+
+  it('reads office admin email env for login prefill', () => {
+    process.env.BEACON_OFFICE_ADMIN_EMAIL = 'marian@school.org'
+    expect(demoOfficeAdminEmail()).toBe('marian@school.org')
   })
   it('detects leadership', () => {
     expect(isLeadership('principal')).toBe(true)

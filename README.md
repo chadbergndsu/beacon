@@ -103,7 +103,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth + client |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server actions / admin client (never expose to browser) |
 
-Then apply **migrations 001–022** (see below) and:
+Then apply **migrations 001–023** (see below) and:
 
 ```bash
 npm run dev
@@ -137,7 +137,7 @@ Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, securit
 
 ### Database migrations
 
-**Source of truth:** `supabase/migrations/` files **001–022** in filename order.
+**Source of truth:** `supabase/migrations/` files **001–023** in filename order.
 
 ```bash
 # Preferred
@@ -191,6 +191,8 @@ Password-only apply **requires** `SUPABASE_PROJECT_REF` (scripts exit with an er
 4. Public `/school`, login, headers, and emails use that brand  
 
 Optional: `BEACON_PRINCIPAL_EMAIL=you@yourschool.org` elevates that user when their profile role is already **admin, staff, or principal** (not parent/teacher). Alias: `BEACON_DEMO_PRINCIPAL_EMAIL`.
+
+**Office admin (secretary / power user):** give the account `profiles.role = 'admin'` and `school_id` set to the school. Sign-in at `/login?as=office` (prefill via `BEACON_OFFICE_ADMIN_EMAIL`). Admins land on **Principal office** with a **Daily tasks** overview — roster, billing, announcements, badges, comms, and Craft. Pilot seed: migration **023** sets `office@lighthouse.test` → admin with display name **Marian Gordon** when that auth user exists.
 
 ### Email & QuickBooks
 
@@ -288,7 +290,7 @@ Platform-provided (do not put secrets in git): `VERCEL_URL`, `VERCEL_ENV`, `VERC
 
 - Parents only access students linked in `parent_students`
 - Staff scoped by `school_id`
-- Principal office requires principal or admin role
+- Principal office requires principal or **admin** role (office secretary / power user)
 - Service role used only after a verified session in app code; edge session refresh is cookie-based in `src/proxy.ts`
 - Production/preview without Supabase public env returns **503** on non-public routes (fail closed)
 - No hard-coded single-school principal identity

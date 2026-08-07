@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { ExternalLink, Shield } from 'lucide-react'
+import { ExternalLink, Shield, UserCog } from 'lucide-react'
 import { LoginForm } from '@/components/auth/LoginForm'
-import { demoPrincipalEmail } from '@/lib/roles'
+import { demoOfficeAdminEmail, demoPrincipalEmail } from '@/lib/roles'
 import { safeInternalPath } from '@/lib/safe-redirect'
 import { loadSchoolBrand } from '@/lib/school-brand'
 import { beaconCraftAppHref, beaconCraftTourUrl } from '@/lib/beaconcraft-url'
@@ -307,6 +307,7 @@ const LOGIN_CRITICAL_CSS = `
 
 /** Pilot form prefill only — does not grant role by itself. */
 const PILOT_PRINCIPAL_EMAIL = 'principal@lighthouse.test'
+const PILOT_OFFICE_ADMIN_EMAIL = 'office@lighthouse.test'
 
 export default async function LoginPage({
   searchParams,
@@ -316,8 +317,10 @@ export default async function LoginPage({
   const params = await searchParams
   const nextPath = safeInternalPath(params.next, '/dashboard')
   const asPrincipal = params.as === 'principal'
+  const asOffice = params.as === 'office'
   const brand = await loadSchoolBrand(null)
   const principalEmail = demoPrincipalEmail() || PILOT_PRINCIPAL_EMAIL
+  const officeAdminEmail = demoOfficeAdminEmail() || PILOT_OFFICE_ADMIN_EMAIL
   const craftHref = beaconCraftAppHref()
   const tourHref = beaconCraftTourUrl()
 
@@ -376,6 +379,31 @@ export default async function LoginPage({
                     ← Staff &amp; parent sign-in
                   </Link>
                 </div>
+              ) : asOffice ? (
+                <div className="login-principal-card">
+                  <div className="login-principal-head">
+                    <div className="login-principal-icon">
+                      <UserCog className="h-5 w-5" aria-hidden />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="kicker">Office admin</p>
+                      <h2>School secretary</h2>
+                      <p>
+                        Full office workspace for roster, billing, announcements, and campus tools
+                        at {brand.name}.
+                      </p>
+                    </div>
+                  </div>
+                  <LoginForm
+                    nextPath={nextPath === '/dashboard' ? '/principal' : nextPath}
+                    defaultEmail={officeAdminEmail}
+                    submitLabel="Enter school office"
+                    variant="office"
+                  />
+                  <Link href="/login" className="login-back">
+                    ← Staff &amp; parent sign-in
+                  </Link>
+                </div>
               ) : (
                 <div className="login-card">
                   <h1>Sign in</h1>
@@ -385,6 +413,13 @@ export default async function LoginPage({
                   <LoginForm nextPath={nextPath} />
 
                   <div className="login-links">
+                    <Link href="/login?as=office" className="login-link-row">
+                      <span>
+                        <span>Office</span>
+                        <strong>Secretary / admin sign-in</strong>
+                      </span>
+                      <em>Continue →</em>
+                    </Link>
                     <Link href="/login?as=principal" className="login-link-row">
                       <span>
                         <span>Leadership</span>

@@ -18,6 +18,14 @@ describe('buildNav role separation', () => {
     expect(labels).not.toContain('Principal office')
   })
 
+  it('office admin nav lands on school office without duplicate Office link', () => {
+    const labels = buildNav('admin').map((n) => n.label)
+    expect(labels).toEqual(
+      expect.arrayContaining(['Home', 'News', 'Comms', 'Settings', 'School site'])
+    )
+    expect(labels).not.toContain('Office')
+  })
+
   it('teacher primary bar is slim with secondary tools in More', () => {
     const { primary, more } = buildStaffNavGroups('teacher')
     expect(primary.map((n) => n.label)).toEqual([

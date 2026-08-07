@@ -13,6 +13,14 @@ export function demoPrincipalEmail(): string | null {
   return v ? v.toLowerCase() : null
 }
 
+/** Office secretary / power-user login prefill (pilot form only — role comes from profiles). */
+export function demoOfficeAdminEmail(): string | null {
+  const v =
+    process.env.BEACON_OFFICE_ADMIN_EMAIL?.trim() ||
+    process.env.BEACON_DEMO_OFFICE_ADMIN_EMAIL?.trim()
+  return v ? v.toLowerCase() : null
+}
+
 export function effectiveRole(
   profile: Pick<Profile, 'role' | 'email'> | null | undefined
 ): Role | null {
@@ -91,11 +99,17 @@ export function canSendSystemEmail(role: Role | null | undefined): boolean {
 
 export function roleLabel(role: Role | null | undefined): string {
   if (role === 'principal') return 'Principal'
+  if (role === 'admin') return 'Office admin'
   if (!role) return ''
   return role.charAt(0).toUpperCase() + role.slice(1)
 }
 
+/** School secretary / office power user — full Principal office, not env-elevated principal. */
+export function isOfficeAdmin(role: Role | null | undefined): boolean {
+  return role === 'admin'
+}
+
 export function homePathForRole(role: Role | null | undefined): string {
-  if (role === 'principal') return '/principal'
+  if (role === 'principal' || role === 'admin') return '/principal'
   return '/dashboard'
 }

@@ -116,6 +116,7 @@ export const SCREEN_CATALOG: Record<ScreenId, { title: string; sections: Section
   principal_overview: {
     title: 'Principal office',
     sections: [
+      { id: 'daily_tasks', label: 'Daily tasks' },
       { id: 'beacon_signal', label: 'Beacon Signal' },
       { id: 'stats', label: 'School stats' },
       { id: 'quickbooks', label: 'QuickBooks card' },
