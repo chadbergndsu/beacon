@@ -74,26 +74,67 @@ CREATE TABLE IF NOT EXISTS billing_schedules (
 CREATE INDEX IF NOT EXISTS idx_billing_schedules_due
   ON billing_schedules (school_id, active, next_run_on);
 
+-- Policy helpers live outside the exposed Data API schema. Defining this here
+-- also keeps a manually assembled pilot safe if migration 019 is applied late.
+CREATE SCHEMA IF NOT EXISTS private;
+REVOKE ALL ON SCHEMA private FROM PUBLIC, anon;
+GRANT USAGE ON SCHEMA private TO authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION private.is_school_billing_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT auth.uid() IS NOT NULL
+    AND EXISTS (
+      SELECT 1
+      FROM public.profiles p
+      WHERE p.id = auth.uid()
+        AND p.role IN ('admin', 'principal')
+    );
+$$;
+REVOKE ALL ON FUNCTION private.is_school_billing_admin() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION private.is_school_billing_admin() TO authenticated, service_role;
+
 ALTER TABLE billing_payment_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE billing_schedules ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Leadership manage payment plans" ON billing_payment_plans;
 CREATE POLICY "Leadership manage payment plans" ON billing_payment_plans FOR ALL
-  USING (school_id = get_user_school_id() AND is_school_leadership())
-  WITH CHECK (school_id = get_user_school_id() AND is_school_leadership());
+  TO authenticated
+  USING (
+    school_id = (SELECT p.school_id FROM public.profiles p WHERE p.id = auth.uid())
+    AND private.is_school_billing_admin()
+  )
+  WITH CHECK (
+    school_id = (SELECT p.school_id FROM public.profiles p WHERE p.id = auth.uid())
+    AND private.is_school_billing_admin()
+  );
 
 DROP POLICY IF EXISTS "Leadership manage schedules" ON billing_schedules;
 CREATE POLICY "Leadership manage schedules" ON billing_schedules FOR ALL
-  USING (school_id = get_user_school_id() AND is_school_leadership())
-  WITH CHECK (school_id = get_user_school_id() AND is_school_leadership());
+  TO authenticated
+  USING (
+    school_id = (SELECT p.school_id FROM public.profiles p WHERE p.id = auth.uid())
+    AND private.is_school_billing_admin()
+  )
+  WITH CHECK (
+    school_id = (SELECT p.school_id FROM public.profiles p WHERE p.id = auth.uid())
+    AND private.is_school_billing_admin()
+  );
 
 -- Parents can read open invoices for their email (portal uses service role; this is app RLS)
 DROP POLICY IF EXISTS "Parents read own invoices" ON billing_invoices;
 CREATE POLICY "Parents read own invoices" ON billing_invoices
   FOR SELECT
   USING (
-    school_id = get_user_school_id()
-    AND get_user_role() = 'parent'
+    school_id = (SELECT p.school_id FROM public.profiles p WHERE p.id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid() AND p.role = 'parent'
+    )
     AND parent_email IS NOT NULL
     AND lower(parent_email) = lower(COALESCE(
       (SELECT email FROM profiles WHERE id = auth.uid()),

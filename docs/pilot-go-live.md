@@ -8,7 +8,7 @@ Local/env gate:
 npm run pilot:check
 ```
 
-## 1. Migrations 001–023
+## 1. Apply every migration in `supabase/migrations/`
 
 ```bash
 DATABASE_URL='postgresql://…' npm run db:migrate

@@ -4,7 +4,13 @@ import type { OnboardingStatus } from '@/lib/ops/onboarding'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-export function OnboardingProgress({ status }: { status: OnboardingStatus }) {
+export function OnboardingProgress({
+  status,
+  parentPilotReady,
+}: {
+  status: OnboardingStatus
+  parentPilotReady: boolean
+}) {
   return (
     <Card className="overflow-hidden">
       <div className="border-b border-border bg-muted/30 px-5 py-4 flex flex-wrap items-center justify-between gap-2">
@@ -15,13 +21,13 @@ export function OnboardingProgress({ status }: { status: OnboardingStatus }) {
           <h3 className="font-medium text-foreground">School onboarding</h3>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={status.readyForParents ? 'success' : 'warning'}>
-            {status.percent}% ready
+          <Badge variant={status.percent === 100 ? 'success' : 'warning'}>
+            {status.percent}% setup
           </Badge>
-          {status.readyForParents ? (
-            <Badge variant="success">OK for pilot parents</Badge>
+          {parentPilotReady ? (
+            <Badge variant="success">Approved for parent pilot</Badge>
           ) : (
-            <Badge variant="muted">Not parent-ready yet</Badge>
+            <Badge variant="muted">Parent pilot approval incomplete</Badge>
           )}
         </div>
       </div>

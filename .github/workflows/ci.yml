@@ -59,3 +59,27 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
           SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key
+
+  database-security:
+    name: Database RLS authorization
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.111.0
+
+      - name: Start disposable Supabase database
+        run: >-
+          supabase start
+          -x gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Verify role and tenant boundaries
+        run: supabase test db supabase/tests --local
+
+      - name: Stop disposable database
+        if: always()
+        run: supabase stop --no-backup

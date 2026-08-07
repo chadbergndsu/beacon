@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { requirePrincipal } from '@/lib/principal'
 import { probeOpsHealth } from '@/lib/ops/health'
 import { RELEASE_CHECKLIST, loadReleaseChecklistState } from '@/lib/ops/release-checklist'
@@ -16,7 +17,7 @@ import { CraftLayoutEditor } from '@/components/craft/CraftLayoutEditor'
 import { CraftRoomMapPanel } from '@/components/craft/CraftRoomMapPanel'
 import { OnboardingProgress } from '@/components/ops/OnboardingProgress'
 import { PilotPathCard } from '@/components/ops/PilotPathCard'
-import { loadSchoolOnboarding } from '@/lib/ops/onboarding'
+import { isParentPilotReady, loadSchoolOnboarding } from '@/lib/ops/onboarding'
 import { resolvePilotPath } from '@/lib/ops/pilot-path'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -59,6 +60,10 @@ export default async function PrincipalReleasePage() {
     brandOk,
   })
   const nextPilot = pilotStatuses.find((s) => !s.done)
+  const parentPilotReady = isParentPilotReady({
+    pilotPathComplete: pilotStatuses.every((status) => status.done),
+    checklist,
+  })
 
   return (
     <div className="page-stack">
@@ -67,6 +72,13 @@ export default async function PrincipalReleasePage() {
         title={`Go-live for ${brand.name}`}
         description="Finish platform health, label demo vs live integrations, set your school branding, and tick the human checklist before wider parent rollout. Beacon works for any school — this page is your launch control."
       />
+
+      <p className="text-sm text-muted-foreground">
+        Preparing for school or board review?{' '}
+        <Link href="/privacy" className="font-medium text-primary hover:underline">
+          Open Trust &amp; Data Practices →
+        </Link>
+      </p>
 
       <PilotPathCard
         statuses={pilotStatuses}
@@ -113,7 +125,7 @@ export default async function PrincipalReleasePage() {
         </Card>
       </div>
 
-      <OnboardingProgress status={onboarding} />
+      <OnboardingProgress status={onboarding} parentPilotReady={parentPilotReady} />
 
       <CraftSetupCard readiness={craftReadiness} />
 

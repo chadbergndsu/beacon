@@ -93,6 +93,9 @@ export default async function AboutPage() {
                   Parents only see linked students. Staff are scoped by school. Email and QuickBooks
                   modes are labeled (live vs log-only / sandbox) so leadership never ships a surprise.
                 </p>
+                <Link href="/privacy" className="mt-2 inline-flex text-sm font-medium text-primary hover:underline">
+                  Read Trust &amp; Data Practices →
+                </Link>
               </div>
             </div>
           </CardContent>

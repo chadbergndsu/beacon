@@ -9,7 +9,7 @@ This file embeds the full standards so agents enforce them without needing netwo
 ### Beacon project notes (this repo)
 
 - **Runbook / setup truth:** `README.md` + `.env.example` (not this file). Soft pilot: `docs/pilot-go-live.md` + `npm run pilot:check`.
-- **Migrations:** `supabase/migrations/` **001–023**; apply with `npm run db:migrate`.
+- **Migrations:** `supabase/migrations/` **001–023 plus timestamped hardening migrations**; apply with `npm run db:migrate`.
 - **Billing money:** first-class tables only (`billing_*`, plans/schedules, `quickbooks_connections`) — not `schools.settings.billing`. Family portal is school-owned (no BillerGenie).
 - **Health:** public liveness `{ status, generatedAt }`; readiness via header `x-beacon-health-secret` (not `?detail=1`).
 - **Auth break-glass:** Beacon does **not** implement `AUTH_OPEN` / `AUTH_AUTO_JOIN`. Production/preview fail closed without Supabase public env.

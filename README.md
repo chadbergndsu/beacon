@@ -12,7 +12,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 |-------|--------|--------|
 | App | Next.js 16 App Router + React 19 + TypeScript + Tailwind 4 | Portable web frontend |
 | Auth edge | `src/proxy.ts` → Supabase SSR session | Public routes listed below; fail-closed without Supabase env on prod/preview |
-| DB | Supabase Postgres | Schema owned in `supabase/migrations/` (**001–023**) |
+| DB | Supabase Postgres | Schema owned in `supabase/migrations/` (**001–023 plus timestamped hardening migrations**) |
 | Auth | Supabase Auth | App code uses `getUser()` before service-role; edge refreshes cookies via `getClaims()` |
 | Host | Vercel + HTTPS | Default per Solid Systems |
 | Email | Resend and/or SMTP (cascade) | Log-only outbox without live transport; never use `onboarding@resend.dev` in prod |
@@ -104,7 +104,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth + client |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server actions / admin client (never expose to browser) |
 
-Then apply **migrations 001–023** (see below) and:
+Then apply **all migrations in `supabase/migrations/`** (see below) and:
 
 ```bash
 npm run dev
@@ -138,7 +138,7 @@ Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, securit
 
 ### Database migrations
 
-**Source of truth:** `supabase/migrations/` files **001–023** in filename order.
+**Source of truth:** every `.sql` file in `supabase/migrations/`, applied in filename order.
 
 ```bash
 # Preferred
@@ -168,6 +168,8 @@ POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate -- 017
 | **021** | P0 money settle: one succeeded payment per invoice |
 | **022** | BeaconCraft Realtime: `badge_scans` on `supabase_realtime` publication |
 | **023** | Office admin / principal pilot profile seed (Marian Gordon, Chris Cowan emails) |
+| **20260807143226** | P0 roster authorization boundary: teacher-owned classes and enrolled students only |
+| **20260807144127** | P0 billing authorization boundary: principal/admin-only billing and QuickBooks RLS |
 
 **Soft pilot:** ordered runbook in [`docs/pilot-go-live.md`](docs/pilot-go-live.md) · `npm run pilot:check` · account bind SQL in `scripts/seed-pilot-accounts.sql` · Go-live **Pilot path** card.
 

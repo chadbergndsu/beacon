@@ -280,6 +280,10 @@ export default async function SchoolWebsitePage({
           <Link href="/about" className="text-primary hover:underline">
             About the suite
           </Link>
+          {' · '}
+          <Link href="/privacy" className="text-primary hover:underline">
+            Trust &amp; data practices
+          </Link>
           {brand.websiteUrl && (
             <>
               {' · '}
