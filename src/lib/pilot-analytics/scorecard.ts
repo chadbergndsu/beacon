@@ -2,18 +2,26 @@ import { reportError } from '@/lib/ops/report-error'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { PilotEvidenceScorecard, WorkflowMetric } from './types'
 import {
-  baselineDay,
+  buildBaselineStatus,
   buildHelpfulnessMetric,
   buildRatioMetric,
-  isBaselinePeriod,
   trailingWindow,
 } from './windows'
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
+const PAGE_SIZE = 1000
 
 type QueryResponse<Row> = {
   data: Row[] | null
   error: unknown
+}
+
+type OrderedQuery<Row> = PromiseLike<QueryResponse<Row>> & {
+  order(
+    column: string,
+    options: { ascending: boolean }
+  ): OrderedQuery<Row>
+  range(from: number, to: number): PromiseLike<QueryResponse<Row>>
 }
 
 type SourceResult<Value> =
@@ -39,7 +47,7 @@ function distinctStrings<Row>(rows: Row[], key: keyof Row): string[] {
   ]
 }
 
-async function loadRows<Row>(
+async function loadQueryRows<Row>(
   schoolId: string,
   source: string,
   query: PromiseLike<QueryResponse<Row>>
@@ -55,6 +63,32 @@ async function loadRows<Row>(
   }
 }
 
+async function loadRows<Row>(
+  schoolId: string,
+  source: string,
+  queryFactory: () => OrderedQuery<Row>,
+  orderColumns: string[]
+): Promise<SourceResult<Row[]>> {
+  const rows: Row[] = []
+
+  for (let from = 0; ; from += PAGE_SIZE) {
+    let query = queryFactory()
+    for (const column of orderColumns) {
+      query = query.order(column, { ascending: true })
+    }
+
+    const page = await loadQueryRows(
+      schoolId,
+      source,
+      query.range(from, from + PAGE_SIZE - 1)
+    )
+    if (!page.ok) return page
+
+    rows.push(...page.value)
+    if (page.value.length < PAGE_SIZE) return { ok: true, value: rows }
+  }
+}
+
 async function loadEligibleLinkedParents(
   admin: AdminClient,
   schoolId: string
@@ -62,7 +96,8 @@ async function loadEligibleLinkedParents(
   const students = await loadRows<{ id: string }>(
     schoolId,
     'students',
-    admin.from('students').select('id').eq('school_id', schoolId).eq('active', true)
+    () => admin.from('students').select('id').eq('school_id', schoolId).eq('active', true),
+    ['id']
   )
   if (!students.ok) return students
 
@@ -72,14 +107,33 @@ async function loadEligibleLinkedParents(
   const links = await loadRows<{ parent_id: string; student_id: string }>(
     schoolId,
     'parent_students',
-    admin
-      .from('parent_students')
-      .select('parent_id, student_id')
-      .in('student_id', studentIds)
+    () =>
+      admin
+        .from('parent_students')
+        .select('parent_id, student_id')
+        .in('student_id', studentIds),
+    ['parent_id', 'student_id']
   )
   if (!links.ok) return links
 
-  return { ok: true, value: distinctStrings(links.value, 'parent_id') }
+  const linkedParentIds = distinctStrings(links.value, 'parent_id')
+  if (linkedParentIds.length === 0) return { ok: true, value: [] }
+
+  const parentProfiles = await loadRows<{ id: string }>(
+    schoolId,
+    'profiles',
+    () =>
+      admin
+        .from('profiles')
+        .select('id')
+        .eq('school_id', schoolId)
+        .eq('role', 'parent')
+        .in('id', linkedParentIds),
+    ['id']
+  )
+  if (!parentProfiles.ok) return parentProfiles
+
+  return { ok: true, value: distinctStrings(parentProfiles.value, 'id') }
 }
 
 async function loadGradeActivity(
@@ -91,7 +145,8 @@ async function loadGradeActivity(
   const classes = await loadRows<{ id: string }>(
     schoolId,
     'classes',
-    admin.from('classes').select('id').eq('school_id', schoolId)
+    () => admin.from('classes').select('id').eq('school_id', schoolId),
+    ['id']
   )
   if (!classes.ok) return classes
 
@@ -103,7 +158,8 @@ async function loadGradeActivity(
   const assignments = await loadRows<{ id: string }>(
     schoolId,
     'assignments',
-    admin.from('assignments').select('id').in('class_id', classIds)
+    () => admin.from('assignments').select('id').in('class_id', classIds),
+    ['id']
   )
   if (!assignments.ok) return assignments
 
@@ -115,12 +171,14 @@ async function loadGradeActivity(
   const grades = await loadRows<{ assignment_id: string }>(
     schoolId,
     'grades',
-    admin
-      .from('grades')
-      .select('assignment_id')
-      .in('assignment_id', assignmentIds)
-      .gte('entered_at', timestampStart)
-      .lt('entered_at', timestampEnd)
+    () =>
+      admin
+        .from('grades')
+        .select('assignment_id')
+        .in('assignment_id', assignmentIds)
+        .gte('entered_at', timestampStart)
+        .lt('entered_at', timestampEnd),
+    ['id']
   )
   if (!grades.ok) return grades
 
@@ -141,8 +199,7 @@ function unavailableScorecard(input: {
 }): PilotEvidenceScorecard {
   return {
     ...input,
-    baseline: false,
-    baselineDay: null,
+    baseline: { state: 'unavailable', reason: 'Baseline activity data is unavailable.' },
     activeTeachers: {
       state: 'unavailable',
       reason: 'Activity or eligibility data is unavailable.',
@@ -212,79 +269,93 @@ export async function loadPilotScorecard(
     loadRows<{ id: string }>(
       schoolId,
       'profiles',
-      admin
-        .from('profiles')
-        .select('id')
-        .eq('school_id', schoolId)
-        .eq('role', 'teacher')
+      () =>
+        admin
+          .from('profiles')
+          .select('id')
+          .eq('school_id', schoolId)
+          .eq('role', 'teacher'),
+      ['id']
     ),
     loadEligibleLinkedParents(admin, schoolId),
     loadRows<{ user_id: string }>(
       schoolId,
       'pilot_activity_daily',
-      admin
-        .from('pilot_activity_daily')
-        .select('user_id')
-        .eq('school_id', schoolId)
-        .eq('actor_role', 'teacher')
-        .eq('event_type', 'teacher_work')
-        .gte('activity_date', sevenDayWindow.start)
-        .lte('activity_date', sevenDayWindow.end)
+      () =>
+        admin
+          .from('pilot_activity_daily')
+          .select('user_id')
+          .eq('school_id', schoolId)
+          .eq('actor_role', 'teacher')
+          .eq('event_type', 'teacher_work')
+          .gte('activity_date', sevenDayWindow.start)
+          .lte('activity_date', sevenDayWindow.end),
+      ['user_id', 'event_type', 'activity_date']
     ),
     loadRows<{ user_id: string }>(
       schoolId,
       'pilot_activity_daily',
-      admin
-        .from('pilot_activity_daily')
-        .select('user_id')
-        .eq('school_id', schoolId)
-        .eq('actor_role', 'parent')
-        .in('event_type', ['parent_portal', 'sign_in'])
-        .gte('activity_date', sevenDayWindow.start)
-        .lte('activity_date', sevenDayWindow.end)
+      () =>
+        admin
+          .from('pilot_activity_daily')
+          .select('user_id')
+          .eq('school_id', schoolId)
+          .eq('actor_role', 'parent')
+          .in('event_type', ['parent_portal', 'sign_in'])
+          .gte('activity_date', sevenDayWindow.start)
+          .lte('activity_date', sevenDayWindow.end),
+      ['user_id', 'event_type', 'activity_date']
     ),
     loadRows<{ date: string }>(
       schoolId,
       'attendance',
-      admin
-        .from('attendance')
-        .select('date')
-        .eq('school_id', schoolId)
-        .gte('updated_at', timestampStart)
-        .lt('updated_at', timestampEnd)
+      () =>
+        admin
+          .from('attendance')
+          .select('date')
+          .eq('school_id', schoolId)
+          .gte('updated_at', timestampStart)
+          .lt('updated_at', timestampEnd),
+      ['id']
     ),
     loadGradeActivity(admin, schoolId, timestampStart, timestampEnd),
     loadRows<{ status: string }>(
       schoolId,
       'email_outbox',
-      admin
-        .from('email_outbox')
-        .select('status')
-        .eq('school_id', schoolId)
-        .gte('created_at', timestampStart)
-        .lt('created_at', timestampEnd)
+      () =>
+        admin
+          .from('email_outbox')
+          .select('status')
+          .eq('school_id', schoolId)
+          .gte('created_at', timestampStart)
+          .lt('created_at', timestampEnd),
+      ['id']
     ),
     loadRows<{ rating: string; comment: string | null; created_at: string }>(
       schoolId,
       'parent_experience_feedback',
-      admin
-        .from('parent_experience_feedback')
-        .select('rating, comment, created_at')
-        .eq('school_id', schoolId)
-        .gte('created_at', feedbackTimestampStart)
-        .lt('created_at', timestampEnd)
+      () =>
+        admin
+          .from('parent_experience_feedback')
+          .select('rating, comment, created_at')
+          .eq('school_id', schoolId)
+          .gte('created_at', feedbackTimestampStart)
+          .lt('created_at', timestampEnd),
+      ['id']
     ),
     loadRows<{ id: string }>(
       schoolId,
       'pilot_feedback',
-      admin
-        .from('pilot_feedback')
-        .select('id')
-        .eq('school_id', schoolId)
-        .gte('created_at', timestampStart)
-        .lt('created_at', timestampEnd)
+      () =>
+        admin
+          .from('pilot_feedback')
+          .select('id')
+          .eq('school_id', schoolId)
+          .gte('created_at', timestampStart)
+          .lt('created_at', timestampEnd),
+      ['id']
     ),
-    loadRows<{ activity_date: string }>(
+    loadQueryRows<{ activity_date: string }>(
       schoolId,
       'pilot_activity_daily',
       admin
@@ -369,12 +440,11 @@ export async function loadPilotScorecard(
 
   const firstActivityDate = firstActivity.ok
     ? firstActivity.value[0]?.activity_date ?? null
-    : null
+    : undefined
 
   return {
     ...windowFields,
-    baseline: isBaselinePeriod(firstActivityDate, now),
-    baselineDay: baselineDay(firstActivityDate, now),
+    baseline: buildBaselineStatus(firstActivityDate, now),
     activeTeachers,
     activeLinkedParents,
     attendanceActivity,

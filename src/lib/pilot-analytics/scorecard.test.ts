@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 type Row = Record<string, unknown>
 type QueryOperation = [
-  method: 'select' | 'eq' | 'in' | 'gte' | 'lte' | 'lt' | 'order' | 'limit',
+  method: 'select' | 'eq' | 'in' | 'gte' | 'lte' | 'lt' | 'order' | 'limit' | 'range',
   ...args: unknown[],
 ]
 type QueryRecord = { table: string; operations: QueryOperation[] }
@@ -18,6 +18,9 @@ type Script = {
   rows?: Record<string, Row[]>
   errors?: Record<string, PostgrestError>
   nullData?: string[]
+  queryError?: (query: QueryRecord) => PostgrestError | undefined
+  queryRejection?: (query: QueryRecord) => Error | undefined
+  nullDataQuery?: (query: QueryRecord) => boolean
 }
 
 const mocks = vi.hoisted(() => ({
@@ -88,11 +91,20 @@ function createScriptedAdmin(script: Script): {
             query.operations.push(['limit', ...args])
             return builder
           },
+          range(...args: unknown[]) {
+            query.operations.push(['range', ...args])
+            return builder
+          },
           then<TResult1 = unknown, TResult2 = never>(
             onfulfilled?: ((value: unknown) => TResult1 | PromiseLike<TResult1>) | null,
             onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
           ): Promise<TResult1 | TResult2> {
-            const error = script.errors?.[table]
+            const rejection = script.queryRejection?.(query)
+            if (rejection) {
+              return Promise.reject(rejection).then(onfulfilled, onrejected)
+            }
+
+            const error = script.queryError?.(query) ?? script.errors?.[table]
             if (error) {
               return Promise.resolve({
                 data: null,
@@ -103,7 +115,7 @@ function createScriptedAdmin(script: Script): {
               }).then(onfulfilled, onrejected)
             }
 
-            if (script.nullData?.includes(table)) {
+            if (script.nullData?.includes(table) || script.nullDataQuery?.(query)) {
               return Promise.resolve({
                 data: null,
                 error: null,
@@ -114,6 +126,9 @@ function createScriptedAdmin(script: Script): {
             }
 
             let data = [...(script.rows?.[table] ?? [])]
+            const orders: Array<[string, { ascending: boolean }]> = []
+            let limit: number | undefined
+            let range: [number, number] | undefined
             for (const [method, ...args] of query.operations) {
               if (method === 'eq') {
                 const [column, value] = args as [string, unknown]
@@ -131,15 +146,24 @@ function createScriptedAdmin(script: Script): {
                 const [column, value] = args as [string, unknown]
                 data = data.filter((row) => compare(row[column], value) < 0)
               } else if (method === 'order') {
-                const [column, options] = args as [string, { ascending: boolean }]
-                data.sort((left, right) => {
-                  const result = compare(left[column], right[column])
-                  return options.ascending ? result : -result
-                })
+                orders.push(args as [string, { ascending: boolean }])
               } else if (method === 'limit') {
-                data = data.slice(0, args[0] as number)
+                limit = args[0] as number
+              } else if (method === 'range') {
+                range = args as [number, number]
               }
             }
+
+            data.sort((left, right) => {
+              for (const [column, options] of orders) {
+                const result = compare(left[column], right[column])
+                if (result !== 0) return options.ascending ? result : -result
+              }
+              return 0
+            })
+            if (limit !== undefined) data = data.slice(0, limit)
+            if (range) data = data.slice(range[0], range[1] + 1)
+            else data = data.slice(0, 1000)
 
             return Promise.resolve({
               data,
@@ -163,6 +187,9 @@ function successfulRows(): Record<string, Row[]> {
       { id: 'teacher-1', school_id: 'school-1', role: 'teacher' },
       { id: 'teacher-2', school_id: 'school-1', role: 'teacher' },
       { id: 'parent-1', school_id: 'school-1', role: 'parent' },
+      { id: 'parent-2', school_id: 'school-1', role: 'parent' },
+      { id: 'parent-wrong-role', school_id: 'school-1', role: 'staff' },
+      { id: 'parent-cross-school', school_id: 'school-2', role: 'parent' },
       { id: 'teacher-other', school_id: 'school-2', role: 'teacher' },
     ],
     students: [
@@ -175,6 +202,9 @@ function successfulRows(): Record<string, Row[]> {
       { parent_id: 'parent-1', student_id: 'student-1' },
       { parent_id: 'parent-1', student_id: 'student-2' },
       { parent_id: 'parent-2', student_id: 'student-2' },
+      { parent_id: 'parent-wrong-role', student_id: 'student-1' },
+      { parent_id: 'parent-cross-school', student_id: 'student-1' },
+      { parent_id: 'parent-missing-profile', student_id: 'student-1' },
       { parent_id: 'parent-inactive', student_id: 'student-inactive' },
       { parent_id: 'parent-other', student_id: 'student-other' },
     ],
@@ -231,6 +261,27 @@ function successfulRows(): Record<string, Row[]> {
       {
         school_id: 'school-1',
         user_id: 'parent-not-eligible',
+        actor_role: 'parent',
+        event_type: 'parent_portal',
+        activity_date: '2026-08-07',
+      },
+      {
+        school_id: 'school-1',
+        user_id: 'parent-wrong-role',
+        actor_role: 'parent',
+        event_type: 'parent_portal',
+        activity_date: '2026-08-07',
+      },
+      {
+        school_id: 'school-1',
+        user_id: 'parent-cross-school',
+        actor_role: 'parent',
+        event_type: 'parent_portal',
+        activity_date: '2026-08-07',
+      },
+      {
+        school_id: 'school-1',
+        user_id: 'parent-missing-profile',
         actor_role: 'parent',
         event_type: 'parent_portal',
         activity_date: '2026-08-07',
@@ -384,8 +435,7 @@ describe('loadPilotScorecard', () => {
       windowStart: '2026-08-01',
       windowEnd: '2026-08-07',
       feedbackWindowStart: '2026-07-09',
-      baseline: true,
-      baselineDay: 19,
+      baseline: { state: 'gathering', day: 19 },
       activeTeachers: { state: 'ready', active: 1, eligible: 2, percent: 50 },
       activeLinkedParents: { state: 'ready', active: 2, eligible: 2, percent: 100 },
       attendanceActivity: { state: 'ready', primary: 2, secondary: 3 },
@@ -420,6 +470,8 @@ describe('loadPilotScorecard', () => {
         ['eq', 'school_id', 'school-1'],
         ['gte', 'updated_at', '2026-08-01T00:00:00.000Z'],
         ['lt', 'updated_at', '2026-08-08T00:00:00.000Z'],
+        ['order', 'id', { ascending: true }],
+        ['range', 0, 999],
       ],
     })
     expect(queries).toContainEqual({
@@ -429,8 +481,23 @@ describe('loadPilotScorecard', () => {
         ['in', 'assignment_id', ['assignment-1', 'assignment-2']],
         ['gte', 'entered_at', '2026-08-01T00:00:00.000Z'],
         ['lt', 'entered_at', '2026-08-08T00:00:00.000Z'],
+        ['order', 'id', { ascending: true }],
+        ['range', 0, 999],
       ],
     })
+
+    for (const query of queries.filter(({ operations }) => {
+      return !operations.some(([method]) => method === 'limit')
+    })) {
+      expect(query.operations, `${query.table} must use stable pagination`).toSatisfy(
+        (operations: QueryOperation[]) => {
+          return (
+            operations.some(([method]) => method === 'order') &&
+            operations.some(([method]) => method === 'range')
+          )
+        }
+      )
+    }
   })
 
   it('suppresses the helpfulness percentage below five responses', async () => {
@@ -449,6 +516,154 @@ describe('loadPilotScorecard', () => {
       total: 4,
       minimum: 5,
     })
+  })
+
+  it('excludes linked IDs without a current same-school parent profile', async () => {
+    const queries = installScript({ rows: successfulRows() })
+
+    const scorecard = await loadPilotScorecard(
+      'school-1',
+      new Date('2026-08-07T16:30:00.000Z')
+    )
+
+    expect(scorecard.activeLinkedParents).toEqual({
+      state: 'ready',
+      active: 2,
+      eligible: 2,
+      percent: 100,
+    })
+    expect(queries).toContainEqual({
+      table: 'profiles',
+      operations: [
+        ['select', 'id'],
+        ['eq', 'school_id', 'school-1'],
+        ['eq', 'role', 'parent'],
+        [
+          'in',
+          'id',
+          [
+            'parent-1',
+            'parent-2',
+            'parent-cross-school',
+            'parent-missing-profile',
+            'parent-wrong-role',
+          ],
+        ],
+        ['order', 'id', { ascending: true }],
+        ['range', 0, 999],
+      ],
+    })
+  })
+
+  it('does not issue an empty profile in-filter when active students have no parent links', async () => {
+    const rows = successfulRows()
+    rows.parent_students = []
+    const queries = installScript({ rows })
+
+    const scorecard = await loadPilotScorecard(
+      'school-1',
+      new Date('2026-08-07T16:30:00.000Z')
+    )
+
+    expect(scorecard.activeLinkedParents).toEqual({
+      state: 'no_eligible',
+      active: 0,
+      eligible: 0,
+    })
+    expect(
+      queries.some(({ table, operations }) => {
+        return (
+          table === 'profiles' &&
+          operations.some(([method, column]) => method === 'eq' && column === 'role') &&
+          operations.some(([method]) => method === 'in')
+        )
+      })
+    ).toBe(false)
+  })
+
+  it('reports a successful empty earliest-activity query as not started', async () => {
+    const rows = successfulRows()
+    rows.pilot_activity_daily = []
+    installScript({ rows })
+
+    const scorecard = await loadPilotScorecard(
+      'school-1',
+      new Date('2026-08-07T16:30:00.000Z')
+    )
+
+    expect(scorecard.baseline).toEqual({ state: 'not_started' })
+  })
+
+  it.each(['error', 'rejection', 'null data'] as const)(
+    'reports the baseline as unavailable after an earliest-activity %s response',
+    async (failure) => {
+      const databaseError = {
+        code: '08006',
+        details: 'connection failure',
+        hint: '',
+        message: 'database unavailable',
+      }
+      const isBaselineQuery = (query: QueryRecord) => {
+        return query.operations.some(([method]) => method === 'limit')
+      }
+      installScript({
+        rows: successfulRows(),
+        queryError: failure === 'error' ? (query) => isBaselineQuery(query) ? databaseError : undefined : undefined,
+        queryRejection:
+          failure === 'rejection'
+            ? (query) => isBaselineQuery(query) ? new Error('network unavailable') : undefined
+            : undefined,
+        nullDataQuery: failure === 'null data' ? isBaselineQuery : undefined,
+      })
+
+      const scorecard = await loadPilotScorecard(
+        'school-1',
+        new Date('2026-08-07T16:30:00.000Z')
+      )
+
+      expect(scorecard.baseline).toEqual({
+        state: 'unavailable',
+        reason: 'Baseline activity data is unavailable.',
+      })
+      expect(scorecard.activeTeachers.state).toBe('ready')
+      expect(scorecard.activeLinkedParents.state).toBe('ready')
+    }
+  )
+
+  it('includes a full first PostgREST page and the following page in exact activity totals', async () => {
+    const rows = successfulRows()
+    rows.attendance = Array.from({ length: 1001 }, (_, index) => ({
+      id: `attendance-${String(index).padStart(4, '0')}`,
+      date: index === 1000 ? '2026-08-02' : '2026-08-01',
+      school_id: 'school-1',
+      updated_at: '2026-08-07T12:00:00.000Z',
+    }))
+    const queries = installScript({ rows })
+
+    const scorecard = await loadPilotScorecard(
+      'school-1',
+      new Date('2026-08-07T16:30:00.000Z')
+    )
+
+    expect(scorecard.attendanceActivity).toEqual({
+      state: 'ready',
+      primary: 2,
+      secondary: 1001,
+    })
+    expect(
+      queries
+        .filter(({ table }) => table === 'attendance')
+        .map(({ operations }) => operations.slice(-2))
+    ).toEqual([
+      [
+        ['order', 'id', { ascending: true }],
+        ['range', 0, 999],
+      ],
+      [
+        ['order', 'id', { ascending: true }],
+        ['range', 1000, 1999],
+      ],
+    ])
   })
 
   it('marks only attendance unavailable when the attendance source fails', async () => {
@@ -478,6 +693,40 @@ describe('loadPilotScorecard', () => {
     expect(mocks.reportError).toHaveBeenCalledTimes(1)
     expect(mocks.reportError).toHaveBeenCalledWith(attendanceError, {
       source: 'attendance',
+      schoolId: 'school-1',
+    })
+  })
+
+  it('fans out a parent feedback failure only to helpfulness and combined feedback', async () => {
+    const parentFeedbackError = {
+      code: '08006',
+      details: 'connection failure',
+      hint: '',
+      message: 'database unavailable',
+    }
+    installScript({
+      rows: successfulRows(),
+      errors: { parent_experience_feedback: parentFeedbackError },
+    })
+
+    const scorecard = await loadPilotScorecard(
+      'school-1',
+      new Date('2026-08-07T16:30:00.000Z')
+    )
+
+    expect(scorecard.parentHelpfulness.state).toBe('unavailable')
+    expect(scorecard.feedbackReceived).toEqual({
+      state: 'unavailable',
+      reason: 'Feedback data is unavailable.',
+    })
+    expect(scorecard.activeTeachers.state).toBe('ready')
+    expect(scorecard.activeLinkedParents.state).toBe('ready')
+    expect(scorecard.attendanceActivity.state).toBe('ready')
+    expect(scorecard.gradeActivity.state).toBe('ready')
+    expect(scorecard.emailDelivery.state).toBe('ready')
+    expect(scorecard.baseline.state).toBe('gathering')
+    expect(mocks.reportError).toHaveBeenCalledWith(parentFeedbackError, {
+      source: 'parent_experience_feedback',
       schoolId: 'school-1',
     })
   })

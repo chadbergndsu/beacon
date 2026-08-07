@@ -117,3 +117,162 @@ The scripted boundary and literal expectations were checked against these realis
 
 1. Supabase Data API projects commonly cap a single selected row set (often 1,000 rows). This task follows the repository's existing direct-select pattern; a larger school could eventually need pagination or database-side aggregates for exact high-volume weekly attendance/grade/email totals.
 2. The inherited `PilotEvidenceScorecard` baseline fields have no `unavailable` state. A baseline-source failure is reported and produces `baseline: false, baselineDay: null`; unlike the metric unions, the model cannot distinguish that from no first activity until the interface is extended.
+
+---
+
+## Fix Round 1 — Important findings
+
+Status: all three approved Important findings are fixed. The two original concerns above are resolved by exact pagination and the approved baseline status union.
+
+### Test files
+
+- `src/lib/pilot-analytics/scorecard.test.ts`
+- `src/lib/pilot-analytics/windows.test.ts`
+
+### RED 1 — exact pagination
+
+Command:
+
+```text
+npm test -- src/lib/pilot-analytics/scorecard.test.ts
+```
+
+The scripted Supabase boundary enforces the configured 1,000-row response cap. A fixture with 1,001 attendance rows placed the second distinct date only on page two. Before pagination, the consumer-visible metric proved the truncation:
+
+```text
+expected { state: 'ready', primary: 2, secondary: 1001 }
+received { state: 'ready', primary: 1, secondary: 1000 }
+Test Files  1 failed (1)
+Tests       1 failed | 5 passed (6)
+```
+
+### GREEN 1 — page contract
+
+Every potentially multi-row scorecard read now uses the same deterministic contract:
+
+- page size: exactly 1,000 rows;
+- range offsets: zero-based and inclusive, `range(0, 999)`, `range(1000, 1999)`, and so on;
+- termination: the first page shorter than 1,000 rows; an exact 1,000-row page intentionally causes one final empty-page read;
+- no `count: 'exact'` shortcut, because distinct dates and IDs require all selected rows;
+- filters are rebuilt identically on every page;
+- stable order before every range:
+  - profiles, students, classes, assignments, attendance, grades, email outbox, parent feedback, and general feedback: primary-key `id ASC`;
+  - `parent_students`: `parent_id ASC, student_id ASC` (its composite primary key);
+  - `pilot_activity_daily`: `user_id ASC, event_type ASC, activity_date ASC`, which is unique inside the fixed school/actor query (and teacher work fixes the event type).
+
+The successful page-two assertion verifies both the final metric and emitted queries:
+
+```text
+attendance page 1: order('id', { ascending: true }).range(0, 999)
+attendance page 2: order('id', { ascending: true }).range(1000, 1999)
+metric: { state: 'ready', primary: 2, secondary: 1001 }
+```
+
+The earliest-activity query remains intentionally bounded rather than paginated: school filter, `activity_date ASC`, `limit(1)`.
+
+### RED 2 — baseline status contract
+
+Command:
+
+```text
+npm test -- src/lib/pilot-analytics/windows.test.ts src/lib/pilot-analytics/scorecard.test.ts
+```
+
+Before implementation, helper tests failed because `buildBaselineStatus` did not exist and loader tests received the old boolean fields:
+
+```text
+TypeError: buildBaselineStatus is not a function
+expected { state: 'gathering', day: 19 }
+received baseline: true, baselineDay: 19
+expected { state: 'not_started' }, received false
+expected { state: 'unavailable', ... }, received false
+Test Files  2 failed (2)
+Tests       8 failed | 20 passed (28)
+```
+
+`PilotEvidenceScorecard.baseline` is now presentation-neutral:
+
+```ts
+type BaselineStatus =
+  | { state: 'not_started' }
+  | { state: 'gathering'; day: number }
+  | { state: 'complete' }
+  | { state: 'unavailable'; reason: string }
+```
+
+Successful empty earliest activity returns `not_started`; UTC days 1–28 return `gathering` with a one-based day; UTC day 29 onward returns `complete`. Returned errors, rejected queries, and unexpected `data: null` each return `unavailable` and preserve source-only error reporting.
+
+### RED 3 — parent profile ownership
+
+Command:
+
+```text
+npm test -- src/lib/pilot-analytics/scorecard.test.ts
+```
+
+The linked-parent fixture includes two valid school parents plus a same-school wrong-role profile, a cross-school parent profile, and a nonexistent profile. All five have links and same-school ledger activity, so the old service-role path proved the denominator and numerator leak:
+
+```text
+expected { state: 'ready', active: 2, eligible: 2, percent: 100 }
+received { state: 'ready', active: 5, eligible: 5, percent: 100 }
+Test Files  1 failed (1)
+Tests       2 failed | 10 passed (12)
+```
+
+After resolving active same-school students and their links, the loader now deduplicates linked IDs and intersects them through:
+
+```text
+profiles
+  .select('id')
+  .eq('school_id', schoolId)
+  .eq('role', 'parent')
+  .in('id', linkedParentIds)
+  .order('id', { ascending: true })
+  .range(...)
+```
+
+An empty active-student set skips `parent_students`; an empty linked-parent set skips the profile `.in()` query. Existing grade empty-set guards remain intact, and the suite asserts that no `.in([])` operation is emitted.
+
+### Failure isolation added in this round
+
+A `parent_experience_feedback` failure now has explicit fan-out coverage: only `parentHelpfulness` and combined `feedbackReceived` become unavailable. Teacher, parent, attendance, grade, email, and baseline evidence remain ready. Error context remains exactly `{ source, schoolId }`.
+
+### Final GREEN and verification
+
+Focused command:
+
+```text
+npm test -- src/lib/pilot-analytics/scorecard.test.ts src/lib/pilot-analytics/windows.test.ts
+Test Files  2 passed (2)
+Tests       31 passed (31)
+```
+
+Repository gates:
+
+```text
+npm run lint
+eslint .
+exit 0
+
+npm run typecheck
+tsc --noEmit
+exit 0
+
+npm test
+Test Files  86 passed (86)
+Tests       386 passed (386)
+```
+
+### Mutation self-review
+
+- Remove `.range()` or stop after the first full page: the literal 1,001-row metric fails.
+- Change page size/endpoints or omit stable ordering: emitted page-contract assertions fail.
+- Return empty/false for a baseline source failure: the returned-error, rejection, and null-data cases fail.
+- Shift the day-28/day-29 boundary: UTC helper expectations fail.
+- Remove the school, role, or linked-ID profile filter: the cross-school/wrong-role/nonexistent fixtures enter the parent ratio and fail.
+- Remove either empty-ID guard: the no-query assertions detect an empty `.in()` path.
+- Convert parent feedback failure to zero or fan it out too broadly: the shared-source isolation test fails.
+
+### Concerns
+
+No blocking concern remains. Offset pagination is deterministic but not snapshot-isolated, so writes occurring between page requests could theoretically shift a live scorecard page. A database-side aggregate/RPC would be the future option if strict point-in-time reporting becomes necessary; the current read-only pilot scorecard now returns exact results for stable source data under the configured PostgREST cap.

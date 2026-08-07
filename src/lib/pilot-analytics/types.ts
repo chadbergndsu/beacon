@@ -20,12 +20,17 @@ export type DeliveryMetric =
   | { state: 'ready'; delivered: number; failed: number; unsent: number }
   | { state: 'unavailable'; reason: string }
 
+export type BaselineStatus =
+  | { state: 'not_started' }
+  | { state: 'gathering'; day: number }
+  | { state: 'complete' }
+  | { state: 'unavailable'; reason: string }
+
 export interface PilotEvidenceScorecard {
   windowStart: string
   windowEnd: string
   feedbackWindowStart: string
-  baseline: boolean
-  baselineDay: number | null
+  baseline: BaselineStatus
   activeTeachers: RatioMetric
   activeLinkedParents: RatioMetric
   attendanceActivity: WorkflowMetric

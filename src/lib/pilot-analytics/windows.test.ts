@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  baselineDay,
+  buildBaselineStatus,
   buildHelpfulnessMetric,
   buildRatioMetric,
-  isBaselinePeriod,
   isoWeekStart,
   trailingWindow,
   utcDateKey,
@@ -33,16 +32,31 @@ describe('UTC date windows', () => {
 })
 
 describe('baseline window', () => {
-  it('treats the first 28 UTC calendar days from activity as baseline', () => {
-    expect(isBaselinePeriod('2026-08-01', new Date('2026-08-28T23:59:59Z'))).toBe(true)
-    expect(isBaselinePeriod('2026-08-01', new Date('2026-08-29T00:00:00Z'))).toBe(false)
+  it('distinguishes no captured activity from unavailable source data', () => {
+    expect(buildBaselineStatus(null, new Date('2026-08-01T00:00:00Z'))).toEqual({
+      state: 'not_started',
+    })
+    expect(buildBaselineStatus(undefined, new Date('2026-08-01T00:00:00Z'))).toEqual({
+      state: 'unavailable',
+      reason: 'Baseline activity data is unavailable.',
+    })
   })
 
-  it('returns a one-based baseline day only during the baseline', () => {
-    expect(baselineDay('2026-08-01', new Date('2026-08-01T00:00:00Z'))).toBe(1)
-    expect(baselineDay('2026-08-01', new Date('2026-08-28T23:59:59Z'))).toBe(28)
-    expect(baselineDay('2026-08-01', new Date('2026-08-29T00:00:00Z'))).toBeNull()
-    expect(baselineDay(null, new Date('2026-08-01T00:00:00Z'))).toBeNull()
+  it('returns one-based gathering days for the first 28 UTC calendar days', () => {
+    expect(buildBaselineStatus('2026-08-01', new Date('2026-08-01T00:00:00Z'))).toEqual({
+      state: 'gathering',
+      day: 1,
+    })
+    expect(buildBaselineStatus('2026-08-01', new Date('2026-08-28T23:59:59Z'))).toEqual({
+      state: 'gathering',
+      day: 28,
+    })
+  })
+
+  it('marks the baseline complete on UTC calendar day 29', () => {
+    expect(buildBaselineStatus('2026-08-01', new Date('2026-08-29T00:00:00Z'))).toEqual({
+      state: 'complete',
+    })
   })
 })
 

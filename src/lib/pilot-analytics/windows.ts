@@ -1,4 +1,4 @@
-import type { HelpfulnessMetric, RatioMetric } from './types'
+import type { BaselineStatus, HelpfulnessMetric, RatioMetric } from './types'
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 const HELPFULNESS_MINIMUM_RESPONSES = 5
@@ -42,28 +42,24 @@ export function trailingWindow(now: Date, days: number): { start: string; end: s
   }
 }
 
-export function isBaselinePeriod(firstActivityDate: string | null, now: Date): boolean {
-  if (firstActivityDate === null) {
-    return false
+export function buildBaselineStatus(
+  firstActivityDate: string | null | undefined,
+  now: Date
+): BaselineStatus {
+  if (firstActivityDate === undefined) {
+    return { state: 'unavailable', reason: 'Baseline activity data is unavailable.' }
   }
+
+  if (firstActivityDate === null) return { state: 'not_started' }
 
   const elapsedDays =
     (utcMidnightMilliseconds(utcDateKey(now)) - utcMidnightMilliseconds(firstActivityDate)) /
     MILLISECONDS_PER_DAY
 
-  return elapsedDays >= 0 && elapsedDays < 28
-}
+  if (elapsedDays < 0) return { state: 'not_started' }
+  if (elapsedDays >= 28) return { state: 'complete' }
 
-export function baselineDay(firstActivityDate: string | null, now: Date): number | null {
-  if (!isBaselinePeriod(firstActivityDate, now) || firstActivityDate === null) {
-    return null
-  }
-
-  return (
-    (utcMidnightMilliseconds(utcDateKey(now)) - utcMidnightMilliseconds(firstActivityDate)) /
-      MILLISECONDS_PER_DAY +
-    1
-  )
+  return { state: 'gathering', day: elapsedDays + 1 }
 }
 
 export function buildRatioMetric(input: {
