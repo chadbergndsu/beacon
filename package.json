@@ -19,7 +19,12 @@
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "ci": "npm run lint && npm run typecheck && npm run test:coverage && npm run build",
-    "db:migrate": "node scripts/apply-migrations.mjs"
+    "db:migrate": "node scripts/apply-migrations.mjs",
+    "icons:generate": "node scripts/generate-app-icons.mjs",
+    "store:check": "node scripts/store-check.mjs",
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npx cap open ios",
+    "cap:android": "npx cap open android"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",

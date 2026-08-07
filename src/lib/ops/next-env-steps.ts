@@ -149,6 +149,16 @@ export function buildLaunchSuggestions(input: {
       optional: true,
       href: '/craft',
     },
+    {
+      id: 'env_store_shells',
+      group: 'env',
+      label: 'Mobile / store shells (or N/A)',
+      detail:
+        'PWA install smoke; docs/store-launch.md. Capacitor ios/android when submitting to App Store / Play.',
+      done: Boolean(checklist.store_shells),
+      optional: true,
+      href: '/privacy',
+    },
   ]
 
   const checklistSteps: LaunchSuggestion[] = checklistItems.map((item) => ({

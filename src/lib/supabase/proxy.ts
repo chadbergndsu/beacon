@@ -42,6 +42,7 @@ export async function updateSession(request: NextRequest) {
     const isPublicPath =
       PUBLIC_EXACT.has(path) ||
       path === '/privacy' ||
+      path === '/terms' ||
       path === '/kiosk' ||
       path.startsWith('/kiosk/') ||
       path.startsWith('/api/kiosk/') ||
@@ -97,7 +98,8 @@ export async function updateSession(request: NextRequest) {
     isStripeWebhook ||
     isEmailInbound ||
     isCron ||
-    path === '/privacy'
+    path === '/privacy' ||
+    path === '/terms'
 
   if (!user && !isPublic) {
     const redirectUrl = request.nextUrl.clone()

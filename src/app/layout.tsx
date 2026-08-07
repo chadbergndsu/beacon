@@ -15,9 +15,17 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Beacon · School Suite',
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://beacon.commoncentsip.com'
+  ),
+  applicationName: 'Beacon',
+  title: {
+    default: 'Beacon · School Suite',
+    template: '%s · Beacon',
+  },
   description:
     'Beacon — the full school suite for any school: academics, families, communications, payments, and principal operations.',
+  manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -25,6 +33,23 @@ export const metadata: Metadata = {
   },
   formatDetection: {
     telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'Beacon',
+    title: 'Beacon · School Suite',
+    description:
+      'The full school suite for any school — academics, family communications, payments, and principal operations.',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
   },
 }
 

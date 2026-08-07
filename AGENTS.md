@@ -16,6 +16,7 @@ This file embeds the full standards so agents enforce them without needing netwo
 - **CI:** GitHub Actions runs typecheck, lint, coverage, build, Playwright e2e separately — local `npm run ci` skips e2e.
 - **Family email replies:** inbound webhook `/api/email/inbound` + `email_inbox` (migration **023**); Reply-To uses `reply+{token}@EMAIL_INBOUND_DOMAIN` when configured.
 - **Family Desk:** staff daily driver at `/desk` (alias of `/admin/emails`) — intention compose + reply inbox; parents use **Notes from school** at `/messages`.
+- **App stores:** PWA manifest + icons; Capacitor shells (`capacitor.config.cjs`) load production HTTPS — runbook `docs/store-launch.md`.
 
 ---
 

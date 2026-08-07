@@ -32,7 +32,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 
 ### Public (unauthenticated) routes
 
-Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/privacy`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/pay/*` (family invoice portal), `/api/stripe/*` (webhook), `/api/email/*` (inbound reply webhook), `/api/health`.
+Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/privacy`, `/terms`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/pay/*` (family invoice portal), `/api/stripe/*` (webhook), `/api/email/*` (inbound reply webhook), `/api/health`.
 
 **Not public:** `/api/quickbooks/callback` requires an existing principal/admin session (Intuit redirect after Connect).
 
@@ -369,6 +369,25 @@ Minecraft-style voxel campus driven by badge presence. Not the same product as *
 **Go-live:** Principal → **Go-live** → layout editor (optional) → **Sync twin rooms** (creates `school_rooms` matching layout names) → smoke-test `/craft` → **Mark smoke test** (checklist item `craft_smoke`). Onboarding and automated health show mapping progress.
 
 **Visuals:** instanced voxel geometry (walls, ceilings, windows, doors), per-room lighting, bloom + N8AO post-processing, fog + contact shadows, wall collision, capsule presence avatars. Two-floor demo with portal transitions.
+
+## Mobile & app stores
+
+Beacon is installable as a **PWA** and prepared for **App Store / Google Play** via thin Capacitor shells that load production HTTPS (same codebase — no native rewrite).
+
+```bash
+npm run icons:generate   # regenerate public/icons + app icons
+npm run store:check      # in-repo readiness
+```
+
+| Piece | Where |
+|-------|--------|
+| Manifest | `src/app/manifest.ts` → `/manifest.webmanifest` |
+| Icons / Play feature | `public/icons/` |
+| Privacy / Terms | `/privacy`, `/terms` (public) |
+| Capacitor config | `capacitor.config.cjs` |
+| Runbook | `docs/store-launch.md` · ADR `docs/adr/002-store-shells-capacitor.md` |
+
+Store developer accounts, signing, and screenshots are external — see the runbook.
 
 ## Repo
 

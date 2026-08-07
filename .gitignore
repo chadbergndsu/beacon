@@ -45,3 +45,8 @@ coverage
 test-results
 playwright-report
 
+# Capacitor native shells (generate locally — see docs/store-launch.md)
+/ios
+/android
+/docs/store-assets
+

@@ -22,7 +22,8 @@ function isPublicPath(path: string): boolean {
     isStripeWebhook ||
     isEmailInbound ||
     isCron ||
-    path === '/privacy'
+    path === '/privacy' ||
+    path === '/terms'
   )
 }
 
@@ -34,6 +35,7 @@ describe('proxy public paths', () => {
     expect(isPublicPath('/kiosk/abc123tokenxyz')).toBe(true)
     expect(isPublicPath('/login')).toBe(true)
     expect(isPublicPath('/privacy')).toBe(true)
+    expect(isPublicPath('/terms')).toBe(true)
     expect(isPublicPath('/pay/tok_abc')).toBe(true)
     expect(isPublicPath('/api/stripe/webhook')).toBe(true)
     expect(isPublicPath('/api/email/inbound')).toBe(true)

@@ -99,6 +99,12 @@ export const RELEASE_CHECKLIST: ChecklistItem[] = [
     group: 'trust',
   },
   {
+    id: 'store_shells',
+    label: 'Mobile / store shells ready (or N/A)',
+    help: 'PWA install smoke + docs/store-launch.md. Capacitor ios/android when submitting to App Store / Play. Privacy + Terms URLs live.',
+    group: 'launch',
+  },
+  {
     id: 'pilot_owner_alerts',
     label: 'Pilot owner alerts wired',
     help: 'BEACON_FEEDBACK_TO for email + optional BEACON_NTFY_URL for phone push. Suggestion button tested.',
