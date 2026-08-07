@@ -21,6 +21,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 import { buttonClassName } from '@/components/ui/button'
+import { recordPilotActivity } from '@/lib/pilot-analytics/activity'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
 export default async function DashboardPage() {
@@ -42,6 +43,15 @@ export default async function DashboardPage() {
   const role = profile.role
   const schoolId = profile.school_id
   const firstName = profile.full_name?.trim().split(/\s+/)[0]
+
+  if (role === 'parent' && schoolId) {
+    await recordPilotActivity({
+      schoolId,
+      userId: user.id,
+      actorRole: role,
+      eventType: 'parent_portal',
+    })
+  }
 
   let classes: {
     id: string
