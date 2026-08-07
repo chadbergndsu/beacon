@@ -32,7 +32,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 
 ### Public (unauthenticated) routes
 
-Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/privacy`, `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/pay/*` (family invoice portal), `/api/stripe/*` (webhook), `/api/health`.
+Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/school`, `/privacy`, `/vs/*` (redirects to About vs FACTS), `/kiosk`, `/kiosk/*`, `/api/kiosk/*`, `/pay/*` (family invoice portal), `/api/stripe/*` (webhook), `/api/health`.
 
 **Not public:** `/api/quickbooks/callback` requires an existing principal/admin session (Intuit redirect after Connect).
 
