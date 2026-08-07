@@ -1,5 +1,5 @@
 import { getProfile } from '@/lib/auth'
-import { DEMO_SCHOOL_LAYOUT } from '@/lib/craft/layout'
+import { loadCraftLayoutForSchool } from '@/lib/craft/settings'
 import { CraftLoader } from './CraftLoader'
 
 export default async function CraftPage() {
@@ -14,9 +14,11 @@ export default async function CraftPage() {
     )
   }
 
+  const layout = await loadCraftLayoutForSchool(profile.school_id)
+
   return (
     <div>
-      <CraftLoader layout={DEMO_SCHOOL_LAYOUT} role={profile.role} />
+      <CraftLoader layout={layout} role={profile.role} />
     </div>
   )
 }

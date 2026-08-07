@@ -5,10 +5,12 @@ import type { Role } from '@/lib/types'
 import type { CraftVisibleMarker } from '@/lib/craft/types'
 import { roleLabel } from '@/lib/roles'
 import { useCraftUi } from './CraftUiContext'
-import { Minimap } from './Minimap'
+import { Minimap, Crosshair } from './Minimap'
 import { MockScanPanel, RoomSearch } from './CraftPanels'
 import { TouchMovePad } from './TouchMovePad'
+import { TouchLookZone } from './TouchLookZone'
 import { VoxelScene } from './VoxelScene'
+import type { CraftFloorLayout } from '@/lib/craft/types'
 
 export function CraftHud({
   role,
@@ -59,16 +61,18 @@ export function CraftHud({
       </div>
 
       <div className="relative min-h-0 flex-1">
-        <VoxelScene layout={layout} />
+        <VoxelScene />
+        <Crosshair />
         {!pointerLocked ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="rounded-lg bg-black/50 px-4 py-2 text-sm text-white">
-              Click the world to capture mouse · WASD move · Space/Shift fly (admin)
+            <div className="rounded-lg bg-black/50 px-4 py-2 text-sm text-white shadow-lg backdrop-blur-sm">
+              Click to capture mouse · WASD · Shift sprint · Space/Shift fly (admin) · Mobile pads
             </div>
           </div>
         ) : null}
         <Minimap />
         <TouchMovePad />
+        <TouchLookZone />
       </div>
 
       <div className="z-10 grid gap-3 border-t border-border/80 bg-white/95 p-3 sm:grid-cols-2">

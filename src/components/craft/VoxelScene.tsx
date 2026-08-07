@@ -2,26 +2,35 @@
 
 import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Sky } from '@react-three/drei'
-import type { CraftFloorLayout } from '@/lib/craft/types'
+import { Sky, Stars } from '@react-three/drei'
 import { VoxelSchool } from './VoxelSchool'
 import { PlayerController } from './PlayerController'
 import { OccupancyParticles, PresenceMarkers, RoomLabels } from './PresenceLayer'
 import { TrailMarkers } from './CraftSidePanels'
+import { SceneEnvironment } from './SceneEnvironment'
 
-export function VoxelScene({ layout }: { layout: CraftFloorLayout }) {
+export function VoxelScene() {
   return (
     <Canvas
       shadows
-      camera={{ fov: 75, near: 0.1, far: 200, position: [24, 2, 26] }}
-      className="h-full w-full touch-none bg-sky-200"
+      dpr={[1, 1.75]}
+      gl={{ antialias: true, powerPreference: 'high-performance' }}
+      camera={{ fov: 72, near: 0.1, far: 160, position: [24, 2, 26] }}
+      className="h-full w-full touch-none bg-sky-300"
     >
-      <color attach="background" args={['#bae6fd']} />
-      <Sky sunPosition={[100, 20, 100]} />
-      <ambientLight intensity={0.55} />
-      <directionalLight castShadow position={[20, 30, 10]} intensity={0.9} shadow-mapSize={[1024, 1024]} />
+      <color attach="background" args={['#b8d4ea']} />
+      <Sky
+        distance={450000}
+        sunPosition={[100, 28, 100]}
+        inclination={0.52}
+        azimuth={0.22}
+        mieCoefficient={0.005}
+        rayleigh={0.4}
+      />
+      <Stars radius={120} depth={40} count={1200} factor={3} saturation={0} fade speed={0.4} />
+      <SceneEnvironment />
       <Suspense fallback={null}>
-        <VoxelSchool layout={layout} />
+        <VoxelSchool />
         <RoomLabels />
         <PresenceMarkers />
         <OccupancyParticles />

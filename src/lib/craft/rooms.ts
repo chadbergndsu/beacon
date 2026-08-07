@@ -1,8 +1,8 @@
 import { listRooms, upsertRoom } from '@/lib/badge/store'
 import type { SchoolRoom } from '@/lib/badge/types'
-import { DEMO_SCHOOL_LAYOUT, buildRoomIdMap } from './layout'
+import { buildRoomIdMap } from './layout'
 import type { CraftFloorLayout } from './types'
-import { loadCraftSettings, saveCraftRoomMap } from './settings'
+import { loadCraftSettings, loadCraftLayoutForSchool, saveCraftRoomMap } from './settings'
 
 export function resolveRoomIdMap(
   layout: CraftFloorLayout,
@@ -21,16 +21,17 @@ export function resolveRoomIdMap(
 
 export async function loadCraftRoomMapping(
   schoolId: string,
-  layout: CraftFloorLayout = DEMO_SCHOOL_LAYOUT
+  layout?: CraftFloorLayout
 ): Promise<{
   layoutToDb: Record<string, string>
   dbToLayout: Record<string, string>
 }> {
+  const resolvedLayout = layout ?? (await loadCraftLayoutForSchool(schoolId))
   const [schoolRooms, settings] = await Promise.all([
     listRooms(schoolId).catch(() => [] as SchoolRoom[]),
     loadCraftSettings(schoolId),
   ])
-  const layoutToDb = resolveRoomIdMap(layout, schoolRooms, settings.roomIdMap || {})
+  const layoutToDb = resolveRoomIdMap(resolvedLayout, schoolRooms, settings.roomIdMap || {})
   const dbToLayout: Record<string, string> = {}
   for (const [layoutId, dbId] of Object.entries(layoutToDb)) {
     dbToLayout[dbId] = layoutId
@@ -40,14 +41,15 @@ export async function loadCraftRoomMapping(
 
 export async function syncLayoutRoomsToSchool(
   schoolId: string,
-  layout: CraftFloorLayout = DEMO_SCHOOL_LAYOUT
+  layout?: CraftFloorLayout
 ): Promise<{ created: number; mapped: number; roomIdMap: Record<string, string> }> {
+  const resolvedLayout = layout ?? (await loadCraftLayoutForSchool(schoolId))
   const existing = await listRooms(schoolId)
   const byName = new Map(existing.map((r) => [r.name.trim().toLowerCase(), r]))
   let created = 0
   const roomIdMap: Record<string, string> = {}
 
-  for (const lr of layout.rooms) {
+  for (const lr of resolvedLayout.rooms) {
     const hit = byName.get(lr.name.trim().toLowerCase())
     if (hit) {
       roomIdMap[lr.roomId] = hit.id
@@ -67,11 +69,11 @@ export async function syncLayoutRoomsToSchool(
   }
 
   const settings = await loadCraftSettings(schoolId)
-  const merged = resolveRoomIdMap(layout, [...existing, ...Object.values(byName)], {
+  const merged = resolveRoomIdMap(resolvedLayout, [...existing, ...Object.values(byName)], {
     ...settings.roomIdMap,
     ...roomIdMap,
   })
-  await saveCraftRoomMap(schoolId, merged, layout.id)
+  await saveCraftRoomMap(schoolId, merged, resolvedLayout.id)
 
   return { created, mapped: Object.keys(merged).length, roomIdMap: merged }
 }

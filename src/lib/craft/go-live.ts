@@ -1,8 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { listRooms } from '@/lib/badge/store'
-import { DEMO_SCHOOL_LAYOUT } from './layout'
 import { listMockPresence } from './presence-store'
-import { loadCraftSettings } from './settings'
+import { loadCraftSettings, loadCraftLayoutForSchool } from './settings'
 import { resolveRoomIdMap } from './rooms'
 
 export type CraftReadiness = {
@@ -45,7 +44,7 @@ export function evaluateCraftReadiness(input: {
 }
 
 export async function probeCraftReadiness(schoolId: string): Promise<CraftReadiness> {
-  const layout = DEMO_SCHOOL_LAYOUT
+  const layout = await loadCraftLayoutForSchool(schoolId)
   const roomsTotal = layout.rooms.length
 
   let schoolRooms: Awaited<ReturnType<typeof listRooms>> = []

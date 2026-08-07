@@ -6,10 +6,13 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { PointerLockControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { getRoomById, getRoomCenter } from '@/lib/craft/layout'
+import { clampToBounds, resolvePlayerCollision } from '@/lib/craft/collision'
 import { useCraftUi } from './CraftUiContext'
 
-const MOVE_SPEED = 6
-const FLY_SPEED = 10
+const WALK_SPEED = 7
+const SPRINT_SPEED = 11
+const FLY_SPEED = 14
+const LOOK_SENS = 0.0022
 
 export function PlayerController() {
   const { camera } = useThree()
@@ -19,11 +22,17 @@ export function PlayerController() {
     teleportRoomId,
     requestTeleport,
     layout,
+    geometry,
     setPointerLocked,
+    pointerLocked,
     touchMove,
+    touchLookRef,
   } = useCraftUi()
   const controlsRef = useRef<ComponentRef<typeof PointerLockControls>>(null)
   const keys = useRef<Record<string, boolean>>({})
+  const velocity = useRef(new THREE.Vector3())
+  const yaw = useRef(0)
+  const pitch = useRef(0)
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -49,50 +58,88 @@ export function PlayerController() {
     }
     const [cx, cy, cz] = getRoomCenter(room)
     camera.position.set(cx, cy + 0.5, cz)
+    velocity.current.set(0, 0, 0)
     requestTeleport(null)
   }, [teleportRoomId, layout, camera, requestTeleport])
 
   useFrame((_, delta) => {
-    const speed = (flyMode ? FLY_SPEED : MOVE_SPEED) * delta
+    camera.rotation.order = 'YXZ'
+
+    if (!pointerLocked) {
+      const look = touchLookRef.current
+      if (look.dx || look.dy) {
+        yaw.current -= look.dx * LOOK_SENS
+        pitch.current = THREE.MathUtils.clamp(pitch.current - look.dy * LOOK_SENS, -1.45, 1.45)
+        look.dx = 0
+        look.dy = 0
+      }
+      camera.rotation.y = yaw.current
+      camera.rotation.x = pitch.current
+    } else {
+      yaw.current = camera.rotation.y
+      pitch.current = camera.rotation.x
+    }
+
+    const sprint =
+      !flyMode &&
+      (keys.current.ShiftLeft || keys.current.ShiftRight) &&
+      !(keys.current.Space)
+    const maxSpeed = flyMode ? FLY_SPEED : sprint ? SPRINT_SPEED : WALK_SPEED
+
     const forward = new THREE.Vector3()
     camera.getWorldDirection(forward)
     forward.y = flyMode ? forward.y : 0
-    forward.normalize()
+    if (forward.lengthSq() > 0) forward.normalize()
 
     const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize()
-    const move = new THREE.Vector3()
+    const wish = new THREE.Vector3()
 
-    if (keys.current.KeyW) move.add(forward)
-    if (keys.current.KeyS) move.sub(forward)
-    if (keys.current.KeyA) move.sub(right)
-    if (keys.current.KeyD) move.add(right)
+    if (keys.current.KeyW) wish.add(forward)
+    if (keys.current.KeyS) wish.sub(forward)
+    if (keys.current.KeyA) wish.sub(right)
+    if (keys.current.KeyD) wish.add(right)
 
     if (touchMove.x || touchMove.y) {
-      move.add(right.clone().multiplyScalar(touchMove.x))
-      move.add(forward.clone().multiplyScalar(-touchMove.y))
+      wish.add(right.clone().multiplyScalar(touchMove.x))
+      wish.add(forward.clone().multiplyScalar(-touchMove.y))
     }
 
     if (flyMode) {
-      if (keys.current.Space) move.y += 1
-      if (keys.current.ShiftLeft || keys.current.ShiftRight) move.y -= 1
+      if (keys.current.Space) wish.y += 1
+      if (keys.current.ShiftLeft || keys.current.ShiftRight) wish.y -= 1
     }
 
-    if (move.lengthSq() > 0) {
-      move.normalize().multiplyScalar(speed)
-      camera.position.add(move)
-    }
+    const target = wish.lengthSq() > 0 ? wish.normalize().multiplyScalar(maxSpeed) : new THREE.Vector3()
+    velocity.current.lerp(target, flyMode ? 0.18 : 0.22)
+    const step = velocity.current.clone().multiplyScalar(delta)
+
+    const prev = { x: camera.position.x, z: camera.position.z }
+    let nextX = prev.x + step.x
+    let nextZ = prev.z + step.z
 
     if (!flyMode) {
-      camera.position.y = 2
-    }
-
-    camera.position.x = THREE.MathUtils.clamp(camera.position.x, 0, 48)
-    camera.position.z = THREE.MathUtils.clamp(camera.position.z, 0, 36)
-    if (flyMode) {
+      const resolved = resolvePlayerCollision(prev, { x: nextX, z: nextZ }, geometry.collision)
+      nextX = resolved.x
+      nextZ = resolved.z
+      const clamped = clampToBounds(nextX, nextZ, geometry.bounds)
+      nextX = clamped.x
+      nextZ = clamped.z
+      camera.position.y = THREE.MathUtils.lerp(camera.position.y, 2, 0.35)
+    } else {
+      camera.position.y += step.y
       camera.position.y = THREE.MathUtils.clamp(camera.position.y, 1, 12)
     }
 
-    setPlayer({ x: camera.position.x, y: camera.position.y, z: camera.position.z })
+    camera.position.x = nextX
+    camera.position.z = nextZ
+
+    setPlayer({
+      x: camera.position.x,
+      y: camera.position.y,
+      z: camera.position.z,
+      yaw: yaw.current,
+      pitch: pitch.current,
+    })
   })
 
   return (

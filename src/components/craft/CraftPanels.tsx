@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import type { CraftFloorLayout, CraftStudentOption } from '@/lib/craft/types'
 import { getRoomByName } from '@/lib/craft/layout'
+import { useCraftUi } from './CraftUiContext'
 
 export function MockScanPanel({
   layout,
@@ -123,11 +124,15 @@ export function RoomSearch({
   layout: CraftFloorLayout
   onSelectRoom: (roomId: string) => void
 }) {
+  const { setHighlightRoomId } = useCraftUi()
   const [query, setQuery] = useState('')
 
   function go() {
     const room = getRoomByName(layout, query)
-    if (room) onSelectRoom(room.roomId)
+    if (room) {
+      setHighlightRoomId(room.roomId)
+      onSelectRoom(room.roomId)
+    }
   }
 
   return (
@@ -138,7 +143,11 @@ export function RoomSearch({
           className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
           placeholder="Room 101 or room id"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            const room = getRoomByName(layout, e.target.value)
+            setHighlightRoomId(room?.roomId ?? null)
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') go()
           }}

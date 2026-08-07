@@ -356,6 +356,8 @@ Minecraft-style voxel campus driven by badge presence. Not the same product as *
 
 **Go-live:** Principal → **Go-live** → **Sync twin rooms** (creates `school_rooms` matching layout names) → smoke-test `/craft` → **Mark smoke test** (checklist item `craft_smoke`). Onboarding and automated health show mapping progress.
 
+**Visuals:** instanced voxel geometry (walls, ceilings, windows, doors), per-room lighting, fog + contact shadows, wall collision, sprint movement, capsule presence avatars, rotating minimap + compass, mobile move/look pads. Optional per-school layout JSON in `schools.settings.craft.customLayout`.
+
 ## Repo
 
 https://github.com/chadbergndsu/beacon

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireCraftProfile } from '@/lib/craft/auth-api'
-import { DEMO_SCHOOL_LAYOUT } from '@/lib/craft/layout'
+import { loadCraftLayoutForSchool } from '@/lib/craft/settings'
 import { loadCampusPresence } from '@/lib/craft/presence-store'
 import { filterPresenceForViewer, defaultAnonymizeForRole } from '@/lib/craft/presence'
 import { isLeadership } from '@/lib/roles'
@@ -14,7 +14,7 @@ export async function GET() {
 
   const { profile } = auth
   const schoolId = profile.school_id!
-  const layout = DEMO_SCHOOL_LAYOUT
+  const layout = await loadCraftLayoutForSchool(schoolId)
   const layoutRoomIds = layout.rooms.map((r) => r.roomId)
   const { layoutToDb, dbToLayout } = await loadCraftRoomMapping(schoolId, layout)
 

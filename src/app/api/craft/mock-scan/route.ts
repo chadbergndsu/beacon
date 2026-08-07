@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireCraftProfile } from '@/lib/craft/auth-api'
 import { canTriggerMockScans } from '@/lib/craft/presence'
-import { DEMO_SCHOOL_LAYOUT, getRoomById } from '@/lib/craft/layout'
+import { getRoomById } from '@/lib/craft/layout'
+import { loadCraftLayoutForSchool } from '@/lib/craft/settings'
 import { upsertMockPresence } from '@/lib/craft/presence-store'
 import { rateLimitAsync } from '@/lib/security/rate-limit'
 
@@ -54,7 +55,8 @@ export async function POST(request: Request) {
     )
   }
 
-  const room = getRoomById(DEMO_SCHOOL_LAYOUT, parsed.data.roomId)
+  const layout = await loadCraftLayoutForSchool(auth.profile.school_id!)
+  const room = getRoomById(layout, parsed.data.roomId)
   if (!room) {
     return NextResponse.json({ ok: false, error: 'Unknown roomId for demo layout.' }, { status: 400 })
   }

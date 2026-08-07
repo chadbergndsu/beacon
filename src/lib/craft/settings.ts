@@ -1,10 +1,14 @@
 import { mergeSchoolSettingsNested } from '@/lib/school-settings'
+import type { CraftFloorLayout } from './types'
+import { DEMO_SCHOOL_LAYOUT } from './layout'
+import { parseCraftLayout } from './layout-validate'
 
 export type CraftSchoolSettings = {
   layoutId?: string
   /** layout roomId → school_rooms.id */
   roomIdMap?: Record<string, string>
   smokeTestAt?: string | null
+  customLayout?: CraftFloorLayout
 }
 
 export async function loadCraftSettings(schoolId: string): Promise<CraftSchoolSettings> {
@@ -16,7 +20,25 @@ export async function loadCraftSettings(schoolId: string): Promise<CraftSchoolSe
     layoutId: craft.layoutId,
     roomIdMap: craft.roomIdMap || {},
     smokeTestAt: craft.smokeTestAt ?? null,
+    customLayout: craft.customLayout,
   }
+}
+
+export async function loadCraftLayoutForSchool(schoolId: string): Promise<CraftFloorLayout> {
+  const settings = await loadCraftSettings(schoolId)
+  const parsed = settings.customLayout ? parseCraftLayout(settings.customLayout) : null
+  return parsed ?? DEMO_SCHOOL_LAYOUT
+}
+
+export async function saveCraftCustomLayout(
+  schoolId: string,
+  layout: CraftFloorLayout
+): Promise<void> {
+  const r = await mergeSchoolSettingsNested(schoolId, 'craft', {
+    customLayout: layout,
+    layoutId: layout.id,
+  })
+  if (!r.ok) throw new Error(r.error)
 }
 
 export async function saveCraftRoomMap(

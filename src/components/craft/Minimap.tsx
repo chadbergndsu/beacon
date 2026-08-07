@@ -11,11 +11,18 @@ export function Minimap() {
 
   const toX = (x: number) => ((x - bounds.minX) / width) * 100
   const toY = (z: number) => ((z - bounds.minZ) / height) * 100
+  const heading = (-player.yaw * 180) / Math.PI
+
+  const compass = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+  const compassIdx = Math.round((((player.yaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8
 
   return (
-    <div className="pointer-events-none absolute bottom-4 right-4 w-40 rounded-lg border border-white/30 bg-slate-900/75 p-2 text-white shadow-lg backdrop-blur sm:w-48">
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-300">Mini-map</p>
-      <svg viewBox="0 0 100 100" className="h-28 w-full rounded bg-slate-950/60 sm:h-32">
+    <div className="pointer-events-none absolute bottom-4 right-4 w-40 rounded-xl border border-white/20 bg-slate-900/80 p-2 text-white shadow-xl backdrop-blur-md sm:w-48">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-300">Campus map</p>
+        <p className="text-[10px] font-bold text-sky-300">{compass[compassIdx]}</p>
+      </div>
+      <svg viewBox="0 0 100 100" className="h-28 w-full rounded-lg bg-slate-950/70 sm:h-32">
         {layout.rooms.map((room) => {
           const [ox, , oz] = room.origin
           const [w, , d] = room.size
@@ -27,9 +34,10 @@ export function Minimap() {
               width={(w / width) * 100}
               height={(d / height) * 100}
               fill={room.color}
-              fillOpacity={0.55}
-              stroke="#cbd5e1"
-              strokeWidth={0.4}
+              fillOpacity={0.5}
+              stroke="#e2e8f0"
+              strokeWidth={0.35}
+              rx={0.5}
             />
           )
         })}
@@ -43,18 +51,33 @@ export function Minimap() {
               key={m.id}
               cx={toX(cx)}
               cy={toY(cz)}
-              r={1.2}
-              fill={m.anonymized ? '#94a3b8' : '#22c55e'}
+              r={1.1}
+              fill={m.anonymized ? '#94a3b8' : '#4ade80'}
             />
           )
         })}
-        <circle cx={toX(player.x)} cy={toY(player.z)} r={1.8} fill="#38bdf8" stroke="#0ea5e9" strokeWidth={0.6} />
-        <polygon
-          points={`${toX(player.x)},${toY(player.z) - 2.5} ${toX(player.x) - 1.5},${toY(player.z) + 1.5} ${toX(player.x) + 1.5},${toY(player.z) + 1.5}`}
-          fill="#38bdf8"
-          opacity={0.5}
-        />
+        <g transform={`rotate(${heading} ${toX(player.x)} ${toY(player.z)})`}>
+          <polygon
+            points={`${toX(player.x)},${toY(player.z) - 3} ${toX(player.x) - 1.8},${toY(player.z) + 1.6} ${toX(player.x) + 1.8},${toY(player.z) + 1.6}`}
+            fill="#38bdf8"
+            stroke="#0ea5e9"
+            strokeWidth={0.5}
+          />
+        </g>
       </svg>
+    </div>
+  )
+}
+
+export function Crosshair() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+      <div className="relative h-6 w-6 opacity-70">
+        <span className="absolute left-1/2 top-0 h-2 w-0.5 -translate-x-1/2 rounded-full bg-white/80" />
+        <span className="absolute bottom-0 left-1/2 h-2 w-0.5 -translate-x-1/2 rounded-full bg-white/80" />
+        <span className="absolute left-0 top-1/2 h-0.5 w-2 -translate-y-1/2 rounded-full bg-white/80" />
+        <span className="absolute right-0 top-1/2 h-0.5 w-2 -translate-y-1/2 rounded-full bg-white/80" />
+      </div>
     </div>
   )
 }
