@@ -4,13 +4,8 @@ import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  BookOpen,
   Check,
-  History,
   Loader2,
-  ShieldAlert,
-  UserPlus,
-  Users,
 } from 'lucide-react'
 import {
   createAbekaClassesAction,
@@ -37,6 +32,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
 export type TeacherClass = {
@@ -137,56 +133,38 @@ export function TeacherClassroomHub({
   }
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-sky-50 to-white p-5 dark:border-emerald-900 dark:from-emerald-950/40 dark:via-sky-950/30 dark:to-slate-950">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
-          Your classroom · teacher ownership
-        </p>
-        <h2 className="mt-1 text-xl font-bold text-navy dark:text-sky-50">
-          {teacherName ? `Hi ${teacherName.split(' ')[0]}` : 'My classroom'}
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-          Build your Abeka classes, add students, and run the year. Deleting a student or class
-          goes to the principal for approval. Mistakes? Use <strong>History</strong> below to undo
-          your own changes. Grade weights and gradebook links also live under{' '}
-          <Link href="/teacher/settings" className="font-semibold text-sky-800 underline">
-            Settings
-          </Link>
-          .
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          <Badge variant="sky">{classes.length} classes</Badge>
-          <Badge variant="success">{students.length} students</Badge>
-          {pendingRequests.filter((r) => r.status === 'pending').length > 0 && (
-            <Badge variant="warning">
-              {pendingRequests.filter((r) => r.status === 'pending').length} pending approval
-            </Badge>
-          )}
+    <div className="page-stack">
+      <div className="flex flex-wrap items-end justify-between gap-2 border-b border-border/80 pb-3">
+        <div>
+          <p className="text-[13px] font-medium text-foreground">
+            {teacherName ? `${teacherName.split(' ')[0]}'s classroom` : 'My classroom'}
+          </p>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            {classes.length} classes · {students.length} students
+            {pendingRequests.filter((r) => r.status === 'pending').length > 0
+              ? ` · ${pendingRequests.filter((r) => r.status === 'pending').length} pending approval`
+              : ''}
+            {' · '}
+            <Link href="/teacher/settings" className="text-primary hover:underline">
+              Settings
+            </Link>
+          </p>
         </div>
       </div>
 
-      {msg && (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+      {msg ? (
+        <p className="rounded-xl border border-emerald-200 bg-success-soft px-4 py-3 text-sm font-medium text-success">
           {msg}
         </p>
-      )}
-      {err && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+      ) : null}
+      {err ? (
+        <p className="rounded-xl border border-red-200 bg-danger-soft px-4 py-3 text-sm font-medium text-danger">
           {err}
         </p>
-      )}
+      ) : null}
 
-      {/* Abeka classes */}
-      <section className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] space-y-4">
-        <div className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-violet-600" />
-          <h3 className="text-lg font-bold text-navy dark:text-sky-50">
-            1. Create Abeka classes (you teach them)
-          </h3>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Pick a grade, choose subjects, create in one click. You become the teacher automatically.
-        </p>
+      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <p className="text-[13px] font-medium text-foreground">1. Create Abeka classes</p>
 
         <div>
           <Label className="text-xs">Grade</Label>
@@ -198,10 +176,10 @@ export function TeacherClassroomHub({
                 onClick={() => onGradeChange(g.id)}
                 aria-pressed={gradeId === g.id}
                 className={cn(
-                  'rounded-full border-2 px-3 py-1.5 text-xs font-bold transition shadow-sm',
+                  'rounded-lg border px-3 py-1.5 text-xs font-semibold transition',
                   gradeId === g.id
-                    ? 'border-violet-700 bg-violet-700 text-white ring-2 ring-violet-300 ring-offset-2'
-                    : 'border-slate-300 bg-white text-slate-700 hover:border-violet-400 dark:bg-slate-900 dark:text-slate-100'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card text-foreground hover:bg-muted'
                 )}
               >
                 {g.label}
@@ -215,7 +193,7 @@ export function TeacherClassroomHub({
             <Label className="text-xs">
               Subjects for this grade{' '}
               <span className="font-normal text-muted-foreground">
-                ({selectedSubjects.length} selected — dark purple = on)
+                ({selectedSubjects.length} selected)
               </span>
             </Label>
             <div className="flex gap-1">
@@ -232,14 +210,14 @@ export function TeacherClassroomHub({
               </Button>
             </div>
           </div>
-          {selectedSubjects.length > 0 && (
-            <p className="mt-2 rounded-lg border-2 border-violet-600 bg-violet-700 px-3 py-2 text-xs font-bold text-white">
+          {selectedSubjects.length > 0 ? (
+            <p className="mt-2 rounded-lg border border-primary/25 bg-primary/10 px-3 py-2 text-xs font-semibold text-foreground">
               Selected ({selectedSubjects.length}):{' '}
               {selectedSubjects
                 .map((id) => availableSubjects.find((s) => s.id === id)?.short || id)
                 .join(' · ')}
             </p>
-          )}
+          ) : null}
           <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {availableSubjects.map((s: AbekaSubject) => {
               const on = selectedSubjects.includes(s.id)
@@ -250,20 +228,20 @@ export function TeacherClassroomHub({
                   onClick={() => toggleSubject(s.id)}
                   aria-pressed={on}
                   className={cn(
-                    'relative rounded-xl border-2 px-3 py-2.5 text-left text-sm transition',
+                    'relative rounded-xl border px-3 py-2.5 text-left text-sm transition',
                     on
-                      ? 'border-violet-700 bg-violet-700 text-white shadow-md shadow-violet-500/30 ring-2 ring-violet-300 ring-offset-1'
-                      : 'border-slate-300 bg-white text-slate-900 hover:border-violet-400 hover:bg-violet-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100'
+                      ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                      : 'border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5'
                   )}
                 >
                   <span className="flex items-start justify-between gap-2">
-                    <span className="font-bold leading-tight">{s.label}</span>
+                    <span className="font-semibold leading-tight">{s.label}</span>
                     <span
                       className={cn(
-                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 text-[10px]',
+                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-[10px]',
                         on
-                          ? 'border-white bg-white text-violet-700'
-                          : 'border-slate-400 bg-transparent text-transparent'
+                          ? 'border-primary-foreground/40 bg-primary-foreground text-primary'
+                          : 'border-border bg-transparent text-transparent'
                       )}
                     >
                       <Check className="h-3.5 w-3.5" strokeWidth={3} />
@@ -272,7 +250,7 @@ export function TeacherClassroomHub({
                   <span
                     className={cn(
                       'mt-1 block text-[11px] font-medium',
-                      on ? 'text-violet-100' : 'text-muted-foreground'
+                      on ? 'text-primary-foreground/80' : 'text-muted-foreground'
                     )}
                   >
                     {suggestClassName(gradeId, s)} · call {suggestCallCode(gradeId, s)}
@@ -286,7 +264,6 @@ export function TeacherClassroomHub({
         <Button
           type="button"
           disabled={pending || selectedSubjects.length === 0}
-          className="bg-violet-700 hover:bg-violet-800"
           onClick={() =>
             run(
               () =>
@@ -360,116 +337,106 @@ export function TeacherClassroomHub({
         </p>
 
         {classes.length > 0 && (
-          <ul className="space-y-2 border-t pt-4">
-            {classes.map((c) => (
-              <li
-                key={c.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"
-              >
-                <div className="min-w-0">
-                  <Link
-                    href={`/classes/${c.id}`}
-                    className="font-semibold text-sky-800 hover:underline dark:text-sky-300"
-                  >
-                    {c.name}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">
-                    {[c.subject, c.grade_level].filter(Boolean).join(' · ')} ·{' '}
-                    {c.enrollment_count} students
-                    {c.call_number ? (
-                      <span className="ml-1 font-mono font-bold text-violet-800 dark:text-violet-300">
-                        · #{c.call_number}
-                      </span>
-                    ) : null}
-                  </p>
-                  {editCallId === c.id ? (
-                    <div className="mt-1 flex flex-wrap items-center gap-1">
-                      <Input
-                        className="h-8 w-36 font-mono text-xs"
-                        value={editCallVal}
-                        onChange={(e) => setEditCallVal(e.target.value)}
-                        placeholder="Call #"
-                      />
+          <Table className="border-t pt-3">
+            <THead>
+              <TR>
+                <TH>Class</TH>
+                <TH>Details</TH>
+                <TH>Call #</TH>
+                <TH className="text-right">Students</TH>
+                <TH className="text-right">Actions</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {classes.map((c) => (
+                <TR key={c.id}>
+                  <TD>
+                    <Link
+                      href={`/classes/${c.id}`}
+                      className="font-medium text-foreground hover:text-primary hover:underline"
+                    >
+                      {c.name}
+                    </Link>
+                  </TD>
+                  <TD className="text-muted-foreground">
+                    {[c.subject, c.grade_level].filter(Boolean).join(' · ') || '—'}
+                  </TD>
+                  <TD>
+                    {editCallId === c.id ? (
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Input
+                          className="h-8 w-28 font-mono text-xs"
+                          value={editCallVal}
+                          onChange={(e) => setEditCallVal(e.target.value)}
+                          placeholder="Call #"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={pending}
+                          onClick={() =>
+                            run(async () => {
+                              const r = await updateClassCallNumberAction(c.id, editCallVal || null)
+                              if (r.ok) setEditCallId(null)
+                              return r
+                            }, 'Call number saved.')
+                          }
+                        >
+                          Save
+                        </Button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="font-mono text-[12px] text-muted-foreground hover:text-primary"
+                        onClick={() => {
+                          setEditCallId(c.id)
+                          setEditCallVal(c.call_number || '')
+                        }}
+                      >
+                        {c.call_number || 'Add'}
+                      </button>
+                    )}
+                  </TD>
+                  <TD className="text-right tabular-nums">{c.enrollment_count}</TD>
+                  <TD className="text-right">
+                    <div className="inline-flex gap-1.5">
+                      <Link href={`/classes/${c.id}`}>
+                        <Button type="button" size="sm">
+                          Gradebook
+                        </Button>
+                      </Link>
                       <Button
                         type="button"
                         size="sm"
+                        variant="outline"
+                        className="text-danger"
                         disabled={pending}
                         onClick={() =>
-                          run(async () => {
-                            const r = await updateClassCallNumberAction(
-                              c.id,
-                              editCallVal || null
-                            )
-                            if (r.ok) setEditCallId(null)
-                            return r
-                          }, 'Call number saved.')
+                          run(
+                            () =>
+                              requestDeletionAction({
+                                kind: 'delete_class',
+                                entityId: c.id,
+                                reason: 'Teacher requested archive',
+                              }),
+                            'Archive request sent.'
+                          )
                         }
                       >
-                        Save
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setEditCallId(null)}
-                      >
-                        Cancel
+                        Remove
                       </Button>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="mt-0.5 text-[11px] font-semibold text-violet-700 underline"
-                      onClick={() => {
-                        setEditCallId(c.id)
-                        setEditCallVal(c.call_number || '')
-                      }}
-                    >
-                      {c.call_number ? 'Edit call #' : 'Add call #'}
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Link href={`/classes/${c.id}`}>
-                    <Button type="button" size="sm">
-                      Gradebook
-                    </Button>
-                  </Link>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="text-red-700"
-                    disabled={pending}
-                    onClick={() =>
-                      run(
-                        () =>
-                          requestDeletionAction({
-                            kind: 'delete_class',
-                            entityId: c.id,
-                            reason: 'Teacher requested archive',
-                          }),
-                        'Archive request sent to principal (or applied if you have leadership).'
-                      )
-                    }
-                  >
-                    Request remove
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
       </section>
 
-      {/* Students */}
-      <section className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] space-y-4">
-        <div className="flex items-center gap-2">
-          <UserPlus className="h-5 w-5 text-emerald-600" />
-          <h3 className="text-lg font-bold text-navy dark:text-sky-50">
-            2. Add students to your class
-          </h3>
-        </div>
+      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <p className="text-[13px] font-medium text-foreground">2. Students</p>
         {classes.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Create at least one class above first — students enroll into your class.
@@ -569,56 +536,52 @@ export function TeacherClassroomHub({
         )}
 
         {students.length > 0 && (
-          <div className="max-h-64 overflow-y-auto rounded-xl border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-xs">
-                <tr>
-                  <th className="px-3 py-2">Student</th>
-                  <th className="px-3 py-2">Grade</th>
-                  <th className="px-3 py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((s) => (
-                  <tr key={s.id} className="border-t">
-                    <td className="px-3 py-1.5">
-                      <Link
-                        href={`/students/${s.id}`}
-                        className="font-medium text-sky-800 hover:underline dark:text-sky-300"
-                      >
-                        {s.last_name}, {s.first_name}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-1.5 text-muted-foreground">
-                      {s.grade_level || '—'}
-                    </td>
-                    <td className="px-3 py-1.5 text-right">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="text-xs text-red-700"
-                        disabled={pending}
-                        onClick={() =>
-                          run(
-                            () =>
-                              requestDeletionAction({
-                                kind: 'delete_student',
-                                entityId: s.id,
-                                reason: 'Teacher requested remove',
-                              }),
-                            'Delete request sent to principal for approval.'
-                          )
-                        }
-                      >
-                        Request delete
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <THead>
+              <TR>
+                <TH>Student</TH>
+                <TH>Grade</TH>
+                <TH className="text-right" />
+              </TR>
+            </THead>
+            <TBody>
+              {students.map((s) => (
+                <TR key={s.id}>
+                  <TD>
+                    <Link
+                      href={`/students/${s.id}`}
+                      className="font-medium text-foreground hover:text-primary hover:underline"
+                    >
+                      {s.last_name}, {s.first_name}
+                    </Link>
+                  </TD>
+                  <TD className="text-muted-foreground">{s.grade_level || '—'}</TD>
+                  <TD className="text-right">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-danger"
+                      disabled={pending}
+                      onClick={() =>
+                        run(
+                          () =>
+                            requestDeletionAction({
+                              kind: 'delete_student',
+                              entityId: s.id,
+                              reason: 'Teacher requested remove',
+                            }),
+                          'Delete request sent.'
+                        )
+                      }
+                    >
+                      Remove
+                    </Button>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
 
         {classes.length > 0 && students.length > 0 && (
@@ -669,125 +632,105 @@ export function TeacherClassroomHub({
         )}
       </section>
 
-      {/* Approvals */}
-      <section className="rounded-2xl border bg-card p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <ShieldAlert className="h-5 w-5 text-amber-600" />
-          <h3 className="text-lg font-bold text-navy dark:text-sky-50">
-            3. Your deletion requests
-          </h3>
+      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[13px] font-medium text-foreground">3. Deletion requests</p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() =>
+              run(async () => {
+                const r = await listPendingApprovalsAction()
+                if (!r.ok) return r
+                return { ok: true as const }
+              }, 'Refreshed requests.')
+            }
+          >
+            Refresh
+          </Button>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Removing students or classes needs principal approval so mistakes don&apos;t wipe the
-          school year.
-        </p>
         {pendingRequests.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No requests yet.</p>
+          <p className="text-[13px] text-muted-foreground">No requests yet.</p>
         ) : (
-          <ul className="space-y-2 text-sm">
-            {pendingRequests.map((r) => (
-              <li
-                key={r.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2"
-              >
-                <span>
-                  <strong>{r.entityLabel}</strong>
-                  <span className="text-muted-foreground"> · {r.kind.replace(/_/g, ' ')}</span>
-                </span>
-                <Badge
-                  variant={
-                    r.status === 'pending'
-                      ? 'warning'
-                      : r.status === 'approved'
-                        ? 'success'
-                        : 'default'
-                  }
-                >
-                  {r.status}
-                </Badge>
-              </li>
-            ))}
-          </ul>
+          <Table>
+            <THead>
+              <TR>
+                <TH>Entity</TH>
+                <TH>Type</TH>
+                <TH>Status</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {pendingRequests.map((r) => (
+                <TR key={r.id}>
+                  <TD className="font-medium">{r.entityLabel}</TD>
+                  <TD className="text-muted-foreground">{r.kind.replace(/_/g, ' ')}</TD>
+                  <TD>
+                    <Badge
+                      variant={
+                        r.status === 'pending'
+                          ? 'warning'
+                          : r.status === 'approved'
+                            ? 'success'
+                            : 'default'
+                      }
+                    >
+                      {r.status}
+                    </Badge>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={pending}
-          onClick={() =>
-            run(async () => {
-              const r = await listPendingApprovalsAction()
-              if (!r.ok) return r
-              return { ok: true as const }
-            }, 'Refreshed requests.')
-          }
-        >
-          Refresh status
-        </Button>
       </section>
 
-      {/* History / version control */}
-      <section className="rounded-2xl border bg-card p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <History className="h-5 w-5 text-sky-600" />
-          <h3 className="text-lg font-bold text-navy dark:text-sky-50">
-            4. Version history (undo mistakes)
-          </h3>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Every create, enroll, and delete is logged. Restore puts the previous snapshot back.
-        </p>
+      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <p className="text-[13px] font-medium text-foreground">4. Version history</p>
         {revisions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No history yet — or run{' '}
-            <code className="rounded bg-muted px-1">migration 013 (roster versions)</code>.
-          </p>
+          <p className="text-[13px] text-muted-foreground">No history yet.</p>
         ) : (
-          <ul className="max-h-72 space-y-2 overflow-y-auto text-sm">
-            {revisions.map((r) => (
-              <li
-                key={r.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2"
-              >
-                <div>
-                  <span className="font-medium">{r.action}</span>{' '}
-                  <span className="text-muted-foreground">
-                    {r.entityType} ·{' '}
+          <Table>
+            <THead>
+              <TR>
+                <TH>Action</TH>
+                <TH>Entity</TH>
+                <TH>When</TH>
+                <TH className="text-right" />
+              </TR>
+            </THead>
+            <TBody>
+              {revisions.slice(0, 40).map((r) => (
+                <TR key={r.id}>
+                  <TD className="font-medium">{r.action}</TD>
+                  <TD className="text-muted-foreground">{r.entityType}</TD>
+                  <TD className="whitespace-nowrap text-[12px] text-muted-foreground">
                     {new Date(r.createdAt).toLocaleString([], {
                       month: 'short',
                       day: 'numeric',
                       hour: 'numeric',
                       minute: '2-digit',
                     })}
-                  </span>
-                  {r.note && (
-                    <p className="text-[11px] text-muted-foreground">{r.note}</p>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={pending}
-                  onClick={() =>
-                    run(
-                      () => restoreRevisionAction(r.id),
-                      'Restored from history.'
-                    )
-                  }
-                >
-                  Undo / restore
-                </Button>
-              </li>
-            ))}
-          </ul>
+                  </TD>
+                  <TD className="text-right">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={pending}
+                      onClick={() => run(() => restoreRevisionAction(r.id), 'Restored.')}
+                    >
+                      Restore
+                    </Button>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
       </section>
-
-      <p className="text-xs text-muted-foreground flex items-center gap-1">
-        <Users className="h-3.5 w-3.5" />
-        Open a class for grades, attendance, and pulse once students are enrolled.
-      </p>
     </div>
   )
 }

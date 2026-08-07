@@ -25,7 +25,7 @@ export function ResendEmailButton({ outboxId }: { outboxId: string }) {
             router.refresh()
           })
         }}
-        className="text-xs font-semibold text-sky-700 hover:underline disabled:opacity-50"
+        className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
       >
         {pending ? 'Resending…' : 'Resend'}
       </button>

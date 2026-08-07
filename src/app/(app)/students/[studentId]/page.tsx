@@ -15,6 +15,10 @@ import { parentCanViewStudent, teacherCanViewStudent } from '@/lib/gradebook-dat
 import { listPulsesForStudent } from '@/lib/school-modules/store'
 import { buildStudentDinnerAndConference } from '@/lib/insights/load-student-insights'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
+import { PageHeader } from '@/components/ui/page-header'
+import { buttonClassName } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
 export default async function StudentOverviewPage({
@@ -107,38 +111,43 @@ export default async function StudentOverviewPage({
   return (
     <ConfigurableView screenId="student_overview" initialLayout={viewLayout}>
       <ViewSection id="header" title="Student header" locked>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-            <Link href="/dashboard" className="hover:underline">
-              Dashboard
-            </Link>
-            {' / '}
-            Student
-          </p>
-          <h1 className="text-2xl font-bold tracking-tight mt-1">{name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {student.grade_level ? `Grade ${student.grade_level}` : 'Student'} · Academics + Beacon
-            Pulse
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Link
-              href={`/students/${studentId}/report-card`}
-              className="inline-flex rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-            >
-              Report card →
-            </Link>
-            <Link
-              href={`/students/${studentId}/conference`}
-              className="inline-flex rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-900 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
-            >
-              Conference brief →
-            </Link>
-            {profile &&
-              ['admin', 'staff', 'teacher', 'principal'].includes(profile.role) && (
+        <PageHeader
+          eyebrow={
+            <>
+              <Link href="/dashboard" className="hover:underline">
+                Home
+              </Link>
+              {' · '}
+              Student
+            </>
+          }
+          title={name}
+          description={
+            student.grade_level
+              ? `Grade ${student.grade_level} · Academics + Beacon Pulse`
+              : 'Academics + Beacon Pulse'
+          }
+          actions={
+            <>
+              <Link
+                href={`/students/${studentId}/report-card`}
+                className={buttonClassName('navy', 'sm')}
+              >
+                Report card
+              </Link>
+              <Link
+                href={`/students/${studentId}/conference`}
+                className={buttonClassName('outline', 'sm')}
+              >
+                Conference brief
+              </Link>
+              {profile &&
+              ['admin', 'staff', 'teacher', 'principal'].includes(profile.role) ? (
                 <EmailDigestButton studentId={studentId} />
-              )}
-          </div>
-        </div>
+              ) : null}
+            </>
+          }
+        />
       </ViewSection>
 
       <ViewSection id="dinner_table" title="Dinner Table Digest">
@@ -158,36 +167,54 @@ export default async function StudentOverviewPage({
 
       <ViewSection id="grades" title="Class grades">
         {sections.length === 0 ? (
-          <p className="rounded-xl border p-4 text-sm text-muted-foreground">
-            No class enrollments.
-          </p>
+          <EmptyState title="No class enrollments" />
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-4">
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Class</TH>
+                  <TH>Details</TH>
+                  <TH className="text-right">Grade</TH>
+                  <TH className="text-right" />
+                </TR>
+              </THead>
+              <TBody>
+                {sections.map(({ classRow, result }) => (
+                  <TR key={classRow.id}>
+                    <TD className="font-medium">{classRow.name}</TD>
+                    <TD className="text-muted-foreground">
+                      {[classRow.subject, classRow.term].filter(Boolean).join(' · ') || '—'}
+                    </TD>
+                    <TD className="text-right tabular-nums font-medium">
+                      {result.overall != null ? `${result.overall}%` : '—'}
+                      {result.letter ? ` ${result.letter}` : ''}
+                    </TD>
+                    <TD className="text-right">
+                      <Link
+                        href={`/classes/${classRow.id}/students/${studentId}`}
+                        className="text-[12px] font-medium text-primary hover:underline"
+                      >
+                        Detail
+                      </Link>
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
             {sections.map(({ classRow, result }) => (
-              <section
-                key={classRow.id}
-                className="rounded-2xl border bg-background p-6 shadow-sm"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                  <div>
-                    <h2 className="text-lg font-semibold">{classRow.name}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {[classRow.subject, classRow.term].filter(Boolean).join(' · ')}
-                    </p>
-                  </div>
-                  <Link
-                    href={`/classes/${classRow.id}/students/${studentId}`}
-                    className="text-sm font-medium text-sky-700 hover:underline"
-                  >
-                    Class detail →
-                  </Link>
+              <details key={classRow.id} className="rounded-lg border border-border">
+                <summary className="cursor-pointer px-3 py-2 text-[13px] font-medium">
+                  {classRow.name} — calculation
+                </summary>
+                <div className="border-t border-border px-3 py-3">
+                  <TransparentGradeView
+                    result={result}
+                    studentName={name}
+                    photoUrl={student.photo_url}
+                  />
                 </div>
-                <TransparentGradeView
-                  result={result}
-                  studentName={name}
-                  photoUrl={student.photo_url}
-                />
-              </section>
+              </details>
             ))}
           </div>
         )}

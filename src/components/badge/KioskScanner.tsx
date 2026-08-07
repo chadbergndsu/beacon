@@ -26,6 +26,12 @@ export function KioskScanner({
     { studentId: string; studentName: string; since: string }[]
   >([])
   const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null)
+  /** Full-screen welcome after successful scan (kiosk little screen). */
+  const [welcome, setWelcome] = useState<{
+    name: string
+    room: string
+    direction: ScanDirection
+  } | null>(null)
   const [pending, start] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
   const focusLock = useRef(true)
@@ -65,15 +71,27 @@ export function KioskScanner({
         kioskLabel: rooms.find((x) => x.id === roomId)?.name,
       })
       if (!r.ok) {
+        setWelcome(null)
         setFlash({ ok: false, text: r.error })
+        setTimeout(() => setFlash(null), 6000)
       } else {
+        const roomLabel =
+          r.roomName || rooms.find((x) => x.id === roomId)?.name || 'room'
+        setWelcome({
+          name: r.studentName,
+          room: roomLabel,
+          direction: r.direction,
+        })
         setFlash({ ok: true, text: r.message })
         refreshPresence()
+        setTimeout(() => {
+          setWelcome(null)
+          setFlash(null)
+        }, 4500)
       }
       setCode('')
       focusLock.current = true
       inputRef.current?.focus()
-      setTimeout(() => setFlash(null), 6000)
     })
   }
 
@@ -84,10 +102,38 @@ export function KioskScanner({
   }
 
   return (
-    <div className="min-h-[100dvh] bg-slate-950 text-white flex flex-col">
+    <div className="min-h-[100dvh] bg-slate-950 text-white flex flex-col relative">
+      {welcome && (
+        <div
+          className={cn(
+            'absolute inset-0 z-50 flex flex-col items-center justify-center px-6 text-center',
+            welcome.direction === 'in'
+              ? 'bg-gradient-to-b from-emerald-600 to-emerald-900'
+              : 'bg-gradient-to-b from-amber-500 to-slate-900'
+          )}
+          role="status"
+          aria-live="polite"
+        >
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-white/80">
+            {welcome.direction === 'in' ? 'Welcome' : 'See you later'}
+          </p>
+          <p className="mt-3 text-4xl sm:text-5xl font-black leading-tight tracking-tight">
+            {welcome.name}
+          </p>
+          <p className="mt-4 text-lg sm:text-xl font-semibold text-white/90">
+            {welcome.direction === 'in' ? 'Checked in · ' : 'Checked out · '}
+            {welcome.room}
+          </p>
+          <p className="mt-8 text-sm text-white/70 max-w-sm">
+            You&apos;re on the campus twin for this room — have a great{' '}
+            {welcome.direction === 'in' ? 'class' : 'day'}!
+          </p>
+        </div>
+      )}
+
       <header className="border-b border-white/10 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-400">
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-primary/80">
             Beacon kiosk
           </p>
           <h1 className="text-lg font-bold">{schoolName}</h1>
@@ -105,9 +151,9 @@ export function KioskScanner({
                 type="button"
                 onClick={() => setRoomId(r.id)}
                 className={cn(
-                  'rounded-xl border px-3 py-2 text-sm font-semibold',
+                  'rounded-lg border px-3 py-2 text-sm font-semibold',
                   roomId === r.id
-                    ? 'border-sky-400 bg-sky-500 text-white'
+                    ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-white/15 bg-white/5 text-slate-200'
                 )}
               >
@@ -125,7 +171,7 @@ export function KioskScanner({
               type="button"
               onClick={() => setDirection('in')}
               className={cn(
-                'rounded-2xl py-4 text-lg font-black',
+                'rounded-lg py-4 text-lg font-bold',
                 direction === 'in' ? 'bg-emerald-500 text-white' : 'bg-white/10 text-slate-300'
               )}
             >
@@ -135,7 +181,7 @@ export function KioskScanner({
               type="button"
               onClick={() => setDirection('out')}
               className={cn(
-                'rounded-2xl py-4 text-lg font-black',
+                'rounded-lg py-4 text-lg font-bold',
                 direction === 'out' ? 'bg-amber-500 text-white' : 'bg-white/10 text-slate-300'
               )}
             >
@@ -170,7 +216,7 @@ export function KioskScanner({
               }}
               autoComplete="off"
               autoCapitalize="characters"
-              className="mt-1 w-full rounded-2xl border-2 border-sky-500/50 bg-slate-900 px-4 py-4 text-center text-2xl font-mono font-bold tracking-widest text-white outline-none focus:border-sky-400"
+              className="mt-1 w-full rounded-lg border-2 border-primary/50 bg-slate-900 px-4 py-4 text-center text-2xl font-mono font-bold tracking-widest text-white outline-none focus:border-primary"
               placeholder="SCAN OR TYPE…"
               disabled={pending || !roomId}
             />
@@ -193,7 +239,7 @@ export function KioskScanner({
         {flash && (
           <div
             className={cn(
-              'rounded-2xl border px-4 py-5 text-center text-lg font-bold',
+              'rounded-lg border px-4 py-5 text-center text-lg font-semibold',
               flash.ok
                 ? 'border-emerald-400/50 bg-emerald-500/20 text-emerald-100'
                 : 'border-red-400/50 bg-red-500/20 text-red-100'
@@ -210,7 +256,7 @@ export function KioskScanner({
             </p>
             <button
               type="button"
-              className="text-[11px] text-sky-400"
+              className="text-[11px] text-primary/80 hover:underline"
               onClick={() => refreshPresence()}
             >
               Refresh

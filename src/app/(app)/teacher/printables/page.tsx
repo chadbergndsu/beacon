@@ -13,6 +13,7 @@ import {
   type ScoreReportBundle,
   type ScoreReportClassOption,
 } from '@/app/actions/printables'
+import { PageHeader } from '@/components/ui/page-header'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
 
 export default async function TeacherPrintablesPage() {
@@ -69,23 +70,19 @@ export default async function TeacherPrintablesPage() {
   return (
     <ConfigurableView screenId="teacher_printables" initialLayout={viewLayout}>
       <ViewSection id="hub_header" title="Printables header" locked>
-        <div className="print:hidden space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-            <Link href="/dashboard" className="hover:underline">
-              Dashboard
-            </Link>
-            {' / '}
-            Teacher printables
-          </p>
-          <h1 className="text-2xl font-bold tracking-tight text-navy dark:text-sky-50">
-            Teacher printables
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground leading-relaxed">
-            Low-prep classroom printables — birthday gifts, send-home score sheets, and more
-            freebies as we grow this shelf. Use <strong>Edit view</strong> to show only the tools
-            you use.
-          </p>
-        </div>
+        <PageHeader
+          className="print:hidden"
+          eyebrow={
+            <>
+              <Link href="/dashboard" className="hover:underline">
+                Dashboard
+              </Link>
+              {' / Teacher printables'}
+            </>
+          }
+          title="Teacher printables"
+          description="Low-prep classroom printables — birthday gifts, send-home score sheets, and more freebies as we grow this shelf. Use Edit view to show only the tools you use."
+        />
       </ViewSection>
 
       <ViewSection

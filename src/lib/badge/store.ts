@@ -1090,6 +1090,21 @@ export async function processBadgeScan(input: {
     }
   }
 
+  // Campus twin (BeaconCraft): show student in room when they scan — non-blocking.
+  // See docs/adr/001-campus-twin-scan-presence.md
+  try {
+    const { notifyCampusTwin } = await import('@/lib/badge/campus-twin')
+    notifyCampusTwin({
+      studentId: student.id as string,
+      studentName,
+      roomId: room.id,
+      roomName: room.name,
+      direction: input.direction,
+    })
+  } catch {
+    /* twin optional */
+  }
+
   return {
     ok: true,
     studentName,

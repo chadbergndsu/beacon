@@ -5,12 +5,10 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Activity,
-  Check,
   ChevronRight,
   ClipboardCheck,
   GraduationCap,
   Save,
-  Zap,
 } from 'lucide-react'
 import { saveGrades } from '@/app/actions/grades'
 import { saveAttendance } from '@/app/actions/attendance'
@@ -22,7 +20,11 @@ import {
   PULSE_LEVEL_LABEL,
   type PulseLevel,
 } from '@/lib/school-modules/types'
-import { Button } from '@/components/ui/button'
+import { Button, buttonClassName } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { FieldError } from '@/components/ui/field'
+import { Select } from '@/components/ui/select'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
 type Mode = 'score' | 'attendance' | 'pulse'
@@ -46,18 +48,19 @@ const STATUSES: AttendanceStatus[] = ['present', 'absent', 'tardy', 'excused']
 const PULSE_LEVELS: PulseLevel[] = ['strong', 'steady', 'needs_care']
 const SCORE_PRESETS = [100, 95, 90, 85, 80, 75]
 
-function statusTone(s: AttendanceStatus) {
-  if (s === 'present') return 'bg-emerald-500 text-white border-emerald-500'
-  if (s === 'absent') return 'bg-amber-500 text-white border-amber-500'
-  if (s === 'tardy') return 'bg-sky-500 text-white border-sky-500'
-  return 'bg-slate-600 text-white border-slate-600'
+function statusTone(s: AttendanceStatus, active: boolean) {
+  if (!active) return 'border-border bg-muted/40 text-muted-foreground'
+  if (s === 'present') return 'border-success bg-success text-white'
+  if (s === 'absent') return 'border-warning bg-warning text-white'
+  if (s === 'tardy') return 'border-primary bg-primary text-white'
+  return 'border-border bg-muted text-foreground'
 }
 
 function pulseTone(l: PulseLevel, active: boolean) {
   if (!active) return 'border-border bg-card text-foreground'
-  if (l === 'strong') return 'border-emerald-500 bg-emerald-500 text-white'
-  if (l === 'steady') return 'border-sky-500 bg-sky-500 text-white'
-  return 'border-amber-500 bg-amber-500 text-white'
+  if (l === 'strong') return 'border-success bg-success text-white'
+  if (l === 'steady') return 'border-primary bg-primary text-white'
+  return 'border-warning bg-warning text-white'
 }
 
 export function TeacherQuickMode({
@@ -225,64 +228,51 @@ export function TeacherQuickMode({
 
   if (!classes.length) {
     return (
-      <div className="rounded-2xl border bg-card p-8 text-center">
-        <Zap className="mx-auto h-8 w-8 text-sky-500" />
-        <h1 className="mt-3 text-xl font-bold">No classes yet</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Once you have a class roster, Quick Mode is the fastest way to mark attendance and scores
-          on your phone.
-        </p>
-        <Link href="/dashboard" className="mt-4 inline-block text-sm font-semibold text-sky-700">
-          ← Back home
-        </Link>
-      </div>
+      <EmptyState
+        tone="primary"
+        title="No classes yet"
+        description="Once you have a class roster, Quick Mode is the fastest way to mark attendance and scores on your phone."
+        action={
+          <Link href="/teacher/classroom" className={buttonClassName('primary', 'sm')}>
+            Open classroom
+          </Link>
+        }
+      />
     )
   }
 
   return (
-    <div className="mx-auto w-full max-w-lg space-y-4 pb-safe">
-      {/* Header */}
-      <div className="rounded-2xl border border-sky-100/80 bg-gradient-to-br from-navy via-slate-900 to-sky-900 px-4 py-4 text-white shadow-[var(--shadow-lift)]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-300">
-              <Zap className="h-3.5 w-3.5" />
-              Teacher quick mode
-            </p>
-            <h1 className="mt-1 text-xl font-bold tracking-tight">Phone-first class tools</h1>
-            <p className="mt-1 text-sm text-slate-300">
-              Big buttons. One hand. Attendance · scores · pulse.
-            </p>
-          </div>
-          <Link
-            href={classId ? `/classes/${classId}` : '/dashboard'}
-            className="shrink-0 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold"
-          >
-            Full class
-          </Link>
+    <div className="mx-auto w-full max-w-2xl page-stack pb-safe">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border/80 pb-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg font-medium tracking-tight">Quick mode</h1>
+          <p className="text-[12px] text-muted-foreground">Attendance · scores · pulse</p>
         </div>
+        <Link
+          href={classId ? `/classes/${classId}` : '/dashboard'}
+          className={buttonClassName('outline', 'sm')}
+        >
+          Full class
+        </Link>
+      </div>
 
-        <label className="mt-4 block">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-300/90">
-            Class
-          </span>
-          <select
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <label className="block">
+          <span className="text-[12px] font-medium text-muted-foreground">Class</span>
+          <Select
             value={classId}
             onChange={(e) => switchClass(e.target.value)}
-            className="mt-1.5 flex h-12 w-full rounded-xl border border-white/15 bg-white/10 px-3 text-base font-semibold text-white outline-none focus:ring-2 focus:ring-sky-400"
+            className="mt-1 h-10 text-[13px] font-medium"
           >
             {classes.map((c) => (
-              <option key={c.id} value={c.id} className="text-slate-900">
+              <option key={c.id} value={c.id}>
                 {c.name}
                 {c.subject ? ` · ${c.subject}` : ''} ({c.studentCount})
               </option>
             ))}
-          </select>
+          </Select>
         </label>
-      </div>
-
-      {/* Mode tabs */}
-      <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
         {(
           [
             { id: 'attendance' as const, label: 'Attend', icon: ClipboardCheck },
@@ -299,33 +289,25 @@ export function TeacherQuickMode({
               setError(null)
             }}
             className={cn(
-              'flex flex-col items-center gap-1 rounded-2xl border px-2 py-3 text-sm font-semibold transition',
+              'flex flex-col items-center gap-1 rounded-md border px-2 py-2 text-[12px] font-medium transition',
               mode === t.id
-                ? t.id === 'pulse'
-                  ? 'border-violet-500 bg-violet-600 text-white shadow-md'
-                  : 'border-sky-500 bg-sky-600 text-white shadow-md'
+                ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-card text-foreground'
             )}
           >
-            <t.icon className="h-5 w-5" />
+            <t.icon className="h-4 w-4" />
             {t.label}
           </button>
         ))}
+        </div>
       </div>
 
-      {(message || error) && (
-        <div
-          className={cn(
-            'rounded-xl border px-3 py-2.5 text-sm font-medium',
-            error
-              ? 'border-red-200 bg-red-50 text-red-900'
-              : 'border-emerald-200 bg-emerald-50 text-emerald-900'
-          )}
-          role="status"
-        >
-          {error || message}
-        </div>
-      )}
+      {error ? <FieldError>{error}</FieldError> : null}
+      {message ? (
+        <p className="rounded-lg border border-success/25 bg-success-soft px-3 py-2 text-[13px] text-success">
+          {message}
+        </p>
+      ) : null}
 
       {/* —— ATTENDANCE —— */}
       {mode === 'attendance' && (
@@ -337,7 +319,7 @@ export function TeacherQuickMode({
             <button
               type="button"
               onClick={setAllPresent}
-              className="rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-sky-700"
+              className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-primary"
             >
               All present
             </button>
@@ -353,50 +335,55 @@ export function TeacherQuickMode({
             ))}
           </div>
 
-          <ul className="space-y-3">
-            {students.map((s) => {
-              const status = statusByStudent[s.id] || 'present'
-              return (
-                <li
-                  key={s.id}
-                  className="rounded-2xl border border-border/80 bg-card p-3 shadow-[var(--shadow-soft)]"
-                >
-                  <p className="mb-2 font-semibold text-navy dark:text-sky-50">
-                    {s.last_name}, {s.first_name}
-                  </p>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {STATUSES.map((st) => (
-                      <button
-                        key={st}
-                        type="button"
-                        onClick={() =>
-                          setStatusByStudent((prev) => ({ ...prev, [s.id]: st }))
-                        }
-                        className={cn(
-                          'rounded-xl border px-1 py-2.5 text-[11px] font-bold transition',
-                          status === st
-                            ? statusTone(st)
-                            : 'border-border bg-muted/40 text-muted-foreground'
-                        )}
-                      >
-                        {st === 'present'
-                          ? 'P'
-                          : st === 'absent'
-                            ? 'A'
-                            : st === 'tardy'
-                              ? 'T'
-                              : 'E'}
-                      </button>
-                    ))}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+          <Table>
+              <THead>
+                <TR>
+                  <TH>Student</TH>
+                  <TH className="text-center">P</TH>
+                  <TH className="text-center">A</TH>
+                  <TH className="text-center">T</TH>
+                  <TH className="text-center">E</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {students.map((s) => {
+                  const status = statusByStudent[s.id] || 'present'
+                  return (
+                    <TR key={s.id}>
+                      <TD className="font-medium">
+                        {s.last_name}, {s.first_name}
+                      </TD>
+                      {STATUSES.map((st) => (
+                        <TD key={st} className="text-center">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setStatusByStudent((prev) => ({ ...prev, [s.id]: st }))
+                            }
+                            className={cn(
+                              'inline-flex h-8 w-8 items-center justify-center rounded-md border text-[11px] font-bold',
+                              statusTone(st, status === st)
+                            )}
+                          >
+                            {st === 'present'
+                              ? 'P'
+                              : st === 'absent'
+                                ? 'A'
+                                : st === 'tardy'
+                                  ? 'T'
+                                  : 'E'}
+                          </button>
+                        </TD>
+                      ))}
+                    </TR>
+                  )
+                })}
+              </TBody>
+            </Table>
 
           <Button
-            size="lg"
-            className="sticky bottom-3 w-full shadow-lg"
+            size="md"
+            className="sticky bottom-3 w-full"
             disabled={pending || !students.length}
             onClick={handleSaveAttendance}
           >
@@ -410,12 +397,18 @@ export function TeacherQuickMode({
       {mode === 'score' && (
         <div className="space-y-3">
           {!assignments.length ? (
-            <div className="rounded-2xl border bg-card p-6 text-center text-sm text-muted-foreground">
-              No assignments yet.{' '}
-              <Link href={`/classes/${classId}?tab=setup`} className="font-semibold text-sky-700">
-                Add in class setup →
-              </Link>
-            </div>
+            <EmptyState
+              title="No assignments yet"
+              description="Add categories and assignments under Setup."
+              action={
+                <Link
+                  href={`/classes/${classId}?tab=setup`}
+                  className={buttonClassName('primary', 'sm')}
+                >
+                  Open setup
+                </Link>
+              }
+            />
           ) : (
             <>
               <div>
@@ -429,9 +422,9 @@ export function TeacherQuickMode({
                       type="button"
                       onClick={() => setAssignmentId(a.id)}
                       className={cn(
-                        'shrink-0 rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition',
+                        'shrink-0 rounded-md border px-2.5 py-1.5 text-left text-[12px] font-medium transition',
                         (activeAssignment?.id ?? assignmentId) === a.id
-                          ? 'border-sky-500 bg-sky-600 text-white'
+                          ? 'border-primary bg-primary text-primary-foreground'
                           : 'border-border bg-card'
                       )}
                     >
@@ -445,88 +438,87 @@ export function TeacherQuickMode({
               </div>
 
               {activeAssignment && (
-                <ul className="space-y-3">
-                  {students.map((s) => {
-                    const key = scoreKey(s.id)
-                    const val = scoreDraft[key] ?? ''
-                    return (
-                      <li
-                        key={s.id}
-                        className="rounded-2xl border border-border/80 bg-card p-3 shadow-[var(--shadow-soft)]"
-                      >
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <p className="min-w-0 truncate font-semibold text-navy dark:text-sky-50">
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>Student</TH>
+                      <TH className="text-center">Score</TH>
+                      <TH>Presets</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {students.map((s) => {
+                      const key = scoreKey(s.id)
+                      const val = scoreDraft[key] ?? ''
+                      return (
+                        <TR key={s.id}>
+                          <TD className="font-medium">
                             {s.last_name}, {s.first_name}
-                          </p>
-                          <input
-                            inputMode="decimal"
-                            value={val}
-                            onChange={(e) =>
-                              setScoreDraft((prev) => ({
-                                ...prev,
-                                [key]: e.target.value,
-                              }))
-                            }
-                            placeholder="—"
-                            aria-label={`Score for ${s.last_name}`}
-                            className={cn(
-                              'h-12 w-20 rounded-xl border border-border bg-muted/30 text-center text-lg font-bold tabular-nums',
-                              'focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/50',
-                              val.toLowerCase() === 'm' && 'bg-amber-50 text-amber-700 border-amber-200'
-                            )}
-                          />
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {SCORE_PRESETS.map((n) => (
-                            <button
-                              key={n}
-                              type="button"
-                              onClick={() =>
-                                setScoreDraft((prev) => ({ ...prev, [key]: String(n) }))
+                          </TD>
+                          <TD className="text-center">
+                            <input
+                              inputMode="decimal"
+                              value={val}
+                              onChange={(e) =>
+                                setScoreDraft((prev) => ({
+                                  ...prev,
+                                  [key]: e.target.value,
+                                }))
                               }
+                              placeholder="—"
+                              aria-label={`Score for ${s.last_name}`}
                               className={cn(
-                                'min-w-[2.75rem] rounded-lg border px-2 py-2 text-xs font-bold',
-                                val === String(n)
-                                  ? 'border-sky-500 bg-sky-500 text-white'
-                                  : 'border-border bg-muted/40'
+                                'h-9 w-16 rounded-md border border-border bg-background text-center text-[13px] font-semibold tabular-nums',
+                                'focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/60',
+                                val.toLowerCase() === 'm' && 'border-warning bg-warning-soft text-warning'
                               )}
-                            >
-                              {n}
-                            </button>
-                          ))}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setScoreDraft((prev) => ({ ...prev, [key]: 'M' }))
-                            }
-                            className={cn(
-                              'min-w-[2.75rem] rounded-lg border px-2 py-2 text-xs font-bold',
-                              val.toLowerCase() === 'm'
-                                ? 'border-amber-500 bg-amber-500 text-white'
-                                : 'border-border bg-muted/40 text-amber-700'
-                            )}
-                          >
-                            M
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setScoreDraft((prev) => ({ ...prev, [key]: '' }))
-                            }
-                            className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-xs font-medium text-muted-foreground"
-                          >
-                            Clear
-                          </button>
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
+                            />
+                          </TD>
+                          <TD>
+                            <div className="flex flex-wrap gap-1">
+                              {SCORE_PRESETS.map((n) => (
+                                <button
+                                  key={n}
+                                  type="button"
+                                  onClick={() =>
+                                    setScoreDraft((prev) => ({ ...prev, [key]: String(n) }))
+                                  }
+                                  className={cn(
+                                    'min-w-[2.25rem] rounded-md border px-1.5 py-1 text-[11px] font-semibold',
+                                    val === String(n)
+                                      ? 'border-primary bg-primary text-primary-foreground'
+                                      : 'border-border bg-muted/40'
+                                  )}
+                                >
+                                  {n}
+                                </button>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setScoreDraft((prev) => ({ ...prev, [key]: 'M' }))
+                                }
+                                className={cn(
+                                  'min-w-[2.25rem] rounded-md border px-1.5 py-1 text-[11px] font-semibold',
+                                  val.toLowerCase() === 'm'
+                                    ? 'border-warning bg-warning text-white'
+                                    : 'border-border bg-muted/40 text-warning'
+                                )}
+                              >
+                                M
+                              </button>
+                            </div>
+                          </TD>
+                        </TR>
+                      )
+                    })}
+                  </TBody>
+                </Table>
               )}
 
               <Button
-                size="lg"
-                className="sticky bottom-3 w-full shadow-lg"
+                size="md"
+                className="sticky bottom-3 w-full"
                 disabled={pending || !students.length || !activeAssignment}
                 onClick={handleSaveScores}
               >
@@ -542,63 +534,57 @@ export function TeacherQuickMode({
       {mode === 'pulse' && (
         <div className="space-y-3">
           {!students.length ? (
-            <div className="rounded-2xl border bg-card p-6 text-center text-sm text-muted-foreground">
-              No students in this class.
-            </div>
+            <EmptyState title="No students in this class" />
           ) : (
             <>
-              <div className="rounded-2xl border border-violet-200/70 bg-card p-4 shadow-[var(--shadow-soft)]">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-violet-700">
-                  Beacon Pulse · 15 seconds
-                </p>
-                <label className="mt-3 block">
-                  <span className="text-sm font-medium">Student</span>
-                  <select
+              <div className="rounded-lg border border-border bg-card p-3">
+                <label className="block">
+                  <span className="text-[12px] font-medium text-muted-foreground">Student</span>
+                  <Select
                     value={pulseStudentId}
                     onChange={(e) => setPulseStudentId(e.target.value)}
-                    className="mt-1.5 flex h-12 w-full rounded-xl border border-border bg-background px-3 text-base font-medium"
+                    className="mt-1 h-10"
                   >
                     {students.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.last_name}, {s.first_name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
 
-                <p className="mt-4 text-sm font-medium">Overall pulse</p>
-                <div className="mt-2 grid grid-cols-3 gap-2">
+                <p className="mt-3 text-[12px] font-medium text-muted-foreground">Overall pulse</p>
+                <div className="mt-1.5 grid grid-cols-3 gap-1.5">
                   {PULSE_LEVELS.map((l) => (
                     <button
                       key={l}
                       type="button"
                       onClick={() => setPulseOverall(l)}
                       className={cn(
-                        'rounded-xl border px-2 py-3 text-xs font-bold transition',
+                        'rounded-md border px-2 py-2 text-[11px] font-semibold transition',
                         pulseTone(l, pulseOverall === l)
                       )}
                     >
-                      {pulseOverall === l && <Check className="mx-auto mb-1 h-3.5 w-3.5" />}
                       {PULSE_LEVEL_LABEL[l]}
                     </button>
                   ))}
                 </div>
 
-                <label className="mt-4 block">
-                  <span className="text-sm font-medium">Quick note (optional)</span>
+                <label className="mt-3 block">
+                  <span className="text-[12px] font-medium text-muted-foreground">Note</span>
                   <textarea
                     value={pulseNote}
                     onChange={(e) => setPulseNote(e.target.value)}
                     rows={2}
-                    placeholder="What stood out today…"
-                    className="mt-1.5 w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-400/50"
+                    placeholder="Optional"
+                    className="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ring/60"
                   />
                 </label>
               </div>
 
               <Button
-                size="lg"
-                className="w-full bg-violet-600 shadow-lg hover:from-violet-500 hover:to-violet-600"
+                size="md"
+                className="w-full"
                 disabled={pending || !pulseStudentId}
                 onClick={handleSavePulse}
               >
@@ -614,7 +600,7 @@ export function TeacherQuickMode({
         Need the full gradebook?
         <Link
           href={classId ? `/classes/${classId}` : '/dashboard'}
-          className="inline-flex items-center font-semibold text-sky-700"
+          className="inline-flex items-center font-semibold text-primary"
         >
           Open class <ChevronRight className="h-3.5 w-3.5" />
         </Link>

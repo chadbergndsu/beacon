@@ -6,10 +6,13 @@ import { listAllPulses } from '@/lib/school-modules/store'
 import { PULSE_LEVEL_LABEL, type PulseLevel } from '@/lib/school-modules/types'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageHeader } from '@/components/ui/page-header'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 
-function badge(level: PulseLevel): 'success' | 'sky' | 'warning' {
+function badge(level: PulseLevel): 'success' | 'default' | 'warning' {
   if (level === 'strong') return 'success'
-  if (level === 'steady') return 'sky'
+  if (level === 'steady') return 'default'
   return 'warning'
 }
 
@@ -32,20 +35,17 @@ export default async function PrincipalPulsePage() {
   }
 
   return (
-    <div className="space-y-6 animate-beacon-in">
-      <div>
-        <div className="flex items-center gap-2">
-          <Activity className="h-5 w-5 text-violet-600" />
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-700">
+    <div className="page-stack animate-beacon-in">
+      <PageHeader
+        eyebrow={
+          <span className="inline-flex items-center gap-1.5">
+            <Activity className="h-3.5 w-3.5" />
             School climate
-          </p>
-        </div>
-        <h2 className="mt-1 text-xl font-bold text-navy dark:text-sky-50">Beacon Pulse board</h2>
-        <p className="mt-1 text-sm text-muted-foreground max-w-2xl">
-          Whole-child signals across your school — not a grade spreadsheet. See who is thriving and who
-          needs pastoral or academic care this week.
-        </p>
-      </div>
+          </span>
+        }
+        title="Beacon Pulse board"
+        description="Whole-child signals across your school — not a grade spreadsheet. See who is thriving and who needs pastoral or academic care this week."
+      />
 
       <div className="grid gap-3 sm:grid-cols-3">
         {(
@@ -56,49 +56,65 @@ export default async function PrincipalPulsePage() {
           ] as const
         ).map(([key, label]) => (
           <Card key={key}>
-            <CardContent className="pt-5">
-              <p className="text-xs font-semibold uppercase text-muted-foreground">{label}</p>
-              <p className="text-3xl font-bold tabular-nums mt-1">{counts[key]}</p>
-              <p className="text-xs text-muted-foreground">recent signals</p>
+            <CardContent className="pt-4 pb-4">
+              <p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{counts[key]}</p>
+              <p className="text-[11px] text-muted-foreground">recent signals</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {pulses.length === 0 ? (
-        <Card className="p-8 text-center text-sm text-muted-foreground">
-          No pulses yet. Teachers log them from a class → <strong>Beacon Pulse</strong> tab.
-        </Card>
+        <EmptyState
+          title="No pulses yet"
+          description="Teachers log them from a class → Beacon Pulse tab."
+        />
       ) : (
-        <ul className="space-y-2">
-          {pulses.slice(0, 40).map((p) => (
-            <li key={p.id}>
-              <Card>
-                <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
-                  <div>
-                    <p className="font-semibold">
-                      {studentMap.get(p.studentId) || 'Student'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {p.date} · {p.teacherName}
-                      {p.celebrate ? ` · 🎉 ${p.celebrate}` : ''}
-                    </p>
-                    {p.note && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{p.note}</p>
-                    )}
-                    <Link
-                      href={`/students/${p.studentId}`}
-                      className="text-xs font-medium text-sky-700 hover:underline mt-1 inline-block"
-                    >
-                      Open student →
-                    </Link>
-                  </div>
+        <Table>
+          <THead>
+            <TR>
+              <TH>Student</TH>
+              <TH>Date</TH>
+              <TH>Teacher</TH>
+              <TH>Overall</TH>
+              <TH>Notes</TH>
+              <TH className="text-right" />
+            </TR>
+          </THead>
+          <TBody>
+            {pulses.slice(0, 40).map((p) => (
+              <TR key={p.id}>
+                <TD className="font-medium">
+                  {studentMap.get(p.studentId) || 'Student'}
+                </TD>
+                <TD className="whitespace-nowrap text-muted-foreground">{p.date}</TD>
+                <TD>{p.teacherName}</TD>
+                <TD>
                   <Badge variant={badge(p.overall)}>{PULSE_LEVEL_LABEL[p.overall]}</Badge>
-                </CardContent>
-              </Card>
-            </li>
-          ))}
-        </ul>
+                </TD>
+                <TD className="min-w-[10rem] max-w-md">
+                  {p.celebrate ? (
+                    <p className="text-[12px] font-medium text-success">{p.celebrate}</p>
+                  ) : null}
+                  {p.note ? (
+                    <p className="text-[12px] text-muted-foreground line-clamp-2">{p.note}</p>
+                  ) : (
+                    '—'
+                  )}
+                </TD>
+                <TD className="text-right">
+                  <Link
+                    href={`/students/${p.studentId}`}
+                    className="text-[12px] font-medium text-primary hover:underline"
+                  >
+                    Open
+                  </Link>
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
       )}
     </div>
   )

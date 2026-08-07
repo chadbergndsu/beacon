@@ -28,7 +28,7 @@ export function HealthChecksList({ checks }: { checks: HealthCheck[] }) {
             <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
               {cat.title}
             </h3>
-            <ul className="mt-2 divide-y divide-border rounded-2xl border">
+            <ul className="mt-2 divide-y divide-border rounded-lg border">
               {list.map((c) => (
                 <li
                   key={c.id}

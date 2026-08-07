@@ -3,6 +3,7 @@ import { loadBillingState } from '@/lib/billing/store'
 import { getQuickBooksConfig } from '@/lib/billing/quickbooks'
 import { QuickBooksConnect } from '@/components/principal/QuickBooksConnect'
 import { Card, CardContent } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function PrincipalPaymentsPage({
   searchParams,
@@ -16,14 +17,11 @@ export default async function PrincipalPaymentsPage({
   const params = await searchParams
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-navy dark:text-sky-50">Payments & QuickBooks</h2>
-        <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Principal-only payment office. Connect QuickBooks Online so tuition products, family
-          invoices, and payments stay in sync with your books.
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        title="Payments & QuickBooks"
+        description="Principal-only payment office. Connect QuickBooks Online so tuition products, family invoices, and payments stay in sync with your books."
+      />
 
       <QuickBooksConnect
         connection={state.quickbooks}
@@ -57,7 +55,7 @@ export default async function PrincipalPaymentsPage({
               <p className="text-xs font-bold text-sky-600 uppercase tracking-wider">
                 Step {s.step}
               </p>
-              <h3 className="font-semibold mt-1 text-navy dark:text-sky-50">{s.title}</h3>
+              <h3 className="mt-1 font-medium">{s.title}</h3>
               <p className="text-sm text-muted-foreground mt-1">{s.body}</p>
             </CardContent>
           </Card>

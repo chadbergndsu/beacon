@@ -1,25 +1,20 @@
 import Link from 'next/link'
-import {
-  BookOpen,
-  CreditCard,
-  Link2,
-  Receipt,
-  Shield,
-} from 'lucide-react'
+import { format } from 'date-fns'
+import { Link2 } from 'lucide-react'
 import { requirePrincipal } from '@/lib/principal'
 import { loadBillingState, formatMoney } from '@/lib/billing/store'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadSchoolBeaconSignal } from '@/lib/insights/load-beacon-signal'
 import { BeaconSignalCard } from '@/components/insights/BeaconSignalCard'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonClassName } from '@/components/ui/button'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
 import { ViewSection } from '@/components/view-prefs/ViewSection'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
 
 export default async function PrincipalOverviewPage() {
-  const { schoolId, profile, user } = await requirePrincipal()
+  const { schoolId, user } = await requirePrincipal()
   const admin = createAdminClient()
   const [billing, signal] = await Promise.all([
     loadBillingState(schoolId),
@@ -68,38 +63,40 @@ export default async function PrincipalOverviewPage() {
       </ViewSection>
 
       <ViewSection id="stats" title="School stats">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: 'Active classes', value: String(classCount ?? 0), icon: BookOpen },
-            { label: 'Students', value: String(studentCount ?? 0), icon: Shield },
-            { label: 'Open tuition', value: formatMoney(openCents), icon: Receipt },
-            { label: 'Payments collected', value: formatMoney(paidCents), icon: CreditCard },
-          ].map((s) => (
-            <Card key={s.label}>
-              <CardContent className="pt-5 flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
-                  <s.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {s.label}
-                  </p>
-                  <p className="text-2xl font-bold tabular-nums text-navy dark:text-sky-50 mt-0.5">
-                    {s.value}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Table>
+          <THead>
+            <TR>
+              <TH>Metric</TH>
+              <TH className="text-right">Value</TH>
+            </TR>
+          </THead>
+          <TBody>
+            <TR>
+              <TD>Active classes</TD>
+              <TD className="text-right tabular-nums font-medium">{classCount ?? 0}</TD>
+            </TR>
+            <TR>
+              <TD>Students</TD>
+              <TD className="text-right tabular-nums font-medium">{studentCount ?? 0}</TD>
+            </TR>
+            <TR>
+              <TD>Open tuition</TD>
+              <TD className="text-right tabular-nums font-medium">{formatMoney(openCents)}</TD>
+            </TR>
+            <TR>
+              <TD>Payments collected</TD>
+              <TD className="text-right tabular-nums font-medium">{formatMoney(paidCents)}</TD>
+            </TR>
+          </TBody>
+        </Table>
       </ViewSection>
 
       <ViewSection id="quickbooks" title="QuickBooks card">
-        <Card className="overflow-hidden">
-          <div className="border-b border-border bg-muted/30 px-5 py-4 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Link2 className="h-4 w-4 text-sky-600" />
-              <h2 className="font-semibold text-navy dark:text-sky-50">QuickBooks</h2>
+        <div className="rounded-lg border border-border bg-card">
+          <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+            <div className="flex items-center gap-2 text-[13px] font-medium">
+              <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+              QuickBooks
             </div>
             <Badge
               variant={
@@ -115,7 +112,7 @@ export default async function PrincipalOverviewPage() {
               {qb.status}
             </Badge>
           </div>
-          <CardContent className="pt-5 space-y-3">
+          <div className="space-y-2 px-3 py-3 text-[13px] text-muted-foreground">
             {qb.status === 'connected' ? (
               <>
                 <p className="text-sm text-muted-foreground">
@@ -144,94 +141,74 @@ export default async function PrincipalOverviewPage() {
               </p>
             )}
             <Link href="/principal/payments">
-              <Button variant="primary" size="md">
+              <Button variant="primary" size="sm">
                 {qb.status === 'connected' || qb.status === 'demo'
                   ? 'Manage connection'
                   : 'Set up payments'}
               </Button>
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </ViewSection>
 
       <ViewSection id="announcements" title="Recent announcements">
-        <Card>
-          <div className="border-b border-border bg-muted/30 px-5 py-4">
-            <h2 className="font-semibold text-navy dark:text-sky-50">Recent announcements</h2>
-          </div>
-          <CardContent className="pt-4">
-            {!announcements?.length ? (
-              <p className="text-sm text-muted-foreground">No announcements yet.</p>
-            ) : (
-              <ul className="space-y-2">
+        <div className="space-y-2">
+          {!announcements?.length ? (
+            <p className="text-[13px] text-muted-foreground">No announcements yet.</p>
+          ) : (
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Title</TH>
+                  <TH className="text-right">Published</TH>
+                </TR>
+              </THead>
+              <TBody>
                 {announcements.map((a) => (
-                  <li key={a.id}>
-                    <Link
-                      href={`/announcements/${a.id}`}
-                      className="text-sm font-medium text-sky-800 hover:underline dark:text-sky-300"
-                    >
-                      {a.title}
-                    </Link>
-                  </li>
+                  <TR key={a.id}>
+                    <TD>
+                      <Link
+                        href={`/announcements/${a.id}`}
+                        className="font-medium text-foreground hover:text-primary hover:underline"
+                      >
+                        {a.title}
+                      </Link>
+                    </TD>
+                    <TD className="text-right text-[12px] text-muted-foreground">
+                      {a.published_at
+                        ? format(new Date(a.published_at), 'MMM d, yyyy')
+                        : '—'}
+                    </TD>
+                  </TR>
                 ))}
-              </ul>
-            )}
-            <div className="mt-4 flex gap-2">
-              <Link href="/announcements/new">
-                <Button variant="outline" size="sm">
-                  New announcement
-                </Button>
-              </Link>
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm">
-                  School dashboard
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+              </TBody>
+            </Table>
+          )}
+          <div className="flex gap-2 pt-1">
+            <Link href="/announcements/new" className={buttonClassName('outline', 'sm')}>
+              New announcement
+            </Link>
+            <Link href="/dashboard" className={buttonClassName('ghost', 'sm')}>
+              Dashboard
+            </Link>
+          </div>
+        </div>
       </ViewSection>
 
       <ViewSection id="shortcuts" title="Office shortcuts">
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card className="border-dashed border-sky-200 bg-sky-50/40 dark:bg-sky-950/20">
-            <CardContent className="pt-5 text-sm text-muted-foreground leading-relaxed">
-              <p>
-                <strong className="text-foreground">Principal layer</strong> is exclusive to{' '}
-                {profile.full_name || 'you'}. Beacon is the full school suite: teachers run classes,
-                families get clarity, and you run the office — including QuickBooks-linked tuition.
-              </p>
-              <p className="mt-2 text-xs">
-                Prefer a leaner office? Use <strong>Edit view</strong> to hide cards you do not use
-                daily.
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-violet-200 bg-violet-50/50 dark:bg-violet-950/20 dark:border-violet-800">
-            <CardContent className="pt-5 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-semibold text-navy dark:text-sky-50">Leadership tools</p>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Videos, whole-child Pulse board, and a private coffee-break game.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Link href="/principal/videos">
-                  <Button size="md">Video module</Button>
-                </Link>
-                <Link href="/principal/pulse">
-                  <Button size="md" variant="outline">
-                    Pulse board
-                  </Button>
-                </Link>
-                <Link href="/principal/break">
-                  <Button size="md" variant="ghost">
-                    Tetris
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/principal/videos" className={buttonClassName('outline', 'sm')}>
+            Videos
+          </Link>
+          <Link href="/principal/pulse" className={buttonClassName('outline', 'sm')}>
+            Pulse board
+          </Link>
+          <Link href="/principal/release" className={buttonClassName('outline', 'sm')}>
+            Go-live
+          </Link>
+          <Link href="/principal/roster" className={buttonClassName('outline', 'sm')}>
+            Roster
+          </Link>
         </div>
       </ViewSection>
     </ConfigurableView>

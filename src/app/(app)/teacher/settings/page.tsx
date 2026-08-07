@@ -14,6 +14,7 @@ import {
   parseSkinId,
 } from '@/lib/skins/catalog'
 import type { Role } from '@/lib/types'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function TeacherSettingsPage() {
   const { profile, user } = await getProfile()
@@ -96,19 +97,12 @@ export default async function TeacherSettingsPage() {
   if (prefs.skin) skin = parseSkinId(prefs.skin)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
-          Preferences
-        </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy dark:text-sky-50">
-          Settings
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-          Your classroom control center: skins, students, classes, grade weights, and shortcuts into
-          every gradebook.
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        eyebrow="Preferences"
+        title="Settings"
+        description="Your classroom control center: skins, students, classes, grade weights, and shortcuts into every gradebook."
+      />
 
       <TeacherSettingsHub
         teacherName={profile.full_name || ''}

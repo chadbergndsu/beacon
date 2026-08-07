@@ -39,7 +39,7 @@ export function SkinPicker({
   if (compact) {
     return (
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
           <Palette className="h-3.5 w-3.5" /> Skin
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -51,10 +51,10 @@ export function SkinPicker({
               disabled={pending}
               onClick={() => pick(s.id)}
               className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-full border-2 shadow-sm transition',
+                'flex h-8 w-8 items-center justify-center rounded-md border transition',
                 selected === s.id
-                  ? 'border-foreground ring-2 ring-offset-2 ring-primary scale-110'
-                  : 'border-white/40 hover:scale-105'
+                  ? 'border-primary ring-1 ring-primary/40'
+                  : 'border-border hover:border-primary/40'
               )}
               style={{
                 background: `linear-gradient(135deg, ${s.swatches[0]}, ${s.swatches[1]})`,
@@ -73,26 +73,26 @@ export function SkinPicker({
   }
 
   return (
-    <section className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] space-y-4">
+    <section className="rounded-lg border border-border bg-card p-4 space-y-4">
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-          <Palette className="h-5 w-5" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-primary">
+          <Palette className="h-4 w-4" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-navy dark:text-sky-50">Your Beacon skin</h2>
-          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+          <h2 className="text-[13px] font-medium text-foreground">Your Beacon skin</h2>
+          <p className="mt-0.5 text-[12px] text-muted-foreground leading-relaxed">
             Pick a look you enjoy. Saved to your account and this browser — only you see it.
           </p>
         </div>
       </div>
 
-      {msg && (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
+      {msg ? (
+        <p className="rounded-lg border border-success/25 bg-success-soft px-3 py-2 text-sm text-success">
           {msg}
         </p>
-      )}
+      ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {SKINS.map((s) => {
           const on = selected === s.id
           return (
@@ -103,14 +103,14 @@ export function SkinPicker({
               onClick={() => pick(s.id)}
               aria-pressed={on}
               className={cn(
-                'rounded-2xl border-2 p-3 text-left transition shadow-sm',
+                'rounded-lg border p-3 text-left transition',
                 on
-                  ? 'border-primary ring-2 ring-primary/40 bg-primary/5'
-                  : 'border-border hover:border-primary/40 hover:bg-muted/40'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/30 hover:bg-muted/40'
               )}
             >
               <div
-                className="mb-2.5 flex h-14 overflow-hidden rounded-xl border border-black/5 shadow-inner"
+                className="mb-2 flex h-12 overflow-hidden rounded-md border border-border"
                 aria-hidden
               >
                 {s.swatches.map((c) => (
@@ -118,12 +118,12 @@ export function SkinPicker({
                 ))}
               </div>
               <div className="flex items-center justify-between gap-2">
-                <p className="font-bold text-sm text-navy dark:text-sky-50">{s.label}</p>
-                {on && (
+                <p className="text-[13px] font-medium">{s.label}</p>
+                {on ? (
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <Check className="h-3 w-3" strokeWidth={3} />
                   </span>
-                )}
+                ) : null}
               </div>
               <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">{s.tagline}</p>
             </button>
@@ -131,7 +131,7 @@ export function SkinPicker({
         })}
       </div>
 
-      <div className="flex flex-wrap gap-2 pt-1">
+      <div className="flex flex-wrap gap-1.5 pt-1">
         {SKINS.map((s) => (
           <Button
             key={s.id}

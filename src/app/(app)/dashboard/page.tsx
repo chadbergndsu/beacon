@@ -15,6 +15,10 @@ import { TeacherTodayCard } from '@/components/insights/TeacherTodayCard'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
 import { ViewSection } from '@/components/view-prefs/ViewSection'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
+import { buttonClassName } from '@/components/ui/button'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
 export default async function DashboardPage() {
@@ -27,7 +31,7 @@ export default async function DashboardPage() {
         <h1 className="text-xl font-bold">Profile not set up</h1>
         <p className="mt-2 text-sm">
           You are signed in as <strong>{user.email}</strong>, but there is no row in{' '}
-          <code className="text-xs bg-amber-100 px-1 rounded">profiles</code> for your user id.
+          <code className="rounded bg-amber-100 px-1 text-xs">profiles</code> for your user id.
         </p>
       </div>
     )
@@ -35,6 +39,7 @@ export default async function DashboardPage() {
 
   const role = profile.role
   const schoolId = profile.school_id
+  const firstName = profile.full_name?.trim().split(/\s+/)[0]
 
   let classes: {
     id: string
@@ -57,7 +62,6 @@ export default async function DashboardPage() {
     (role === 'admin' || role === 'staff' || role === 'principal') &&
     schoolId
   ) {
-    // Fail closed: no school_id → no class list (never all-tenants wildcard)
     const { data } = await admin
       .from('classes')
       .select('id, name, subject, grade_level, term, teacher_id')
@@ -67,7 +71,6 @@ export default async function DashboardPage() {
     classes = data ?? []
   }
 
-  // Roster counts per class
   const classIds = classes.map((c) => c.id)
   const rosterCount = new Map<string, number>()
   if (classIds.length) {
@@ -102,7 +105,6 @@ export default async function DashboardPage() {
     }
   }
 
-  // Recent announcements
   let announcements: {
     id: string
     title: string
@@ -128,7 +130,6 @@ export default async function DashboardPage() {
   const isPrincipal = role === 'principal'
   const showQuick = canPost
 
-  // Market: parents want missing-work clarity; teachers want a "today" focus list
   const parentMissing =
     role === 'parent' && children.length
       ? await loadMissingWorkForParentChildren(children)
@@ -142,7 +143,6 @@ export default async function DashboardPage() {
   const isStaffHome =
     role === 'teacher' || role === 'admin' || role === 'staff' || role === 'principal'
 
-  // Family billing balances (open + recent paid for this parent's email)
   let parentInvoices: Awaited<
     ReturnType<typeof import('@/lib/billing/invoice-email').listOpenInvoicesForParentEmail>
   > = []
@@ -159,9 +159,8 @@ export default async function DashboardPage() {
     'header',
     'announcements',
     ...(showQuick ? (['quick_mobile'] as const) : []),
-    ...(isPrincipal ? (['principal_banner'] as const) : []),
     ...(teacherToday ? (['teacher_today'] as const) : []),
-    ...(isStaffHome ? (['classes', 'quick_tips'] as const) : []),
+    ...(isStaffHome ? (['classes'] as const) : []),
     ...(role === 'parent' && schoolId ? (['parent_billing'] as const) : []),
     ...(role === 'parent' && parentMissing.length > 0 ? (['parent_missing'] as const) : []),
     ...(role === 'parent' ? (['children'] as const) : []),
@@ -172,121 +171,77 @@ export default async function DashboardPage() {
 
   const viewLayout = await loadScreenLayout(user.id, 'dashboard', [...presentSectionIds])
 
+  const welcomeDescription =
+    role === 'parent'
+      ? 'Balances, Dinner Table Digest, grades, and Pulse — your family’s home.'
+      : isPrincipal
+        ? 'School-wide hub. Open Office for tuition, go-live, and climate.'
+        : 'Your classroom home. Use Edit view to show only what you need.'
+
   return (
     <ConfigurableView screenId="dashboard" initialLayout={viewLayout}>
       {showQuick ? (
         <ViewSection id="quick_mobile" title="Mobile quick mode">
           <Link
             href="/teacher/quick"
-            className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-600 to-sky-600 px-4 py-3.5 text-white shadow-[var(--shadow-lift)] sm:hidden"
+            className="flex items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary px-4 py-3 text-primary-foreground sm:hidden"
           >
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-100">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/80">
                 On your phone
               </p>
-              <p className="truncate font-bold">Teacher Quick Mode</p>
-              <p className="text-xs text-white/85">Attendance · scores · pulse</p>
+              <p className="truncate font-semibold">Teacher Quick Mode</p>
+              <p className="text-xs text-primary-foreground/85">Attendance · scores · pulse</p>
             </div>
-            <span className="shrink-0 rounded-xl bg-white/20 px-3 py-2 text-sm font-bold">
+            <span className="shrink-0 rounded-lg bg-white/15 px-3 py-2 text-sm font-semibold">
               Open →
             </span>
           </Link>
         </ViewSection>
       ) : null}
 
-      {isPrincipal ? (
-        <ViewSection id="principal_banner" title="Principal welcome">
-          <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-navy via-slate-900 to-sky-900 px-5 py-5 text-white shadow-[var(--shadow-lift)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-300">
-              Principal access
-            </p>
-            <h2 className="mt-1 text-xl font-bold tracking-tight">
-              Welcome{profile.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''} — leadership
-              workspace
-            </h2>
-            <p className="mt-2 text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Full Beacon suite for your school: academics, families, communications, tuition, and
-              QuickBooks. Use Go-live to finish ops and trust before wider rollout.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Link
-                href="/principal"
-                className="rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-400"
-              >
-                Open principal office
-              </Link>
-              <Link
-                href="/principal/release"
-                className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-400"
-              >
-                Go-live checklist
-              </Link>
-              <Link
-                href="/principal/payments"
-                className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/15"
-              >
-                Payments & QuickBooks
-              </Link>
-            </div>
-          </div>
-        </ViewSection>
-      ) : null}
-
       <ViewSection id="header" title="Welcome header" locked>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Welcome{profile.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              {role === 'parent'
-                ? 'Your family’s home — balances & pay, Dinner Table Digest, grades, and Pulse.'
-                : isPrincipal
-                  ? 'School-wide hub — Beacon Signal, tuition, go-live, and academics.'
-                  : 'Your home in the Beacon school suite. Use Edit view to show what you care about.'}
-            </p>
-          </div>
-          {canPost && (
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/teacher/classroom"
-                className="rounded-lg bg-violet-600 text-white px-3 py-2 text-sm font-semibold"
-              >
-                My classroom
-              </Link>
-              <Link
-                href="/teacher/settings"
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800"
-              >
-                Settings
-              </Link>
-              <Link
-                href="/teacher/quick"
-                className="hidden rounded-lg bg-emerald-600 text-white px-3 py-2 text-sm font-semibold sm:inline-flex"
-              >
-                Quick mode
-              </Link>
-              <Link
-                href="/teacher/lessons"
-                className="hidden rounded-lg border border-sky-300 bg-sky-50 text-sky-900 px-3 py-2 text-sm font-semibold sm:inline-flex dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
-              >
-                Lesson day/week
-              </Link>
-              <Link
-                href="/announcements/new"
-                className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold"
-              >
-                New announcement
-              </Link>
-              <Link
-                href="/admin/emails"
-                className="rounded-lg border bg-background px-3 py-2 text-sm font-medium"
-              >
-                Comms
-              </Link>
-            </div>
-          )}
-        </div>
+        <PageHeader
+          title={<>Welcome{firstName ? `, ${firstName}` : ''}</>}
+          description={welcomeDescription}
+          actions={
+            canPost ? (
+              <>
+                <Link href="/teacher/classroom" className={buttonClassName('primary', 'sm')}>
+                  Classroom
+                </Link>
+                <Link
+                  href="/teacher/quick"
+                  className={buttonClassName('outline', 'sm', 'hidden sm:inline-flex')}
+                >
+                  Quick
+                </Link>
+                <Link href="/announcements/new" className={buttonClassName('outline', 'sm')}>
+                  Announce
+                </Link>
+                {isPrincipal ? (
+                  <>
+                    <Link href="/principal" className={buttonClassName('outline', 'sm')}>
+                      Office
+                    </Link>
+                    <Link href="/principal/release" className={buttonClassName('ghost', 'sm')}>
+                      Go-live
+                    </Link>
+                  </>
+                ) : null}
+              </>
+            ) : isPrincipal ? (
+              <>
+                <Link href="/principal" className={buttonClassName('primary', 'sm')}>
+                  Office
+                </Link>
+                <Link href="/principal/release" className={buttonClassName('outline', 'sm')}>
+                  Go-live
+                </Link>
+              </>
+            ) : undefined
+          }
+        />
       </ViewSection>
 
       {teacherToday ? (
@@ -301,69 +256,67 @@ export default async function DashboardPage() {
 
       {isStaffHome ? (
         <ViewSection id="classes" title="Classes">
-          <section>
-            <h2 className="text-lg font-semibold mb-3">Classes</h2>
-            {classes.length === 0 ? (
-              <div className="rounded-xl border border-violet-200 bg-violet-50/80 p-4 text-sm text-violet-950 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-100">
-                <p className="font-semibold">No classes yet — claim your classroom</p>
-                <p className="mt-1 text-xs leading-relaxed opacity-90">
-                  Create Abeka subjects, add students, and run grades. Deletions need principal
-                  approval; history lets you undo mistakes.
-                </p>
+          <section className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[13px] font-medium text-foreground">Classes</p>
+              {classes.length > 0 ? (
                 <Link
                   href="/teacher/classroom"
-                  className="mt-3 inline-flex rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white"
+                  className="text-[12px] font-medium text-primary hover:underline"
                 >
-                  Open My classroom →
+                  Manage
                 </Link>
-              </div>
+              ) : null}
+            </div>
+            {classes.length === 0 ? (
+              <EmptyState
+                title="No classes yet"
+                description="Create subjects, add students, and run grades."
+                action={
+                  <Link href="/teacher/classroom" className={buttonClassName('primary', 'sm')}>
+                    Open classroom
+                  </Link>
+                }
+              />
             ) : (
-              <>
-                <div className="mb-3 flex flex-wrap gap-2 text-xs">
-                  <Link
-                    href="/teacher/settings"
-                    className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1 font-semibold text-slate-800"
-                  >
-                    Settings · weights
-                  </Link>
-                  <Link
-                    href="/teacher/classroom"
-                    className="rounded-lg border border-violet-300 bg-violet-50 px-2.5 py-1 font-semibold text-violet-900"
-                  >
-                    My classroom
-                  </Link>
-                </div>
-                <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>Class</TH>
+                    <TH>Subject</TH>
+                    <TH>Grade</TH>
+                    <TH>Term</TH>
+                    <TH className="text-right">Students</TH>
+                    <TH className="text-right" />
+                  </TR>
+                </THead>
+                <TBody>
                   {classes.map((c) => (
-                    <li
-                      key={c.id}
-                      className="rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-soft)]"
-                    >
-                      <p className="font-semibold">{c.name}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {[c.subject, c.grade_level, c.term].filter(Boolean).join(' · ') || 'Class'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {rosterCount.get(c.id) || 0} students
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
+                    <TR key={c.id}>
+                      <TD>
                         <Link
                           href={`/classes/${c.id}`}
-                          className="rounded-lg bg-sky-600 px-2.5 py-1 text-xs font-bold text-white"
+                          className="font-medium text-foreground hover:text-primary hover:underline"
+                        >
+                          {c.name}
+                        </Link>
+                      </TD>
+                      <TD className="text-muted-foreground">{c.subject || '—'}</TD>
+                      <TD className="text-muted-foreground">{c.grade_level || '—'}</TD>
+                      <TD className="text-muted-foreground">{c.term || '—'}</TD>
+                      <TD className="text-right tabular-nums">{rosterCount.get(c.id) || 0}</TD>
+                      <TD className="text-right">
+                        <Link
+                          href={`/classes/${c.id}`}
+                          className="text-[12px] font-medium text-primary hover:underline"
                         >
                           Gradebook
                         </Link>
-                        <Link
-                          href={`/classes/${c.id}?tab=setup`}
-                          className="rounded-lg border border-violet-300 bg-violet-50 px-2.5 py-1 text-xs font-bold text-violet-900"
-                        >
-                          Weights
-                        </Link>
-                      </div>
-                    </li>
+                      </TD>
+                    </TR>
                   ))}
-                </ul>
-              </>
+                </TBody>
+              </Table>
             )}
           </section>
         </ViewSection>
@@ -371,8 +324,8 @@ export default async function DashboardPage() {
 
       {role === 'parent' && schoolId ? (
         <ViewSection id="parent_billing" title="Balances & pay">
-          <section id="billing" className="max-w-2xl">
-            <h2 className="text-lg font-semibold mb-3">Balances &amp; pay</h2>
+          <section id="billing" className="max-w-2xl space-y-3">
+            <h2 className="text-lg font-semibold tracking-tight">Balances &amp; pay</h2>
             <ParentBillingCard invoices={parentInvoices} />
           </section>
         </ViewSection>
@@ -386,47 +339,53 @@ export default async function DashboardPage() {
 
       {role === 'parent' ? (
         <ViewSection id="children" title="Your children">
-          <section>
-            <h2 className="text-lg font-semibold mb-3">Your children</h2>
+          <section className="space-y-2">
+            <p className="text-[13px] font-medium text-foreground">Your children</p>
             {children.length === 0 ? (
-              <p className="text-sm text-muted-foreground rounded-xl border bg-background p-4">
-                No students linked.
-              </p>
+              <EmptyState
+                title="No students linked"
+                description="Ask the school to link your children to this account."
+              />
             ) : (
-              <ul className="space-y-3">
-                {children.map((child) => (
-                  <li
-                    key={child.id}
-                    className="rounded-2xl border bg-card p-4 shadow-[var(--shadow-soft)]"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <p className="font-semibold">
+              <>
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>Student</TH>
+                      <TH>Grade</TH>
+                      <TH className="text-right">Overview</TH>
+                      <TH className="text-right">Report</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {children.map((child) => (
+                      <TR key={child.id}>
+                        <TD className="font-medium">
                           {child.last_name}, {child.first_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {child.grade_level || 'Student'}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Link
-                          href={`/students/${child.id}`}
-                          className="text-sm font-medium text-sky-700 hover:underline"
-                        >
-                          Overview →
-                        </Link>
-                        <Link
-                          href={`/students/${child.id}/report-card`}
-                          className="text-sm font-medium text-sky-700 hover:underline"
-                        >
-                          Report card →
-                        </Link>
-                      </div>
-                    </div>
-                    <ParentClassLinksWithGrades studentId={child.id} />
-                  </li>
-                ))}
-              </ul>
+                        </TD>
+                        <TD className="text-muted-foreground">{child.grade_level || '—'}</TD>
+                        <TD className="text-right">
+                          <Link
+                            href={`/students/${child.id}`}
+                            className="text-[12px] font-medium text-primary hover:underline"
+                          >
+                            Open
+                          </Link>
+                        </TD>
+                        <TD className="text-right">
+                          <Link
+                            href={`/students/${child.id}/report-card`}
+                            className="text-[12px] font-medium text-primary hover:underline"
+                          >
+                            View
+                          </Link>
+                        </TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+                <ParentGradesTable linkedChildren={children} />
+              </>
             )}
           </section>
         </ViewSection>
@@ -439,58 +398,46 @@ export default async function DashboardPage() {
       ) : null}
 
       <ViewSection id="announcements" title="Announcements">
-        <section className="rounded-xl border bg-background p-4 max-w-2xl">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold">Announcements</h2>
-            <Link
-              href="/announcements"
-              className="text-xs font-medium text-sky-700 hover:underline"
-            >
+        <section className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[13px] font-medium text-foreground">Announcements</p>
+            <Link href="/announcements" className="text-[12px] font-medium text-primary hover:underline">
               View all
             </Link>
           </div>
           {announcements.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No announcements yet.</p>
+            <p className="text-[13px] text-muted-foreground">No announcements yet.</p>
           ) : (
-            <ul className="space-y-3">
-              {announcements.map((a) => (
-                <li key={a.id}>
-                  <Link href={`/announcements/${a.id}`} className="block group">
-                    <p className="font-medium text-sm group-hover:text-sky-700">{a.title}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{a.body}</p>
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      {a.published_at ? format(new Date(a.published_at), 'MMM d') : ''}
-                      {' · '}
-                      {a.audience}
-                    </p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Title</TH>
+                  <TH>Audience</TH>
+                  <TH className="text-right">Date</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {announcements.map((a) => (
+                  <TR key={a.id}>
+                    <TD>
+                      <Link href={`/announcements/${a.id}`} className="block hover:text-primary">
+                        <span className="font-medium text-foreground">{a.title}</span>
+                        <span className="mt-0.5 block line-clamp-1 text-[12px] text-muted-foreground">
+                          {a.body}
+                        </span>
+                      </Link>
+                    </TD>
+                    <TD className="text-muted-foreground">{a.audience}</TD>
+                    <TD className="text-right whitespace-nowrap text-[12px] text-muted-foreground">
+                      {a.published_at ? format(new Date(a.published_at), 'MMM d, yyyy') : '—'}
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
           )}
         </section>
       </ViewSection>
-
-      {canPost ? (
-        <ViewSection id="quick_tips" title="Quick tips">
-          <section className="rounded-xl border border-sky-100 bg-sky-50 p-4 text-sm text-sky-950 max-w-2xl">
-            <p className="font-semibold">Quick tips</p>
-            <ul className="mt-2 space-y-1 text-sky-900/90 list-disc ml-4">
-              <li>
-                <Link href="/teacher/quick" className="font-semibold underline">
-                  Quick mode
-                </Link>{' '}
-                on phone — attendance &amp; scores
-              </li>
-              <li>Classes · setup · transparent grades</li>
-              <li>Announcements &amp; family email</li>
-              <li>
-                Use <strong>Edit view</strong> (top right) to hide sections you do not use
-              </li>
-            </ul>
-          </section>
-        </ViewSection>
-      ) : null}
     </ConfigurableView>
   )
 }
@@ -508,25 +455,33 @@ async function ParentFeedSection({
   return <ParentFeed items={items} />
 }
 
-async function ParentClassLinksWithGrades({ studentId }: { studentId: string }) {
+async function ParentGradesTable({
+  linkedChildren,
+}: {
+  linkedChildren: { id: string; first_name: string; last_name: string }[]
+}) {
   const admin = createAdminClient()
-  const { data: enrollments } = await admin
-    .from('enrollments')
-    .select('class_id')
-    .eq('student_id', studentId)
+  const rows: {
+    studentId: string
+    studentName: string
+    classId: string
+    className: string
+    overall: number | null
+    letter: string | null
+  }[] = []
 
-  const classIds = (enrollments ?? []).map((e) => e.class_id)
-  if (!classIds.length) {
-    return <p className="text-xs text-muted-foreground mt-2">No class enrollments.</p>
-  }
+  for (const child of linkedChildren) {
+    const { data: enrollments } = await admin
+      .from('enrollments')
+      .select('class_id')
+      .eq('student_id', child.id)
+    const classIds = (enrollments ?? []).map((e) => e.class_id)
+    if (!classIds.length) continue
 
-  const { data: classes } = await admin.from('classes').select('id, name').in('id', classIds)
-  if (!classes?.length) {
-    return <p className="text-xs text-muted-foreground mt-2">No class enrollments.</p>
-  }
+    const { data: classes } = await admin.from('classes').select('id, name').in('id', classIds)
+    if (!classes?.length) continue
 
-  const cards = await Promise.all(
-    classes.map(async (c) => {
+    for (const c of classes) {
       const [{ data: categories }, { data: assignmentsData }] = await Promise.all([
         admin.from('grade_categories').select('*').eq('class_id', c.id),
         admin.from('assignments').select('*').eq('class_id', c.id),
@@ -539,31 +494,61 @@ async function ParentClassLinksWithGrades({ studentId }: { studentId: string }) 
         const { data } = await admin
           .from('grades')
           .select('*')
-          .eq('student_id', studentId)
+          .eq('student_id', child.id)
           .in('assignment_id', ids)
         grades = (data ?? []) as Grade[]
       }
       const result = calculateTransparentGrade(cats, assignments, grades)
-      return { ...c, overall: result.overall, letter: result.letter }
-    })
-  )
+      rows.push({
+        studentId: child.id,
+        studentName: `${child.last_name}, ${child.first_name}`,
+        classId: c.id,
+        className: c.name,
+        overall: result.overall,
+        letter: result.letter,
+      })
+    }
+  }
+
+  if (!rows.length) {
+    return (
+      <p className="text-[12px] text-muted-foreground">No class enrollments with grades yet.</p>
+    )
+  }
 
   return (
-    <ul className="mt-3 space-y-2">
-      {cards.map((c) => (
-        <li key={c.id}>
-          <Link
-            href={`/classes/${c.id}/students/${studentId}`}
-            className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 text-sky-950 border border-sky-100 px-3 py-2 text-sm hover:bg-sky-100"
-          >
-            <span className="font-medium">{c.name}</span>
-            <span className="tabular-nums font-semibold">
-              {c.overall != null ? `${c.overall}%` : '—'}
-              {c.letter ? ` ${c.letter}` : ''}
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-1.5">
+      <p className="text-[12px] font-medium text-muted-foreground">Grades by class</p>
+      <Table>
+        <THead>
+          <TR>
+            <TH>Student</TH>
+            <TH>Class</TH>
+            <TH className="text-right">Grade</TH>
+            <TH className="text-right" />
+          </TR>
+        </THead>
+        <TBody>
+          {rows.map((r) => (
+            <TR key={`${r.studentId}-${r.classId}`}>
+              <TD className="text-muted-foreground">{r.studentName}</TD>
+              <TD>{r.className}</TD>
+              <TD className="text-right tabular-nums font-medium">
+                {r.overall != null ? `${r.overall}%` : '—'}
+                {r.letter ? ` ${r.letter}` : ''}
+              </TD>
+              <TD className="text-right">
+                <Link
+                  href={`/classes/${r.classId}/students/${r.studentId}`}
+                  className="text-[12px] font-medium text-primary hover:underline"
+                >
+                  Detail
+                </Link>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+    </div>
   )
 }

@@ -32,6 +32,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Field, FieldError } from '@/components/ui/field'
+import { Table, THead, TBody, TR, TH, TD } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
 export type RosterStudent = {
@@ -185,33 +189,26 @@ export function RosterHub({
   }
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-2xl border border-sky-200 bg-sky-50/80 p-4 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-100">
-        <p className="font-semibold">Start with people you know</p>
-        <p className="mt-1 text-xs leading-relaxed opacity-90">
-          Add a <strong>teacher</strong> or <strong>parent</strong> with their real email → Beacon
-          creates a login and shows a temporary password once. Then add students, classes, and link
-          parents to kids. School: <strong>{schoolName}</strong>.
-        </p>
-        <p className="mt-2 text-xs">
-          Counts: {students.length} students · {teachers.length} teachers · {parents.length} parents
-          · {classes.length} classes
-        </p>
+    <div className="page-stack">
+      <div className="flex flex-wrap items-end justify-between gap-2 border-b border-border/80 pb-3">
+        <div>
+          <p className="text-[13px] font-medium text-foreground">School roster</p>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            {schoolName} · {students.length} students · {teachers.length} teachers ·{' '}
+            {parents.length} parents · {classes.length} classes
+          </p>
+        </div>
       </div>
 
-      {msg && (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+      {msg ? (
+        <p className="rounded-xl border border-success/25 bg-success-soft px-4 py-3 text-sm text-success">
           {msg}
         </p>
-      )}
-      {err && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-          {err}
-        </p>
-      )}
+      ) : null}
+      <FieldError>{err}</FieldError>
 
       {creds && (
-        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 shadow-sm dark:border-amber-800 dark:bg-amber-950/40">
+        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">
           <div className="flex items-start gap-3">
             <KeyRound className="mt-0.5 h-5 w-5 text-amber-800" />
             <div className="min-w-0 flex-1">
@@ -259,10 +256,10 @@ export function RosterHub({
       )}
 
       {/* 1. People you know */}
-      <section className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
+      <section className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-center gap-2">
-          <UserPlus className="h-5 w-5 text-sky-600" />
-          <h2 className="text-lg font-bold text-navy dark:text-sky-50">
+          <UserPlus className="h-5 w-5 text-primary" />
+          <h2 className="text-[13px] font-medium text-foreground">
             1. Add someone you know (email login)
           </h2>
         </div>
@@ -270,30 +267,28 @@ export function RosterHub({
           Teacher, parent, or office staff. Use their real email so they can sign in.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div>
+          <Field>
             <Label htmlFor="pn">Full name</Label>
             <Input
               id="pn"
-              className="mt-1"
               placeholder="Jordan Lee"
               value={personName}
               onChange={(e) => setPersonName(e.target.value)}
             />
-          </div>
-          <div>
+          </Field>
+          <Field>
             <Label htmlFor="pe">Email</Label>
             <Input
               id="pe"
               type="email"
-              className="mt-1"
               placeholder="jordan@school.org"
               value={personEmail}
               onChange={(e) => setPersonEmail(e.target.value)}
             />
-          </div>
-          <div className="sm:col-span-2">
+          </Field>
+          <Field className="sm:col-span-2">
             <Label>Role</Label>
-            <div className="mt-1.5 flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
               {(
                 [
                   ['teacher', 'Teacher'],
@@ -305,21 +300,21 @@ export function RosterHub({
                   type="button"
                   onClick={() => setPersonRole(v)}
                   className={cn(
-                    'rounded-full border px-3 py-1 text-xs font-semibold',
+                    'rounded-lg border px-3 py-1.5 text-xs font-semibold transition',
                     personRole === v
-                      ? 'border-sky-600 bg-sky-600 text-white'
-                      : 'border-border bg-background'
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border bg-card text-foreground hover:bg-muted'
                   )}
                 >
                   {label}
                 </button>
               ))}
             </div>
-          </div>
+          </Field>
           {personRole === 'parent' && students.length > 0 && (
-            <div className="sm:col-span-2">
+            <Field className="sm:col-span-2">
               <Label>Link to children (optional now)</Label>
-              <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border p-2 text-sm">
+              <ul className="max-h-40 space-y-1 overflow-y-auto rounded-xl border p-2 text-sm">
                 {students.map((s) => {
                   const checked = linkStudentIds.includes(s.id)
                   return (
@@ -341,7 +336,7 @@ export function RosterHub({
                   )
                 })}
               </ul>
-            </div>
+            </Field>
           )}
         </div>
         <Button
@@ -356,47 +351,42 @@ export function RosterHub({
       </section>
 
       {/* 2. Students */}
-      <section className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
+      <section className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-emerald-600" />
-          <h2 className="text-lg font-bold text-navy dark:text-sky-50">2. Students</h2>
+          <Users className="h-5 w-5 text-primary" />
+          <h2 className="text-[13px] font-medium text-foreground">2. Students</h2>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
           Students do not need email. Add a few by hand, or paste a CSV.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-4">
-          <div>
+          <Field>
             <Label>First name</Label>
-            <Input className="mt-1" value={sf} onChange={(e) => setSf(e.target.value)} />
-          </div>
-          <div>
+            <Input value={sf} onChange={(e) => setSf(e.target.value)} />
+          </Field>
+          <Field>
             <Label>Last name</Label>
-            <Input className="mt-1" value={sl} onChange={(e) => setSl(e.target.value)} />
-          </div>
-          <div>
+            <Input value={sl} onChange={(e) => setSl(e.target.value)} />
+          </Field>
+          <Field>
             <Label>Grade</Label>
             <Input
-              className="mt-1"
               placeholder="5"
               value={sg}
               onChange={(e) => setSg(e.target.value)}
             />
-          </div>
-          <div>
+          </Field>
+          <Field>
             <Label>Class (optional)</Label>
-            <select
-              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-              value={sClass}
-              onChange={(e) => setSClass(e.target.value)}
-            >
+            <Select value={sClass} onChange={(e) => setSClass(e.target.value)}>
               <option value="">— none yet —</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
         </div>
         <Button
           type="button"
@@ -420,16 +410,18 @@ export function RosterHub({
         </Button>
 
         <div className="mt-6 border-t pt-4">
-          <Label>Or paste CSV</Label>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Headers: first_name, last_name, grade_level, parent_email, class
-          </p>
-          <textarea
-            className="mt-2 w-full min-h-[100px] rounded-xl border border-input bg-background px-3 py-2 font-mono text-xs"
-            placeholder={STUDENT_CSV_TEMPLATE}
-            value={csv}
-            onChange={(e) => setCsv(e.target.value)}
-          />
+          <Field>
+            <Label>Or paste CSV</Label>
+            <p className="text-[11px] text-muted-foreground">
+              Headers: first_name, last_name, grade_level, parent_email, class
+            </p>
+            <Textarea
+              className="font-mono text-xs"
+              placeholder={STUDENT_CSV_TEMPLATE}
+              value={csv}
+              onChange={(e) => setCsv(e.target.value)}
+            />
+          </Field>
           <div className="mt-2 flex flex-wrap gap-2">
             <Button
               type="button"
@@ -468,35 +460,39 @@ export function RosterHub({
         </div>
 
         {students.length > 0 && (
-          <div className="mt-4 max-h-48 overflow-y-auto rounded-xl border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-xs">
-                <tr>
-                  <th className="px-3 py-2">Name</th>
-                  <th className="px-3 py-2">Grade</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.slice(0, 50).map((s) => (
-                  <tr key={s.id} className="border-t">
-                    <td className="px-3 py-1.5">
+          <div className="mt-3">
+            <Table className="min-w-0">
+              <THead>
+                <TR>
+                  <TH>Name</TH>
+                  <TH>Grade</TH>
+                  <TH>Status</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {students.slice(0, 100).map((s) => (
+                  <TR key={s.id}>
+                    <TD>
                       <Link
                         href={`/students/${s.id}`}
-                        className="font-medium text-sky-800 hover:underline dark:text-sky-300"
+                        className="font-medium text-foreground hover:text-primary hover:underline"
                       >
                         {s.last_name}, {s.first_name}
                       </Link>
-                    </td>
-                    <td className="px-3 py-1.5 text-muted-foreground">
-                      {s.grade_level || '—'}
-                    </td>
-                  </tr>
+                    </TD>
+                    <TD className="text-muted-foreground">{s.grade_level || '—'}</TD>
+                    <TD>
+                      <Badge variant={s.active === false ? 'warning' : 'success'}>
+                        {s.active === false ? 'Inactive' : 'Active'}
+                      </Badge>
+                    </TD>
+                  </TR>
                 ))}
-              </tbody>
-            </table>
-            {students.length > 50 && (
-              <p className="border-t px-3 py-2 text-xs text-muted-foreground">
-                Showing 50 of {students.length}
+              </TBody>
+            </Table>
+            {students.length > 100 && (
+              <p className="border-t px-2.5 py-1.5 text-[12px] text-muted-foreground">
+                Showing 100 of {students.length}
               </p>
             )}
           </div>
@@ -504,8 +500,8 @@ export function RosterHub({
       </section>
 
       {/* 3. Classes — Abeka + assign teacher */}
-      <section className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
-        <h2 className="text-lg font-bold text-navy dark:text-sky-50">3. Classes (Abeka)</h2>
+      <section className="rounded-lg border border-border bg-card p-4">
+        <h2 className="text-[13px] font-medium text-foreground">3. Classes (Abeka)</h2>
         <p className="mt-1 text-xs text-muted-foreground">
           Build grade + subject classes and assign a teacher. Teachers can also self-serve under My
           classroom. Removals use Approvals &amp; history.
@@ -523,10 +519,10 @@ export function RosterHub({
                   setAbeaSubjects(coreSubjectsForGrade(g.id).map((s) => s.id))
                 }}
                 className={cn(
-                  'rounded-full border-2 px-3 py-1.5 text-xs font-bold shadow-sm',
+                  'rounded-lg border px-3 py-1.5 text-xs font-semibold transition',
                   cGrade === g.id
-                    ? 'border-violet-700 bg-violet-700 text-white ring-2 ring-violet-300 ring-offset-2'
-                    : 'border-slate-300 bg-white text-slate-700'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card text-foreground hover:bg-muted'
                 )}
               >
                 {g.label}
@@ -539,8 +535,8 @@ export function RosterHub({
           <Label className="text-xs">Abeka subjects to create</Label>
           <div className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
             {abeaSubjects.length > 0 && (
-              <p className="mb-2 rounded-lg border-2 border-violet-600 bg-violet-700 px-3 py-2 text-xs font-bold text-white">
-                Selected ({abeaSubjects.length}): dark purple = on
+              <p className="mb-2 rounded-lg border border-primary/25 bg-primary/10 px-3 py-2 text-xs font-semibold text-foreground sm:col-span-2 lg:col-span-3">
+                Selected ({abeaSubjects.length})
               </p>
             )}
             {subjectsForGrade(cGrade).map((s) => {
@@ -556,17 +552,17 @@ export function RosterHub({
                     )
                   }
                   className={cn(
-                    'rounded-xl border-2 px-3 py-2.5 text-left text-sm transition',
+                    'rounded-xl border px-3 py-2.5 text-left text-sm transition',
                     on
-                      ? 'border-violet-700 bg-violet-700 font-bold text-white shadow-md ring-2 ring-violet-300 ring-offset-1'
-                      : 'border-slate-300 bg-white text-slate-900 hover:border-violet-400'
+                      ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                      : 'border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5'
                   )}
                 >
                   <span className={on ? 'font-bold' : 'font-medium'}>{s.label}</span>
                   <span
                     className={cn(
                       'block text-[11px]',
-                      on ? 'text-violet-100' : 'text-muted-foreground'
+                      on ? 'text-primary-foreground/80' : 'text-muted-foreground'
                     )}
                   >
                     {suggestClassName(cGrade, s)}
@@ -578,21 +574,17 @@ export function RosterHub({
         </div>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div>
+          <Field>
             <Label>Assign teacher</Label>
-            <select
-              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-              value={cTeacher}
-              onChange={(e) => setCTeacher(e.target.value)}
-            >
+            <Select value={cTeacher} onChange={(e) => setCTeacher(e.target.value)}>
               <option value="">— assign later —</option>
               {teachers.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.full_name || t.email}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
           <div className="flex items-end">
             <Button
               type="button"
@@ -615,39 +607,33 @@ export function RosterHub({
         </div>
 
         <div className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
+          <Field>
             <Label>Custom class name</Label>
             <Input
-              className="mt-1"
               placeholder="5th Grade Homeroom"
               value={cName}
               onChange={(e) => setCName(e.target.value)}
             />
-          </div>
-          <div>
+          </Field>
+          <Field>
             <Label>Subject</Label>
             <Input
-              className="mt-1"
               placeholder="Homeroom / Math"
               value={cSubject}
               onChange={(e) => setCSubject(e.target.value)}
             />
-          </div>
-          <div>
+          </Field>
+          <Field>
             <Label>Teacher</Label>
-            <select
-              className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-              value={cTeacher}
-              onChange={(e) => setCTeacher(e.target.value)}
-            >
+            <Select value={cTeacher} onChange={(e) => setCTeacher(e.target.value)}>
               <option value="">— assign later —</option>
               {teachers.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.full_name || t.email}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
           <div className="flex items-end">
             <Button
               type="button"
@@ -672,55 +658,63 @@ export function RosterHub({
         </div>
 
         {classes.length > 0 && (
-          <ul className="mt-4 space-y-2">
-            {classes.map((c) => (
-              <li
-                key={c.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm"
-              >
-                <div>
-                  <Link
-                    href={`/classes/${c.id}`}
-                    className="font-semibold text-sky-800 hover:underline dark:text-sky-300"
-                  >
-                    {c.name}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">
-                    {[c.subject, c.grade_level].filter(Boolean).join(' · ') || 'Class'}
-                    {' · '}
-                    {c.enrollment_count} students
-                  </p>
-                </div>
-                <select
-                  className="rounded-lg border px-2 py-1 text-xs"
-                  value={c.teacher_id || ''}
-                  disabled={pending}
-                  onChange={(e) =>
-                    run(
-                      () =>
-                        assignTeacherToClassAction(c.id, e.target.value || null),
-                      'Teacher assigned.'
-                    )
-                  }
-                >
-                  <option value="">No teacher</option>
-                  {teachers.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.full_name || t.email}
-                    </option>
-                  ))}
-                </select>
-              </li>
-            ))}
-          </ul>
+          <Table className="mt-3">
+            <THead>
+              <TR>
+                <TH>Class</TH>
+                <TH>Details</TH>
+                <TH className="text-right">Students</TH>
+                <TH>Teacher</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {classes.map((c) => (
+                <TR key={c.id}>
+                  <TD>
+                    <Link
+                      href={`/classes/${c.id}`}
+                      className="font-medium text-foreground hover:text-primary hover:underline"
+                    >
+                      {c.name}
+                    </Link>
+                  </TD>
+                  <TD className="text-muted-foreground">
+                    {[c.subject, c.grade_level].filter(Boolean).join(' · ') || '—'}
+                  </TD>
+                  <TD className="text-right tabular-nums">{c.enrollment_count}</TD>
+                  <TD>
+                    <Select
+                      className="h-8 min-w-[10rem] text-[12px]"
+                      value={c.teacher_id || ''}
+                      disabled={pending}
+                      onChange={(e) =>
+                        run(
+                          () =>
+                            assignTeacherToClassAction(c.id, e.target.value || null),
+                          'Teacher assigned.'
+                        )
+                      }
+                    >
+                      <option value="">No teacher</option>
+                      {teachers.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.full_name || t.email}
+                        </option>
+                      ))}
+                    </Select>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
 
         {classes.length > 0 && students.length > 0 && (
           <div className="mt-4 flex flex-wrap items-end gap-2 border-t pt-4">
-            <div>
+            <Field>
               <Label className="text-xs">Enroll existing student</Label>
-              <select
-                className="mt-1 block rounded-lg border px-2 py-2 text-sm"
+              <Select
+                className="h-9 min-w-[12rem]"
                 value={enStudent}
                 onChange={(e) => setEnStudent(e.target.value)}
               >
@@ -729,12 +723,12 @@ export function RosterHub({
                     {s.last_name}, {s.first_name}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div>
+              </Select>
+            </Field>
+            <Field>
               <Label className="text-xs">Into class</Label>
-              <select
-                className="mt-1 block rounded-lg border px-2 py-2 text-sm"
+              <Select
+                className="h-9 min-w-[12rem]"
                 value={enClass}
                 onChange={(e) => setEnClass(e.target.value)}
               >
@@ -743,8 +737,8 @@ export function RosterHub({
                     {c.name}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
             <Button
               type="button"
               size="sm"
@@ -764,8 +758,8 @@ export function RosterHub({
       </section>
 
       {/* 4. Parent links */}
-      <section className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
-        <h2 className="text-lg font-bold text-navy dark:text-sky-50">
+      <section className="rounded-lg border border-border bg-card p-4">
+        <h2 className="text-[13px] font-medium text-foreground">
           4. Link parents to students
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
@@ -778,10 +772,10 @@ export function RosterHub({
           </p>
         ) : (
           <div className="mt-4 flex flex-wrap items-end gap-2">
-            <div>
+            <Field>
               <Label className="text-xs">Parent</Label>
-              <select
-                className="mt-1 block rounded-lg border px-2 py-2 text-sm"
+              <Select
+                className="h-9 min-w-[12rem]"
                 value={lpParent}
                 onChange={(e) => setLpParent(e.target.value)}
               >
@@ -790,12 +784,12 @@ export function RosterHub({
                     {p.full_name || p.email}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div>
+              </Select>
+            </Field>
+            <Field>
               <Label className="text-xs">Student</Label>
-              <select
-                className="mt-1 block rounded-lg border px-2 py-2 text-sm"
+              <Select
+                className="h-9 min-w-[12rem]"
                 value={lpStudent}
                 onChange={(e) => setLpStudent(e.target.value)}
               >
@@ -804,8 +798,8 @@ export function RosterHub({
                     {s.last_name}, {s.first_name}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
             <Button
               type="button"
               size="sm"
@@ -823,31 +817,42 @@ export function RosterHub({
         )}
 
         {parents.length > 0 && (
-          <ul className="mt-4 space-y-2 text-sm">
-            {parents.map((p) => {
-              const kids = linksByParent.get(p.id) ?? []
-              return (
-                <li key={p.id} className="rounded-lg border px-3 py-2">
-                  <span className="font-medium">{p.full_name || p.email}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{p.email}</span>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {kids.length === 0 ? (
-                      <Badge variant="warning">No students linked</Badge>
-                    ) : (
-                      kids.map((sid) => {
-                        const st = students.find((s) => s.id === sid)
-                        return (
-                          <Badge key={sid} variant="sky">
-                            {st ? `${st.first_name} ${st.last_name}` : sid.slice(0, 6)}
-                          </Badge>
-                        )
-                      })
-                    )}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+          <Table className="mt-3">
+            <THead>
+              <TR>
+                <TH>Parent</TH>
+                <TH>Email</TH>
+                <TH>Linked students</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {parents.map((p) => {
+                const kids = linksByParent.get(p.id) ?? []
+                return (
+                  <TR key={p.id}>
+                    <TD className="font-medium">{p.full_name || '—'}</TD>
+                    <TD className="text-muted-foreground">{p.email || '—'}</TD>
+                    <TD>
+                      {kids.length === 0 ? (
+                        <Badge variant="warning">None</Badge>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {kids.map((sid) => {
+                            const st = students.find((s) => s.id === sid)
+                            return (
+                              <Badge key={sid} variant="muted">
+                                {st ? `${st.first_name} ${st.last_name}` : sid.slice(0, 6)}
+                              </Badge>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </TD>
+                  </TR>
+                )
+              })}
+            </TBody>
+          </Table>
         )}
       </section>
 

@@ -1,33 +1,41 @@
 @import "tailwindcss";
 
-/* Beacon design system — premium education product */
+/* Beacon design system — professional ops product */
 :root {
-  --background: #f4f7fb;
-  --foreground: #0b1220;
+  --background: #f6f7f9;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-foreground: #0b1220;
-  --primary: #0284c7;
-  --primary-foreground: #f0f9ff;
-  --secondary: #e0f2fe;
-  --secondary-foreground: #0c4a6e;
-  --muted: #eef2f7;
-  --muted-foreground: #5b6b7c;
+  --card-foreground: #0f172a;
+  --primary: #0369a1;
+  --primary-foreground: #f8fafc;
+  --secondary: #e2e8f0;
+  --secondary-foreground: #1e293b;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
   --accent: #0ea5e9;
   --accent-foreground: #0c4a6e;
   --navy: #0a1628;
   --navy-foreground: #f8fafc;
-  --success: #059669;
+  --success: #047857;
   --success-soft: #ecfdf5;
-  --warning: #d97706;
+  --warning: #b45309;
   --warning-soft: #fffbeb;
-  --danger: #dc2626;
+  --danger: #b91c1c;
   --danger-soft: #fef2f2;
-  --ring: #38bdf8;
+  --ring: #0284c7;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --radius: 0.875rem;
-  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 10px 28px rgb(15 23 42 / 0.06);
-  --shadow-lift: 0 8px 30px rgb(2 132 199 / 0.12), 0 2px 8px rgb(15 23 42 / 0.04);
+  /* App chrome (header) — skin overrides below */
+  --chrome: #0a1628;
+  --chrome-elevated: #111827;
+  --chrome-foreground: #f8fafc;
+  --chrome-muted: #94a3b8;
+  --chrome-border: rgb(255 255 255 / 0.08);
+  --chrome-hover: rgb(255 255 255 / 0.06);
+  --chrome-active: rgb(255 255 255 / 0.12);
+  --radius: 0.5rem;
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.04);
+  --shadow-lift: 0 4px 16px rgb(15 23 42 / 0.08), 0 1px 3px rgb(15 23 42 / 0.04);
 }
 
 @theme inline {
@@ -54,6 +62,13 @@
   --color-ring: var(--ring);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-chrome: var(--chrome);
+  --color-chrome-elevated: var(--chrome-elevated);
+  --color-chrome-foreground: var(--chrome-foreground);
+  --color-chrome-muted: var(--chrome-muted);
+  --color-chrome-border: var(--chrome-border);
+  --color-chrome-hover: var(--chrome-hover);
+  --color-chrome-active: var(--chrome-active);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --radius-lg: var(--radius);
@@ -86,6 +101,13 @@
     --ring: #38bdf8;
     --border: #1a2d45;
     --input: #1a2d45;
+    --chrome: #040a12;
+    --chrome-elevated: #0a1524;
+    --chrome-foreground: #e8eef6;
+    --chrome-muted: #94a3b8;
+    --chrome-border: rgb(255 255 255 / 0.08);
+    --chrome-hover: rgb(255 255 255 / 0.06);
+    --chrome-active: rgb(255 255 255 / 0.12);
   }
 }
 
@@ -118,6 +140,13 @@ html[data-skin='cartoon'] {
   --radius: 1.15rem;
   --shadow-soft: 0 2px 0 #e9d5ff, 0 8px 24px rgb(192 38 211 / 0.12);
   --shadow-lift: 0 4px 0 #d8b4fe, 0 12px 28px rgb(219 39 119 / 0.15);
+  --chrome: #4a044e;
+  --chrome-elevated: #701a75;
+  --chrome-foreground: #fdf4ff;
+  --chrome-muted: #f0abfc;
+  --chrome-border: rgb(255 255 255 / 0.12);
+  --chrome-hover: rgb(255 255 255 / 0.1);
+  --chrome-active: #e879f9;
 }
 
 html[data-skin='sports'] {
@@ -147,6 +176,13 @@ html[data-skin='sports'] {
   --radius: 0.65rem;
   --shadow-soft: 0 1px 2px rgb(20 83 45 / 0.08), 0 8px 24px rgb(22 163 74 / 0.1);
   --shadow-lift: 0 8px 28px rgb(22 163 74 / 0.18);
+  --chrome: #052e16;
+  --chrome-elevated: #14532d;
+  --chrome-foreground: #f7fee7;
+  --chrome-muted: #86efac;
+  --chrome-border: rgb(255 255 255 / 0.1);
+  --chrome-hover: rgb(255 255 255 / 0.1);
+  --chrome-active: #4ade80;
 }
 
 html[data-skin='midnight'] {
@@ -176,6 +212,13 @@ html[data-skin='midnight'] {
   --radius: 0.9rem;
   --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px rgb(88 28 135 / 0.25);
   --shadow-lift: 0 8px 32px rgb(167 139 250 / 0.2);
+  --chrome: #0a0614;
+  --chrome-elevated: #150d28;
+  --chrome-foreground: #ede9fe;
+  --chrome-muted: #a78bfa;
+  --chrome-border: rgb(255 255 255 / 0.08);
+  --chrome-hover: rgb(255 255 255 / 0.08);
+  --chrome-active: #a78bfa;
 }
 
 html[data-skin='ocean'] {
@@ -205,6 +248,13 @@ html[data-skin='ocean'] {
   --radius: 1rem;
   --shadow-soft: 0 1px 2px rgb(8 51 68 / 0.06), 0 12px 28px rgb(13 148 136 / 0.1);
   --shadow-lift: 0 10px 30px rgb(6 182 212 / 0.16);
+  --chrome: #042f2e;
+  --chrome-elevated: #0c4a5e;
+  --chrome-foreground: #ecfeff;
+  --chrome-muted: #5eead4;
+  --chrome-border: rgb(255 255 255 / 0.1);
+  --chrome-hover: rgb(255 255 255 / 0.1);
+  --chrome-active: #2dd4bf;
 }
 
 html[data-skin='forest'] {
@@ -234,6 +284,13 @@ html[data-skin='forest'] {
   --radius: 0.75rem;
   --shadow-soft: 0 1px 2px rgb(26 46 5 / 0.06), 0 10px 26px rgb(101 163 13 / 0.1);
   --shadow-lift: 0 8px 28px rgb(101 163 13 / 0.16);
+  --chrome: #1a2e05;
+  --chrome-elevated: #365314;
+  --chrome-foreground: #f7fee7;
+  --chrome-muted: #bef264;
+  --chrome-border: rgb(255 255 255 / 0.1);
+  --chrome-hover: rgb(255 255 255 / 0.1);
+  --chrome-active: #a3e635;
 }
 
 html[data-skin='sunrise'] {
@@ -263,6 +320,13 @@ html[data-skin='sunrise'] {
   --radius: 1rem;
   --shadow-soft: 0 1px 2px rgb(154 52 18 / 0.06), 0 12px 28px rgb(234 88 12 / 0.12);
   --shadow-lift: 0 10px 32px rgb(249 115 22 / 0.18);
+  --chrome: #7c2d12;
+  --chrome-elevated: #9a3412;
+  --chrome-foreground: #fff7ed;
+  --chrome-muted: #fdba74;
+  --chrome-border: rgb(255 255 255 / 0.12);
+  --chrome-hover: rgb(255 255 255 / 0.1);
+  --chrome-active: #fb923c;
 }
 
 html[data-skin='campus'] {
@@ -292,6 +356,13 @@ html[data-skin='campus'] {
   --radius: 0.5rem;
   --shadow-soft: 0 1px 2px rgb(127 29 29 / 0.06), 0 10px 24px rgb(185 28 28 / 0.08);
   --shadow-lift: 0 8px 28px rgb(185 28 28 / 0.14);
+  --chrome: #450a0a;
+  --chrome-elevated: #7f1d1d;
+  --chrome-foreground: #faf5f0;
+  --chrome-muted: #fca5a5;
+  --chrome-border: rgb(255 255 255 / 0.1);
+  --chrome-hover: rgb(255 255 255 / 0.1);
+  --chrome-active: #f87171;
 }
 
 html[data-skin='chalk'] {
@@ -321,6 +392,13 @@ html[data-skin='chalk'] {
   --radius: 0.4rem;
   --shadow-soft: 0 1px 0 #d4cfb8, 0 8px 20px rgb(26 47 35 / 0.08);
   --shadow-lift: 0 6px 22px rgb(77 124 15 / 0.12);
+  --chrome: #1a2f23;
+  --chrome-elevated: #243d2e;
+  --chrome-foreground: #f4f1e8;
+  --chrome-muted: #a3e635;
+  --chrome-border: rgb(255 255 255 / 0.1);
+  --chrome-hover: rgb(255 255 255 / 0.08);
+  --chrome-active: #84cc16;
 }
 
 html[data-skin='neon'] {
@@ -350,12 +428,16 @@ html[data-skin='neon'] {
   --radius: 0.35rem;
   --shadow-soft: 0 0 0 1px rgb(217 70 239 / 0.15), 0 8px 24px rgb(0 0 0 / 0.5);
   --shadow-lift: 0 0 24px rgb(217 70 239 / 0.25), 0 8px 32px rgb(0 0 0 / 0.4);
+  --chrome: #050505;
+  --chrome-elevated: #121212;
+  --chrome-foreground: #f5f5f5;
+  --chrome-muted: #d946ef;
+  --chrome-border: rgb(217 70 239 / 0.25);
+  --chrome-hover: rgb(217 70 239 / 0.12);
+  --chrome-active: #d946ef;
 }
 
-/* Skin-aware app chrome */
-html[data-skin] .beacon-shell header.sticky {
-  /* header keeps dark bar; tint via CSS variable if needed */
-}
+/* App chrome uses --chrome* tokens (see AppHeader) */
 
 html[data-skin='cartoon'] .beacon-shell {
   background-image: radial-gradient(circle at 10% 10%, rgb(244 114 182 / 0.12), transparent 40%),
@@ -437,22 +519,14 @@ svg {
 }
 
 .beacon-shell {
-  background:
-    radial-gradient(1100px 420px at 8% -8%, rgb(14 165 233 / 0.09), transparent 55%),
-    radial-gradient(900px 380px at 92% 0%, rgb(2 132 199 / 0.07), transparent 50%),
-    radial-gradient(600px 300px at 50% 100%, rgb(15 23 42 / 0.03), transparent 55%),
-    var(--background);
-  background-attachment: scroll;
+  background: var(--background);
   overflow-x: clip;
 }
 
 /* Soften decorative gradients on small screens (wife's weird scale fix) */
 @media (max-width: 640px) {
   .beacon-shell {
-    background:
-      radial-gradient(280px 180px at 0% 0%, rgb(14 165 233 / 0.07), transparent 70%),
-      radial-gradient(240px 160px at 100% 0%, rgb(2 132 199 / 0.05), transparent 65%),
-      var(--background);
+    background: var(--background);
   }
 
   /* Decorative blurs can paint outside the viewport and cause sideways scroll */
@@ -497,18 +571,26 @@ svg {
   }
 }
 
-/* Premium card hover — only on fine pointers so phones don't jump */
+/* Subtle card hover — border only, no bounce */
 .card-interactive {
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .card-interactive {
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  }
   .card-interactive:hover {
-    transform: translateY(-2px);
     box-shadow: var(--shadow-lift);
-    border-color: rgb(14 165 233 / 0.35);
+    border-color: color-mix(in oklab, var(--foreground) 12%, var(--border));
+  }
+}
+
+/* Page rhythm */
+.page-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+@media (min-width: 640px) {
+  .page-stack {
+    gap: 1.5rem;
   }
 }
 

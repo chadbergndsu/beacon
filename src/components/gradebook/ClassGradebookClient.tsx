@@ -64,23 +64,23 @@ export function ClassGradebookClient({
         }}
       />
 
-      {message && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">
+      {message ? (
+        <div className="rounded-xl border border-emerald-200 bg-success-soft px-4 py-3 text-sm font-medium text-success">
           {message}
         </div>
-      )}
-      {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
+      ) : null}
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-danger-soft px-4 py-3 text-sm font-medium text-danger">
           {error}
         </div>
-      )}
+      ) : null}
 
-      {previewStudent && previewResult && (
+      {previewStudent && previewResult ? (
         <Card className="overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-gradient-to-r from-sky-50 to-transparent dark:from-sky-950/30 px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 bg-muted/30 px-5 py-4">
             <div>
-              <h3 className="font-semibold text-navy dark:text-sky-50">Live parent preview</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <h3 className="font-semibold tracking-tight">Live parent preview</h3>
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 Exactly what parents see — updates as you type
               </p>
             </div>
@@ -112,7 +112,7 @@ export function ClassGradebookClient({
             />
           </div>
         </Card>
-      )}
+      ) : null}
     </div>
   )
 }

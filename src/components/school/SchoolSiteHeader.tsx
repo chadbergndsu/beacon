@@ -3,14 +3,21 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
+import { beaconCraftTourUrl } from '@/lib/beaconcraft-url'
+import { buttonClassName } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const anchors = [
   { href: '#about', label: 'About' },
   { href: '#academics', label: 'Academics' },
+  { href: '#tour', label: 'Campus tour' },
   { href: '#families', label: 'Families' },
   { href: '#contact', label: 'Contact' },
 ]
+
+function craftTourUrl(): string {
+  return beaconCraftTourUrl()
+}
 
 export function SchoolSiteHeader({
   schoolName,
@@ -20,13 +27,14 @@ export function SchoolSiteHeader({
   websiteUrl?: string | null
 }) {
   const [open, setOpen] = useState(false)
+  const tourUrl = craftTourUrl()
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-card/90 backdrop-blur-xl pt-safe">
+    <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-xl pt-safe">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-        <Link href="/school" className="min-w-0 font-bold text-navy dark:text-sky-50">
-          <span className="block truncate text-sm sm:text-base">{schoolName}</span>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">
+        <Link href="/school" className="min-w-0">
+          <span className="block truncate text-sm font-medium sm:text-base">{schoolName}</span>
+          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
             Powered by Beacon
           </span>
         </Link>
@@ -36,7 +44,7 @@ export function SchoolSiteHeader({
             <a
               key={a.href}
               href={a.href}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               {a.label}
             </a>
@@ -46,22 +54,27 @@ export function SchoolSiteHeader({
               href={websiteUrl}
               target="_blank"
               rel="noreferrer"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50"
+              className="rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-muted"
             >
               Official site
             </a>
           )}
-          <Link
-            href="/login"
-            className="ml-1 rounded-xl bg-navy px-3.5 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+          <a
+            href={tourUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
           >
+            Campus tour
+          </a>
+          <Link href="/login" className={cn(buttonClassName('primary', 'sm'), 'ml-1')}>
             Sign in
           </Link>
         </nav>
 
         <button
           type="button"
-          className="md:hidden rounded-xl border border-border p-2"
+          className="rounded-md border border-border p-2 md:hidden"
           aria-label={open ? 'Close menu' : 'Open menu'}
           onClick={() => setOpen((v) => !v)}
         >
@@ -71,7 +84,7 @@ export function SchoolSiteHeader({
 
       <div
         className={cn(
-          'md:hidden border-t border-border bg-card px-4 pb-4',
+          'border-t border-border bg-card px-4 pb-4 md:hidden',
           open ? 'block' : 'hidden'
         )}
       >
@@ -80,7 +93,7 @@ export function SchoolSiteHeader({
             <a
               key={a.href}
               href={a.href}
-              className="rounded-lg px-3 py-2.5 text-sm font-medium"
+              className="rounded-md px-3 py-2.5 text-sm font-medium"
               onClick={() => setOpen(false)}
             >
               {a.label}
@@ -91,14 +104,23 @@ export function SchoolSiteHeader({
               href={websiteUrl}
               target="_blank"
               rel="noreferrer"
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-sky-700"
+              className="rounded-md px-3 py-2.5 text-sm font-medium text-primary"
             >
               Official website
             </a>
           )}
+          <a
+            href={tourUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md px-3 py-2.5 text-sm font-medium"
+            onClick={() => setOpen(false)}
+          >
+            Campus tour
+          </a>
           <Link
             href="/login"
-            className="mt-1 rounded-xl bg-navy px-3 py-2.5 text-center text-sm font-semibold text-white"
+            className={cn(buttonClassName('primary', 'sm'), 'mt-1 text-center')}
             onClick={() => setOpen(false)}
           >
             Sign in to Beacon

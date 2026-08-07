@@ -7,6 +7,7 @@ import {
   type RosterPerson,
   type RosterStudent,
 } from '@/components/roster/RosterHub'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function PrincipalRosterPage() {
   const { schoolId } = await requirePrincipal()
@@ -77,24 +78,22 @@ export default async function PrincipalRosterPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
-          School year setup
-        </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy dark:text-sky-50">
-          Roster
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-          Put real people in Beacon: teachers and parents you know (by email), then students and
-          classes. Teachers can also own their own Abeka classes and students under{' '}
-          <strong>My classroom</strong>. Deletions go through{' '}
-          <a href="/principal/approvals" className="text-sky-700 underline">
-            Approvals &amp; history
-          </a>
-          .
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        eyebrow="School year setup"
+        title="Roster"
+        description={
+          <>
+            Put real people in Beacon: teachers and parents you know (by email), then students and
+            classes. Teachers can also own their own Abeka classes and students under{' '}
+            <strong>My classroom</strong>. Deletions go through{' '}
+            <a href="/principal/approvals" className="text-primary hover:underline">
+              Approvals &amp; history
+            </a>
+            .
+          </>
+        }
+      />
 
       <RosterHub
         schoolName={brand.name}

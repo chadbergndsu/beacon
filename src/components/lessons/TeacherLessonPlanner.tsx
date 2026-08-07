@@ -23,6 +23,7 @@ import { setLessonPlanStatus } from '@/app/actions/lessons'
 import type { LessonPlan } from '@/lib/school-modules/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/page-header'
 import { cn } from '@/lib/utils'
 
 export type TeacherClass = {
@@ -97,17 +98,17 @@ function DayLessonBlock({
   return (
     <section
       className={cn(
-        'border-b border-slate-200 last:border-b-0 dark:border-slate-700',
+        'border-b border-border last:border-b-0',
         isTaught && 'opacity-90'
       )}
     >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 bg-slate-50/90 px-4 py-3 text-left hover:bg-slate-100 dark:bg-slate-900/60 dark:hover:bg-slate-900"
+        className="flex w-full items-center justify-between gap-2 bg-muted/40 px-4 py-3 text-left hover:bg-muted/60"
       >
         <div className="min-w-0">
-          <p className="font-bold uppercase tracking-wide text-sky-900 dark:text-sky-200">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-foreground">
             {label}
           </p>
           <p className="text-xs text-muted-foreground">
@@ -131,7 +132,7 @@ function DayLessonBlock({
           <ChevronDown
             className={cn(
               'h-5 w-5 text-slate-500 transition-transform',
-              open && 'rotate-180 text-sky-600'
+              open && 'rotate-180 text-primary'
             )}
           />
         </div>
@@ -144,7 +145,7 @@ function DayLessonBlock({
               <p>No lesson plan for this day.</p>
               <Link
                 href={`/classes/${classRow.id}?tab=lessons`}
-                className="mt-2 inline-flex items-center gap-1 font-semibold text-sky-700 hover:underline"
+                className="mt-2 inline-flex items-center gap-1 text-[12px] font-medium text-primary hover:underline"
               >
                 Add in class lesson plans
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -245,7 +246,7 @@ function DayLessonBlock({
                 )}
                 <Link
                   href={`/classes/${classRow.id}?tab=lessons`}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-sky-700 hover:underline"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                   onClick={(e) => e.stopPropagation()}
                 >
                   Edit in class
@@ -364,43 +365,34 @@ export function TeacherLessonPlanner({
   }
 
   return (
-    <div className="space-y-4 animate-beacon-in">
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-700">
-          Lesson Plan
-        </p>
-        <h1 className="text-2xl font-bold tracking-tight text-navy dark:text-sky-50">
-          My day &amp; week
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground max-w-2xl">
-          <strong className="text-foreground">Week</strong> is the planning board (Mon–Fri cards per
-          subject). <strong className="text-foreground">Day</strong> is for teaching — full lessons
-          stacked, with <strong className="text-foreground">Done for today</strong> to clear a
-          subject without deleting the plan.
-        </p>
-        <p className="mt-2 text-sm">
-          <Link
-            href="/teacher/calendar"
-            className="font-semibold text-sky-700 hover:underline dark:text-sky-300"
-          >
-            Assignment month calendar →
+    <div className="page-stack animate-beacon-in">
+      <PageHeader
+        eyebrow="Lesson plan"
+        title="My day & week"
+        description={
+          <>
+            <strong className="text-foreground">Week</strong> is the planning board (Mon–Fri cards per
+            subject). <strong className="text-foreground">Day</strong> is for teaching — full lessons
+            stacked, with <strong className="text-foreground">Done for today</strong> to clear a
+            subject without deleting the plan.
+          </>
+        }
+        actions={
+          <Link href="/teacher/calendar" className="text-[12px] font-medium text-primary hover:underline">
+            Assignment calendar →
           </Link>
-          <span className="text-muted-foreground">
-            {' '}
-            (due dates / quizzes like SchoolWorx calendar)
-          </span>
-        </p>
-      </div>
+        }
+      />
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm dark:border-slate-700">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-slate-100 px-4 py-3 dark:bg-slate-900">
+      <div className="overflow-hidden rounded-lg border border-border">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="font-semibold text-slate-700 dark:text-slate-200">Teacher:</span>
-            <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium dark:border-slate-600 dark:bg-slate-800">
+            <span className="font-medium text-muted-foreground">Teacher:</span>
+            <span className="rounded-md border border-border bg-card px-3 py-1.5 text-[13px] font-medium">
               {teacherName}
             </span>
-            <span className="text-slate-400">›</span>
-            <span className="font-semibold text-slate-800 dark:text-slate-100">
+            <span className="text-muted-foreground">›</span>
+            <span className="font-medium text-foreground">
               {mode === 'day'
                 ? formatLongDay(selectedDay)
                 : `Week of ${formatWeekRange(anchor)}`}
@@ -412,20 +404,18 @@ export function TeacherLessonPlanner({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-              Preview:
-            </span>
-            <div className="inline-flex rounded-lg border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800">
+            <span className="text-[13px] font-medium text-muted-foreground">Preview:</span>
+            <div className="inline-flex rounded-md border border-border bg-card p-0.5">
               {(['day', 'week'] as const).map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setMode(m)}
                   className={cn(
-                    'rounded-md px-3 py-1.5 text-sm font-semibold capitalize',
+                    'rounded-md px-3 py-1.5 text-[13px] font-medium capitalize',
                     mode === m
-                      ? 'bg-sky-600 text-white shadow'
-                      : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted'
                   )}
                 >
                   {m}
@@ -535,10 +525,9 @@ export function TeacherLessonPlanner({
           </div>
         ) : (
           /* SchoolWorx-style week board: subject rows × Mon–Fri cards */
-          <div className="overflow-x-auto bg-[#f4f6f8] dark:bg-slate-950">
-            {/* Day headers */}
+          <div className="overflow-x-auto bg-muted/30">
             <div
-              className="grid min-w-[900px] border-b border-slate-300 dark:border-slate-700"
+              className="grid min-w-[900px] border-b border-border"
               style={{ gridTemplateColumns: `repeat(5, minmax(0, 1fr))` }}
             >
               {weekDays.map((d) => {
@@ -548,10 +537,10 @@ export function TeacherLessonPlanner({
                   <div
                     key={date}
                     className={cn(
-                      'border-r border-slate-300 px-2 py-2.5 text-center text-xs font-bold last:border-r-0 dark:border-slate-700',
+                      'border-r border-border px-2 py-2.5 text-center text-[11px] font-medium last:border-r-0',
                       isToday
-                        ? 'bg-sky-700 text-white'
-                        : 'bg-slate-700 text-white dark:bg-slate-800'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-foreground'
                     )}
                   >
                     {formatShortDay(d)}
@@ -566,7 +555,7 @@ export function TeacherLessonPlanner({
               sortedClasses.map((c) => (
                 <div
                   key={c.id}
-                  className="grid min-w-[900px] border-b border-slate-200 dark:border-slate-800"
+                  className="grid min-w-[900px] border-b border-border"
                   style={{ gridTemplateColumns: `repeat(5, minmax(0, 1fr))` }}
                 >
                   {weekDays.map((d) => {
@@ -581,17 +570,17 @@ export function TeacherLessonPlanner({
                       return (
                         <div
                           key={date}
-                          className="min-h-[140px] border-r border-slate-200 bg-white p-2 last:border-r-0 dark:border-slate-800 dark:bg-slate-950"
+                          className="min-h-[140px] border-r border-border bg-card p-2 last:border-r-0"
                         >
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-sky-900/70 dark:text-sky-300/80">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                             {label}
                           </p>
                           <Link
                             href={`/classes/${c.id}?tab=lessons`}
-                            className="mt-2 flex min-h-[88px] flex-col items-center justify-center rounded border border-dashed border-slate-300 px-1 text-center text-[11px] text-slate-500 hover:border-sky-400 hover:bg-sky-50/60 dark:border-slate-600 dark:hover:bg-sky-950/30"
+                            className="mt-2 flex min-h-[88px] flex-col items-center justify-center rounded-md border border-dashed border-border px-1 text-center text-[11px] text-muted-foreground hover:border-primary/40 hover:bg-muted/40"
                           >
                             Click to add lesson plan.
-                            <ChevronDown className="mt-1 h-4 w-4 text-slate-400" />
+                            <ChevronDown className="mt-1 h-4 w-4 text-muted-foreground" />
                           </Link>
                         </div>
                       )
@@ -601,13 +590,13 @@ export function TeacherLessonPlanner({
                       <div
                         key={date}
                         className={cn(
-                          'min-h-[140px] border-r border-slate-200 bg-white p-2 last:border-r-0 dark:border-slate-800 dark:bg-slate-950',
-                          open && 'bg-sky-50/40 dark:bg-sky-950/20'
+                          'min-h-[140px] border-r border-border bg-card p-2 last:border-r-0',
+                          open && 'bg-muted/40'
                         )}
                       >
                         {/* Card chrome — subject + complete check */}
                         <div className="flex items-start justify-between gap-1">
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-sky-950 dark:text-sky-200">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-foreground">
                             {label}
                           </p>
                           <div className="flex shrink-0 items-center gap-0.5">
@@ -648,7 +637,7 @@ export function TeacherLessonPlanner({
                             <ChevronDown
                               className={cn(
                                 'h-4 w-4 text-slate-400 transition',
-                                open && 'rotate-180 text-sky-600'
+                                open && 'rotate-180 text-primary'
                               )}
                             />
                           </div>
@@ -689,7 +678,7 @@ export function TeacherLessonPlanner({
                             )}
                             <Link
                               href={`/classes/${c.id}?tab=lessons`}
-                              className="inline-flex items-center gap-1 pt-1 font-semibold text-sky-700 hover:underline"
+                              className="inline-flex items-center gap-1 pt-1 text-[11px] font-medium text-primary hover:underline"
                             >
                               Edit
                               <ExternalLink className="h-3 w-3" />

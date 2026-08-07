@@ -17,8 +17,12 @@ import { BadgePrintSheet } from '@/components/badge/BadgePrintSheet'
 import type { AftercareSession, BadgeScan, SchoolRoom, StudentBadge } from '@/lib/badge/types'
 import type { RoomKind } from '@/lib/badge/types'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Field, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 
 export function BadgesAdmin({
@@ -68,18 +72,30 @@ export function BadgesAdmin({
     typeof window !== 'undefined' ? window.location.origin : 'https://beacon.commoncentsip.com'
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-2xl border border-violet-200 bg-violet-50/80 p-4 text-sm text-violet-950 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-100">
-        <p className="font-semibold">Badge system for Chris&apos;s rooms</p>
-        <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs leading-relaxed">
+    <div className="page-stack">
+      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
+        <p className="font-semibold text-foreground">Badge system for Chris&apos;s rooms</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          Product plan: scan-in welcomes the student on the kiosk screen and places them in
+          the matching room on the <strong className="text-foreground">3D campus twin</strong>{' '}
+          (BeaconCraft). See{' '}
+          <code className="text-[10px]">docs/adr/001-campus-twin-scan-presence.md</code>.
+        </p>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs leading-relaxed text-muted-foreground">
           <li>
-            <strong>Assign codes</strong> to students → print badges
+            <strong className="text-foreground">Assign codes</strong> to students → print badges
           </li>
           <li>
-            Add <strong>rooms</strong> (classroom vs aftercare with hourly rate)
+            Add <strong className="text-foreground">rooms</strong> (classroom vs aftercare with hourly rate)
           </li>
           <li>
-            Open <strong>BeaconCraft</strong> at <Link href="/craft" className="font-semibold underline">/craft</Link>{' '}
+            Open <strong className="text-foreground">kiosk</strong> on a tablet → USB scan, camera QR, or name search
+          </li>
+          <li>
+            Open <strong>BeaconCraft</strong> at{' '}
+            <Link href="/craft" className="font-semibold underline">
+              /craft
+            </Link>{' '}
             for the voxel campus twin (sync rooms on{' '}
             <Link href="/principal/release" className="font-semibold underline">
               Go-live
@@ -87,35 +103,31 @@ export function BadgesAdmin({
             )
           </li>
           <li>
-            Classroom IN marks <strong>attendance present</strong>; aftercare tracks time →{' '}
-            <strong>bill for payments</strong>
+            Classroom IN marks <strong className="text-foreground">attendance present</strong>; aftercare tracks time →{' '}
+            <strong className="text-foreground">bill for payments</strong>
           </li>
           <li>
-            Teachers can also use nav <strong>Scan</strong> from a laptop
+            Teachers can also use nav <strong className="text-foreground">Scan</strong> from a laptop
           </li>
           <li>
             Aftercare IN/OUT emails parents (optional SMS via Twilio); RFID/USB readers work too
           </li>
         </ol>
-        <p className="mt-2 text-[11px] opacity-80">
+        <p className="mt-2 text-[11px] text-muted-foreground">
           First time: apply migrations 011–012 via <code>npm run db:migrate</code> if tables or
           RFID columns are missing.
         </p>
       </div>
 
-      {msg && (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
+      {msg ? (
+        <p className="rounded-xl border border-success/25 bg-success-soft px-3 py-2 text-sm text-success">
           {msg}
         </p>
-      )}
-      {err && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
-          {err}
-        </p>
-      )}
+      ) : null}
+      {err ? <FieldError>{err}</FieldError> : null}
 
-      <section className="rounded-2xl border bg-card p-5 space-y-3">
-        <h2 className="font-bold text-navy dark:text-sky-50">Kiosk link (tablet)</h2>
+      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <h2 className="font-semibold tracking-tight text-foreground">Kiosk link (tablet)</h2>
         <p className="text-xs text-muted-foreground">
           Full-screen room scanner. Bookmark on classroom / aftercare iPad. No staff login on the
           tablet.
@@ -184,8 +196,8 @@ export function BadgesAdmin({
         </p>
       </section>
 
-      <section className="rounded-2xl border bg-card p-5 space-y-3">
-        <h2 className="font-bold text-navy dark:text-sky-50">Student badges</h2>
+      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <h2 className="font-semibold tracking-tight text-foreground">Student badges</h2>
         <p className="text-xs text-muted-foreground">
           {initialBadges.length} students with codes. Assign missing codes, then print.
         </p>
@@ -218,38 +230,46 @@ export function BadgesAdmin({
         )}
       </section>
 
-      <section className="rounded-2xl border bg-card p-5 space-y-3">
-        <h2 className="font-bold text-navy dark:text-sky-50">Rooms</h2>
-        <ul className="space-y-2 text-sm">
-          {initialRooms.map((r) => (
-            <li
-              key={r.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2"
-            >
-              <span>
-                <strong>{r.name}</strong>
-                <span className="ml-2 text-xs text-muted-foreground">{r.kind}</span>
-              </span>
-              {r.billable && (
-                <Badge variant="sky">${(r.rateCentsPerHour / 100).toFixed(2)}/hr</Badge>
-              )}
-            </li>
-          ))}
-        </ul>
-        <div className="grid gap-2 sm:grid-cols-4 border-t pt-3">
-          <div className="sm:col-span-2">
-            <Label>New room name</Label>
+      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <h2 className="text-[13px] font-medium text-foreground">Rooms</h2>
+        <Table>
+          <THead>
+            <TR>
+              <TH>Room</TH>
+              <TH>Kind</TH>
+              <TH className="text-right">Rate</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {initialRooms.map((r) => (
+              <TR key={r.id}>
+                <TD className="font-medium">{r.name}</TD>
+                <TD className="text-muted-foreground">{r.kind}</TD>
+                <TD className="text-right">
+                  {r.billable ? (
+                    <Badge variant="muted">${(r.rateCentsPerHour / 100).toFixed(2)}/hr</Badge>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+        <div className="grid gap-3 border-t border-border/80 pt-3 sm:grid-cols-4">
+          <Field className="sm:col-span-2">
+            <Label htmlFor="room-name">New room name</Label>
             <Input
-              className="mt-1"
+              id="room-name"
               value={roomName}
               onChange={(e) => setRoomName(e.target.value)}
               placeholder="Room 12 / Aftercare A"
             />
-          </div>
-          <div>
-            <Label>Kind</Label>
-            <select
-              className="mt-1 w-full rounded-lg border px-2 py-2 text-sm"
+          </Field>
+          <Field>
+            <Label htmlFor="room-kind">Kind</Label>
+            <Select
+              id="room-kind"
               value={roomKind}
               onChange={(e) => setRoomKind(e.target.value as RoomKind)}
             >
@@ -258,19 +278,19 @@ export function BadgesAdmin({
               <option value="gym">Gym</option>
               <option value="office">Office</option>
               <option value="other">Other</option>
-            </select>
-          </div>
-          <div>
-            <Label>$ / hour (aftercare)</Label>
+            </Select>
+          </Field>
+          <Field>
+            <Label htmlFor="room-rate">$ / hour (aftercare)</Label>
             <Input
-              className="mt-1"
+              id="room-rate"
               type="number"
               min={0}
               step={0.5}
               value={rate}
               onChange={(e) => setRate(e.target.value)}
             />
-          </div>
+          </Field>
         </div>
         <Button
           type="button"
@@ -302,8 +322,8 @@ export function BadgesAdmin({
         </Button>
       </section>
 
-      <section className="rounded-2xl border bg-card p-5 space-y-3">
-        <h2 className="font-bold text-navy dark:text-sky-50">Parent notify (aftercare)</h2>
+      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <h2 className="font-semibold tracking-tight text-foreground">Parent notify (aftercare)</h2>
         <p className="text-xs text-muted-foreground">
           When a student checks in or out of an aftercare room, linked parents get an email. SMS is
           sent too if Twilio is configured and the parent profile has a phone number.
@@ -347,14 +367,14 @@ export function BadgesAdmin({
         </p>
       </section>
 
-      <section className="rounded-2xl border bg-card p-5 space-y-3">
-        <h2 className="font-bold text-navy dark:text-sky-50">RFID / hardware readers</h2>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          <strong>USB scanners</strong> (QR or RFID keyboard-wedge) already work on the kiosk —
-          they type the code and press Enter. For <strong>ESP32 / wall readers</strong>, POST to
+      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <h2 className="font-semibold tracking-tight text-foreground">RFID / hardware readers</h2>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">USB scanners</strong> (QR or RFID keyboard-wedge) already work on the kiosk —
+          they type the code and press Enter. For <strong className="text-foreground">ESP32 / wall readers</strong>, POST to
           the device API with the school device token.
         </p>
-        <div>
+        <Field>
           <Label className="text-xs">Device token (keep secret)</Label>
           <code className="mt-1 block break-all rounded-lg bg-muted px-3 py-2 text-xs">
             {deviceToken || '— generate by refreshing —'}
@@ -365,13 +385,13 @@ export function BadgesAdmin({
               or re-open Principal → Badges after expiry (expired tokens are rejected).
             </p>
           )}
-        </div>
-        <div>
+        </Field>
+        <Field>
           <Label className="text-xs">API endpoint</Label>
           <code className="mt-1 block break-all rounded-lg bg-muted px-3 py-2 text-[11px]">
             POST {origin}/api/kiosk/device-scan
           </code>
-        </div>
+        </Field>
         <pre className="overflow-x-auto rounded-lg bg-slate-950 p-3 text-[11px] text-slate-100">
 {`{
   "deviceToken": "${deviceToken || 'dev_…'}",
@@ -405,18 +425,18 @@ export function BadgesAdmin({
           </Button>
         </div>
 
-        <div className="border-t pt-3 space-y-2">
-          <h3 className="text-sm font-semibold">Assign RFID / NFC UID to student</h3>
+        <div className="space-y-3 border-t border-border/80 pt-3">
+          <h3 className="text-sm font-semibold tracking-tight">Assign RFID / NFC UID to student</h3>
           <p className="text-[11px] text-muted-foreground">
             Tap a blank card on a reader that types the UID, paste it here. Same code works on
             kiosk USB scanners. Requires SQL{' '}
             <code className="rounded bg-muted px-1">migration 012 (RFID)</code>.
           </p>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="sm:col-span-1">
-              <Label className="text-xs">Student</Label>
-              <select
-                className="mt-1 w-full rounded-lg border px-2 py-2 text-sm"
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Field>
+              <Label htmlFor="rfid-student">Student</Label>
+              <Select
+                id="rfid-student"
                 value={rfidStudentId}
                 onChange={(e) => setRfidStudentId(e.target.value)}
               >
@@ -426,17 +446,18 @@ export function BadgesAdmin({
                     {b.rfidUid ? ` · RFID ${b.rfidUid}` : ''}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div className="sm:col-span-1">
-              <Label className="text-xs">RFID / NFC UID</Label>
+              </Select>
+            </Field>
+            <Field>
+              <Label htmlFor="rfid-uid">RFID / NFC UID</Label>
               <Input
-                className="mt-1 font-mono text-sm"
+                id="rfid-uid"
+                className="font-mono text-sm"
                 value={rfidUid}
                 onChange={(e) => setRfidUid(e.target.value)}
                 placeholder="A1:B2:C3:D4 or DEADBEEF"
               />
-            </div>
+            </Field>
             <div className="flex items-end">
               <Button
                 type="button"
@@ -467,9 +488,9 @@ export function BadgesAdmin({
         </div>
       </section>
 
-      <section className="rounded-2xl border bg-card p-5 space-y-3">
+      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-bold text-navy dark:text-sky-50">Open aftercare (on campus now)</h2>
+          <h2 className="font-semibold tracking-tight text-foreground">Open aftercare (on campus now)</h2>
           <Button
             type="button"
             size="sm"
@@ -498,57 +519,81 @@ export function BadgesAdmin({
           </Button>
         </div>
         {initialOpenAftercare.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No students currently checked into aftercare.</p>
+          <EmptyState
+            title="No students in aftercare"
+            description="Students checked into aftercare rooms will appear here."
+          />
         ) : (
-          <ul className="space-y-1 text-sm">
-            {initialOpenAftercare.map((s) => (
-              <li key={s.id} className="rounded-lg border px-3 py-2">
-                <strong>{s.studentName}</strong>
-                <span className="text-muted-foreground">
-                  {' '}
-                  · {s.roomName} · in since{' '}
-                  {new Date(s.checkInAt).toLocaleTimeString([], {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <Table>
+            <THead>
+              <TR>
+                <TH>Student</TH>
+                <TH>Room</TH>
+                <TH className="text-right">Checked in</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {initialOpenAftercare.map((s) => (
+                <TR key={s.id}>
+                  <TD className="font-medium">{s.studentName}</TD>
+                  <TD className="text-muted-foreground">{s.roomName}</TD>
+                  <TD className="text-right whitespace-nowrap text-[12px] text-muted-foreground">
+                    {new Date(s.checkInAt).toLocaleTimeString([], {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
       </section>
 
-      <section className="rounded-2xl border bg-card p-5 space-y-3">
-        <h2 className="font-bold text-navy dark:text-sky-50">Recent scans</h2>
+      <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <h2 className="font-semibold tracking-tight text-foreground">Recent scans</h2>
         {initialScans.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No scans yet.</p>
+          <EmptyState title="No scans yet" description="Scans from kiosk or device readers appear here." />
         ) : (
-          <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">
-            {initialScans.map((s) => (
-              <li key={s.id} className="border-b border-border/60 py-1.5 last:border-0">
-                <span className="font-medium">{s.studentName}</span>{' '}
-                <Badge variant={s.direction === 'in' ? 'success' : 'warning'} className="ml-1">
-                  {s.direction}
-                </Badge>
-                <span className="text-muted-foreground">
-                  {' '}
-                  · {s.roomName} · {s.purpose} ·{' '}
-                  {new Date(s.scannedAt).toLocaleString([], {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <Table>
+            <THead>
+              <TR>
+                <TH>Student</TH>
+                <TH>Dir</TH>
+                <TH>Room</TH>
+                <TH>Purpose</TH>
+                <TH className="text-right">When</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {initialScans.map((s) => (
+                <TR key={s.id}>
+                  <TD className="font-medium">{s.studentName}</TD>
+                  <TD>
+                    <Badge variant={s.direction === 'in' ? 'success' : 'warning'}>
+                      {s.direction}
+                    </Badge>
+                  </TD>
+                  <TD className="text-muted-foreground">{s.roomName}</TD>
+                  <TD className="text-muted-foreground">{s.purpose}</TD>
+                  <TD className="text-right whitespace-nowrap text-[12px] text-muted-foreground">
+                    {new Date(s.scannedAt).toLocaleString([], {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
       </section>
 
       <p className="text-xs text-muted-foreground">
         School: {schoolName}. Payments for billed aftercare appear under{' '}
-        <Link href="/principal/invoices" className="text-sky-700 underline">
+        <Link href="/principal/invoices" className="font-semibold text-primary hover:underline">
           Invoices
         </Link>
         .

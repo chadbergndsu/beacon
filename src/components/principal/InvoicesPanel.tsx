@@ -21,6 +21,10 @@ import { formatMoney } from '@/lib/billing/store'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { Field, FieldError } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
 
 export function InvoicesPanel({
   products,
@@ -46,9 +50,9 @@ export function InvoicesPanel({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-sm text-sky-950">
+      <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
         <p className="font-semibold">Family billing (school-owned)</p>
-        <p className="mt-1 text-xs leading-relaxed">
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           Portal pay links, reminders, payment plans, and recurring tuition — built into Beacon.
           Not BillerGenie or any third-party biller lock-in.
           {stripeConfigured
@@ -58,16 +62,12 @@ export function InvoicesPanel({
         </p>
       </div>
 
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
-          {error}
-        </div>
-      )}
-      {ok && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+      <FieldError>{error}</FieldError>
+      {ok ? (
+        <p className="rounded-xl border border-success/25 bg-success-soft px-3.5 py-2.5 text-sm text-success">
           {ok}
-        </div>
-      )}
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <Button
@@ -140,47 +140,39 @@ export function InvoicesPanel({
               })
             }}
           >
-            <label className="text-xs font-medium text-muted-foreground">
-              Family name
-              <input
+            <Field>
+              <Label htmlFor="inv-familyName">Family name</Label>
+              <Input
+                id="inv-familyName"
                 name="familyName"
                 required
                 placeholder="Johnson family"
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
               />
-            </label>
-            <label className="text-xs font-medium text-muted-foreground">
-              Parent email
-              <input
+            </Field>
+            <Field>
+              <Label htmlFor="inv-parentEmail">Parent email</Label>
+              <Input
+                id="inv-parentEmail"
                 name="parentEmail"
                 type="email"
                 placeholder="parent@example.com"
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
               />
-            </label>
-            <label className="text-xs font-medium text-muted-foreground">
-              Product
-              <select
-                name="productId"
-                required
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
-              >
+            </Field>
+            <Field>
+              <Label htmlFor="inv-productId">Product</Label>
+              <Select id="inv-productId" name="productId" required>
                 <option value="">Select…</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} · {formatMoney(p.amountCents)}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label className="text-xs font-medium text-muted-foreground">
-              Due date
-              <input
-                name="dueDate"
-                type="date"
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
-              />
-            </label>
+              </Select>
+            </Field>
+            <Field>
+              <Label htmlFor="inv-dueDate">Due date</Label>
+              <Input id="inv-dueDate" name="dueDate" type="date" />
+            </Field>
             <div className="sm:col-span-2">
               <Button type="submit" disabled={pending}>
                 Create invoice
@@ -222,59 +214,49 @@ export function InvoicesPanel({
               })
             }}
           >
-            <label className="text-xs font-medium text-muted-foreground">
-              Family name
-              <input name="familyName" required className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" />
-            </label>
-            <label className="text-xs font-medium text-muted-foreground">
-              Parent email
-              <input
-                name="parentEmail"
-                type="email"
-                required
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-xs font-medium text-muted-foreground sm:col-span-2">
-              Description
-              <input
+            <Field>
+              <Label htmlFor="plan-familyName">Family name</Label>
+              <Input id="plan-familyName" name="familyName" required />
+            </Field>
+            <Field>
+              <Label htmlFor="plan-parentEmail">Parent email</Label>
+              <Input id="plan-parentEmail" name="parentEmail" type="email" required />
+            </Field>
+            <Field className="sm:col-span-2">
+              <Label htmlFor="plan-description">Description</Label>
+              <Input
+                id="plan-description"
                 name="description"
                 placeholder="Annual tuition plan"
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
               />
-            </label>
-            <label className="text-xs font-medium text-muted-foreground">
-              Total ($)
-              <input
+            </Field>
+            <Field>
+              <Label htmlFor="plan-totalDollars">Total ($)</Label>
+              <Input
+                id="plan-totalDollars"
                 name="totalDollars"
                 type="number"
                 step="0.01"
                 min="1"
                 required
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
               />
-            </label>
-            <label className="text-xs font-medium text-muted-foreground">
-              # installments
-              <input
+            </Field>
+            <Field>
+              <Label htmlFor="plan-installmentCount"># installments</Label>
+              <Input
+                id="plan-installmentCount"
                 name="installmentCount"
                 type="number"
                 min={2}
                 max={24}
                 defaultValue={4}
                 required
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
               />
-            </label>
-            <label className="text-xs font-medium text-muted-foreground">
-              First due date
-              <input
-                name="firstDueDate"
-                type="date"
-                required
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
-              />
-            </label>
+            </Field>
+            <Field>
+              <Label htmlFor="plan-firstDueDate">First due date</Label>
+              <Input id="plan-firstDueDate" name="firstDueDate" type="date" required />
+            </Field>
             <div className="sm:col-span-2">
               <Button type="submit" disabled={pending} variant="outline">
                 Create payment plan
@@ -322,39 +304,29 @@ export function InvoicesPanel({
               })
             }}
           >
-            <label className="text-xs font-medium text-muted-foreground">
-              Family name
-              <input name="familyName" required className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" />
-            </label>
-            <label className="text-xs font-medium text-muted-foreground">
-              Parent email
-              <input
-                name="parentEmail"
-                type="email"
-                required
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-xs font-medium text-muted-foreground">
-              Product
-              <select name="productId" required className="mt-1 w-full rounded-xl border px-3 py-2 text-sm">
+            <Field>
+              <Label htmlFor="sched-familyName">Family name</Label>
+              <Input id="sched-familyName" name="familyName" required />
+            </Field>
+            <Field>
+              <Label htmlFor="sched-parentEmail">Parent email</Label>
+              <Input id="sched-parentEmail" name="parentEmail" type="email" required />
+            </Field>
+            <Field>
+              <Label htmlFor="sched-productId">Product</Label>
+              <Select id="sched-productId" name="productId" required>
                 <option value="">Select…</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} ({p.frequency})
                   </option>
                 ))}
-              </select>
-            </label>
-            <label className="text-xs font-medium text-muted-foreground">
-              Next bill date
-              <input
-                name="nextRunOn"
-                type="date"
-                required
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
-              />
-            </label>
+              </Select>
+            </Field>
+            <Field>
+              <Label htmlFor="sched-nextRunOn">Next bill date</Label>
+              <Input id="sched-nextRunOn" name="nextRunOn" type="date" required />
+            </Field>
             <div className="sm:col-span-2">
               <Button type="submit" disabled={pending} variant="outline">
                 Add schedule

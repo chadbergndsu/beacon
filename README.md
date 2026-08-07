@@ -56,7 +56,8 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 | **Teacher Quick Mode** | Phone-first attendance / scores / pulse |
 | **Teacher printables** | Birthday Coupon Book (4th/5th) — printable classroom freebies |
 | **Go-live / onboarding** | Health probes, checklist, first-run setup % |
-| **Badges & kiosk** | Room attendance, aftercare billable rooms, public `/kiosk` + RFID device API |
+| **Badges & kiosk** | Room attendance, aftercare billable rooms, public `/kiosk` + RFID device API; kiosk **welcome screen** on scan |
+| **Campus twin (BeaconCraft)** | 3D property; badge scans place kids **in the room** on the twin (ADR `docs/adr/001-campus-twin-scan-presence.md`) |
 | **Roster / approvals** | Teacher-owned classes/students; principal delete approvals + version history |
 | **Public** | School marketing site at `/school` (driven by school branding / `?school=` slug) |
 
@@ -75,8 +76,11 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 
 **Production:** https://beacon.commoncentsip.com  
 **School site:** https://beacon.commoncentsip.com/school  
+**Campus twin:** https://beaconcraft.vercel.app · tour `/?tour=1`  
 **Go-live (principal):** https://beacon.commoncentsip.com/principal/release  
 **Health (liveness):** https://beacon.commoncentsip.com/api/health  
+
+Twin bridge plan: `docs/adr/001-campus-twin-scan-presence.md` (scan → kiosk welcome → live markers in rooms).
 
 Pilot accounts are issued privately. Set school branding in **Principal → Go-live**.
 

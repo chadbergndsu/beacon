@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { getProfile } from '@/lib/auth'
 import { loadUserPreferences } from '@/lib/view-prefs/store'
 import { SkinPicker } from '@/components/skins/SkinPicker'
+import { PageHeader } from '@/components/ui/page-header'
 import {
   DEFAULT_SKIN,
   SKIN_COOKIE,
@@ -28,19 +29,12 @@ export default async function SettingsPage() {
   const staff = isSchoolStaff(role)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          Your preferences
-        </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy dark:text-sky-50">
-          Settings
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-          Choose how Beacon looks for you. Skins are personal — classmates and parents keep their
-          own picks.
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        eyebrow="Your preferences"
+        title="Settings"
+        description="Choose how Beacon looks for you. Skins are personal — classmates and parents keep their own picks."
+      />
 
       <div id="skins">
         <SkinPicker currentSkin={skin} />
@@ -49,7 +43,7 @@ export default async function SettingsPage() {
       {staff && (
         <p className="text-sm text-muted-foreground">
           Teachers &amp; staff:{' '}
-          <Link href="/teacher/settings" className="font-semibold text-sky-700 underline">
+          <Link href="/teacher/settings" className="font-medium text-primary hover:underline">
             Class weights, gradebook shortcuts →
           </Link>
         </p>

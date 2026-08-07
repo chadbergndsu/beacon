@@ -2,6 +2,7 @@ import { requirePrincipal } from '@/lib/principal'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { listRosterRevisions } from '@/lib/roster/revisions'
 import { ApprovalsPanel } from '@/components/roster/ApprovalsPanel'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function PrincipalApprovalsPage() {
   const { schoolId } = await requirePrincipal()
@@ -50,19 +51,12 @@ export default async function PrincipalApprovalsPage() {
   const revisions = await listRosterRevisions(admin, schoolId, 60)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
-          Safety net
-        </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy dark:text-sky-50">
-          Approvals &amp; roster history
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-          Teachers request student/class removals here. Approve, reject, or restore any roster
-          change from version history if someone made a mistake.
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        eyebrow="Safety net"
+        title="Approvals & roster history"
+        description="Teachers request student/class removals here. Approve, reject, or restore any roster change from version history if someone made a mistake."
+      />
 
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-950">
         First time: run{' '}

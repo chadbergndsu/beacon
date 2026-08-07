@@ -1,4 +1,3 @@
-import { Activity } from 'lucide-react'
 import {
   PULSE_LABELS,
   PULSE_LEVEL_LABEL,
@@ -6,11 +5,12 @@ import {
   type PulseLevel,
 } from '@/lib/school-modules/types'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 
-function badge(level: PulseLevel): 'success' | 'sky' | 'warning' {
+function badge(level: PulseLevel): 'success' | 'default' | 'warning' {
   if (level === 'strong') return 'success'
-  if (level === 'steady') return 'sky'
+  if (level === 'steady') return 'default'
   return 'warning'
 }
 
@@ -23,61 +23,51 @@ export function StudentPulseTimeline({
 }) {
   if (!pulses.length) {
     return (
-      <Card className="border-dashed">
-        <CardContent className="py-6 text-center text-sm text-muted-foreground">
-          No Beacon Pulse entries yet for {studentName}. Teachers log whole-child check-ins here —
-          beyond grades alone.
-        </CardContent>
-      </Card>
+      <EmptyState
+        title="No pulse entries yet"
+        description={`Teachers log whole-child check-ins for ${studentName}.`}
+      />
     )
   }
 
   return (
-    <div className="space-y-3 animate-beacon-in">
-      <div className="flex items-center gap-2">
-        <Activity className="h-4 w-4 text-violet-600" />
-        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-          Beacon Pulse · whole-child signals
-        </h3>
-      </div>
-      <ul className="space-y-2">
+    <Table>
+      <THead>
+        <TR>
+          <TH>Date</TH>
+          <TH>Teacher</TH>
+          <TH>Overall</TH>
+          <TH>Notes</TH>
+        </TR>
+      </THead>
+      <TBody>
         {pulses.map((p) => (
-          <li key={p.id}>
-            <Card className="border-violet-100/80 dark:border-violet-900/40">
-              <CardContent className="py-4 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {p.date} · {p.teacherName}
-                  </p>
-                  <Badge variant={badge(p.overall)}>{PULSE_LEVEL_LABEL[p.overall]}</Badge>
-                </div>
-                {p.celebrate && (
-                  <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
-                    🎉 {p.celebrate}
-                  </p>
+          <TR key={p.id}>
+            <TD className="whitespace-nowrap text-[12px] text-muted-foreground">{p.date}</TD>
+            <TD className="text-[12px]">{p.teacherName}</TD>
+            <TD>
+              <Badge variant={badge(p.overall)}>{PULSE_LEVEL_LABEL[p.overall]}</Badge>
+            </TD>
+            <TD className="min-w-[12rem]">
+              {p.celebrate ? (
+                <p className="text-[12px] font-medium text-success">{p.celebrate}</p>
+              ) : null}
+              {p.note ? (
+                <p className="text-[12px] text-foreground">{p.note}</p>
+              ) : null}
+              <div className="mt-1 flex flex-wrap gap-1">
+                {Object.entries(p.dimensions).map(([k, v]) =>
+                  v ? (
+                    <Badge key={k} variant="muted" className="text-[10px] font-normal">
+                      {PULSE_LABELS[k as keyof typeof PULSE_LABELS]}: {PULSE_LEVEL_LABEL[v]}
+                    </Badge>
+                  ) : null
                 )}
-                {p.note && profileSafeNote(p.note) && (
-                  <p className="text-sm text-foreground/90">{p.note}</p>
-                )}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {Object.entries(p.dimensions).map(([k, v]) =>
-                    v ? (
-                      <Badge key={k} variant="muted" className="font-normal">
-                        {PULSE_LABELS[k as keyof typeof PULSE_LABELS]}: {PULSE_LEVEL_LABEL[v]}
-                      </Badge>
-                    ) : null
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </li>
+              </div>
+            </TD>
+          </TR>
         ))}
-      </ul>
-    </div>
+      </TBody>
+    </Table>
   )
-}
-
-/** Parents see celebrate + general note; keep simple for now (same note field). */
-function profileSafeNote(note: string) {
-  return note.trim().length > 0
 }

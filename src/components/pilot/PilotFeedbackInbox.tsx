@@ -51,11 +51,11 @@ export function PilotFeedbackInbox({ initialItems }: { initialItems: PilotFeedba
         {items.map((item) => (
           <li
             key={item.id}
-            className="rounded-2xl border bg-card p-4 shadow-[var(--shadow-soft)]"
+            className="rounded-lg border bg-card p-4"
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={item.category === 'issue' ? 'danger' : 'sky'}>
+                <Badge variant={item.category === 'issue' ? 'danger' : 'outline'}>
                   {FEEDBACK_CATEGORY_LABEL[item.category]}
                 </Badge>
                 <Badge variant={item.status === 'new' ? 'warning' : 'muted'}>

@@ -34,6 +34,10 @@ export const SCREEN_CATALOG: Record<ScreenId, { title: string; sections: Section
         label: 'Classes',
       },
       {
+        id: 'parent_billing',
+        label: 'Balances & pay',
+      },
+      {
         id: 'parent_missing',
         label: 'Family missing work',
       },
@@ -48,10 +52,6 @@ export const SCREEN_CATALOG: Record<ScreenId, { title: string; sections: Section
       {
         id: 'announcements',
         label: 'Announcements',
-      },
-      {
-        id: 'quick_tips',
-        label: 'Quick tips',
       },
     ],
   },

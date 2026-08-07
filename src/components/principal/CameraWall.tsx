@@ -21,6 +21,7 @@ import type { CameraStreamKind, SchoolCamera } from '@/lib/school-modules/types'
 import { CAMERA_ZONE_LABEL } from '@/lib/school-modules/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/page-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -67,80 +68,82 @@ export function CameraWall({ cameras: initial }: { cameras: SchoolCamera[] }) {
 
   return (
     <div className="space-y-6 animate-beacon-in">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-700">
-            Principal · campus security
-          </p>
-          <h2 className="text-xl font-bold text-navy dark:text-sky-50 flex items-center gap-2">
-            <Camera className="h-5 w-5 text-sky-600" />
+      <PageHeader
+        eyebrow="Principal · campus security"
+        title={
+          <span className="inline-flex items-center gap-2">
+            <Camera className="h-5 w-5 text-primary" />
             Cameras
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground leading-relaxed">
+          </span>
+        }
+        description={
+          <>
             Live wall of school cameras — same idea as your{' '}
             <strong className="text-foreground">EasyCamera LiveGrid</strong>: pick a cam, open a
             session. Production streams use open-source{' '}
             <strong className="text-foreground">go2rtc</strong> /{' '}
             <strong className="text-foreground">MediaMTX</strong> +{' '}
             <strong className="text-foreground">hls.js</strong>.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant={layout === 'grid' ? 'primary' : 'outline'}
-            onClick={() => setLayout('grid')}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            Wall
-          </Button>
-          <Button
-            size="sm"
-            variant={layout === 'focus' ? 'primary' : 'outline'}
-            onClick={() => setLayout('focus')}
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-            Focus
-          </Button>
-          <Button size="sm" onClick={() => setShowForm((v) => !v)}>
-            <Plus className="h-3.5 w-3.5" />
-            {showForm ? 'Hide form' : 'Add camera'}
-          </Button>
-          {initial.length === 0 && (
+          </>
+        }
+        actions={
+          <>
             <Button
               size="sm"
-              variant="outline"
-              disabled={pending}
-              onClick={() => {
-                start(async () => {
-                  const res = await seedDemoCameras()
-                  if (!res.ok) {
-                    setError(res.error)
-                    return
-                  }
-                  setOk(`Loaded ${res.count} simulator cameras (EasyCamera pattern).`)
-                  router.refresh()
-                })
-              }}
+              variant={layout === 'grid' ? 'primary' : 'outline'}
+              onClick={() => setLayout('grid')}
             >
-              Seed demo wall
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Wall
             </Button>
-          )}
-        </div>
-      </div>
+            <Button
+              size="sm"
+              variant={layout === 'focus' ? 'primary' : 'outline'}
+              onClick={() => setLayout('focus')}
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              Focus
+            </Button>
+            <Button size="sm" onClick={() => setShowForm((v) => !v)}>
+              <Plus className="h-3.5 w-3.5" />
+              {showForm ? 'Hide form' : 'Add camera'}
+            </Button>
+            {initial.length === 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={() => {
+                  start(async () => {
+                    const res = await seedDemoCameras()
+                    if (!res.ok) {
+                      setError(res.error)
+                      return
+                    }
+                    setOk(`Loaded ${res.count} simulator cameras (EasyCamera pattern).`)
+                    router.refresh()
+                  })
+                }}
+              >
+                Seed demo wall
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {/* Setup callout — EasyCamera + go2rtc / MediaMTX */}
-      <Card className="border-sky-200/80 bg-sky-50/40 dark:border-sky-900 dark:bg-sky-950/20">
+      <Card className="border-border bg-muted/30">
         <CardContent className="pt-5 text-sm text-muted-foreground space-y-2 leading-relaxed">
           <p className="font-semibold text-foreground flex items-center gap-2">
-            <Video className="h-4 w-4 text-sky-600" />
+            <Video className="h-4 w-4 text-primary" />
             Open-source stack (from EasyCamera + go2rtc)
           </p>
           <ol className="list-decimal ml-5 space-y-1">
             <li>
               Site gateway:{' '}
               <a
-                className="font-medium text-sky-700 underline"
+                className="font-medium text-primary underline"
                 href="https://github.com/AlexxIT/go2rtc"
                 target="_blank"
                 rel="noreferrer"
@@ -149,7 +152,7 @@ export function CameraWall({ cameras: initial }: { cameras: SchoolCamera[] }) {
               </a>{' '}
               or{' '}
               <a
-                className="font-medium text-sky-700 underline"
+                className="font-medium text-primary underline"
                 href="https://github.com/bluenviron/mediamtx"
                 target="_blank"
                 rel="noreferrer"
@@ -188,7 +191,7 @@ export function CameraWall({ cameras: initial }: { cameras: SchoolCamera[] }) {
               'rounded-full border px-3 py-1 text-xs font-semibold',
               zoneFilter === 'all'
                 ? 'border-navy bg-navy text-white'
-                : 'border-border bg-card hover:border-sky-300'
+                : 'border-border bg-card hover:border-primary/30'
             )}
           >
             All ({initial.filter((c) => c.enabled).length})
@@ -204,8 +207,8 @@ export function CameraWall({ cameras: initial }: { cameras: SchoolCamera[] }) {
                 className={cn(
                   'rounded-full border px-3 py-1 text-xs font-semibold',
                   zoneFilter === z
-                    ? 'border-sky-600 bg-sky-600 text-white'
-                    : 'border-border bg-card hover:border-sky-300'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card hover:border-primary/30'
                 )}
               >
                 {CAMERA_ZONE_LABEL[z]} ({n})
@@ -235,7 +238,7 @@ export function CameraWall({ cameras: initial }: { cameras: SchoolCamera[] }) {
       {cameras.length === 0 ? (
         <Card className="border-dashed p-10 text-center">
           <Grid2x2 className="mx-auto h-10 w-10 text-muted-foreground" />
-          <p className="mt-3 font-semibold text-navy dark:text-sky-50">No cameras yet</p>
+          <p className="mt-3 font-medium text-foreground">No cameras yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Add your first go2rtc / HLS stream to build the wall.
           </p>
@@ -258,7 +261,7 @@ export function CameraWall({ cameras: initial }: { cameras: SchoolCamera[] }) {
               key={cam.id}
               className={cn(
                 'overflow-hidden transition',
-                focus?.id === cam.id && layout === 'focus' && 'ring-2 ring-sky-500'
+                focus?.id === cam.id && layout === 'focus' && 'ring-2 ring-primary/40'
               )}
             >
               <button

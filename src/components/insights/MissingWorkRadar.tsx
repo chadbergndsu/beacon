@@ -17,36 +17,32 @@ export function MissingWorkRadar({
   if (!summaries.length) return null
 
   return (
-    <Card className="overflow-hidden border-rose-200/70 dark:border-rose-900/40">
-      <div className="border-b border-rose-100 bg-gradient-to-r from-rose-50 via-orange-50 to-white px-5 py-4 dark:from-rose-950/40 dark:via-orange-950/20 dark:to-slate-900 dark:border-rose-900/40">
+    <Card className="overflow-hidden">
+      <div className="border-b border-border/70 bg-muted/30 px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="flex items-start gap-2.5 min-w-0">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500 text-white shadow-md shadow-rose-500/25">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning text-white">
               <ClipboardList className="h-5 w-5" aria-hidden />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-rose-800 dark:text-rose-300">
-                Market edge · calm missing-work view
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-warning">
+                Missing work
               </p>
-              <h2 className="text-lg font-bold text-navy dark:text-sky-50 leading-tight">
-                {title}
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Past-due and unscored work only — future due dates stay in “coming up,” not panic.
+              <h2 className="text-lg font-semibold leading-tight tracking-tight">{title}</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Past-due and unscored only — future due dates stay in “coming up.”
               </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            <Badge variant={totalMissing > 0 ? 'danger' : 'success'}>
-              {totalMissing} missing
-            </Badge>
-            <Badge variant="sky">{totalUpcoming} upcoming</Badge>
+            <Badge variant={totalMissing > 0 ? 'danger' : 'success'}>{totalMissing} missing</Badge>
+            <Badge variant="muted">{totalUpcoming} upcoming</Badge>
           </div>
         </div>
       </div>
-      <CardContent className="pt-4 space-y-5">
+      <CardContent className="space-y-5 pt-4">
         {totalMissing === 0 && totalUpcoming === 0 ? (
-          <p className="text-sm text-muted-foreground rounded-xl bg-emerald-50/80 px-3 py-2.5 dark:bg-emerald-950/30">
+          <p className="rounded-xl border border-success/20 bg-success-soft/60 px-3 py-2.5 text-sm">
             All caught up — no missing or upcoming unscored work.
           </p>
         ) : (
@@ -55,23 +51,23 @@ export function MissingWorkRadar({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Link
                   href={`/students/${s.studentId}`}
-                  className="font-semibold text-sky-800 hover:underline dark:text-sky-300"
+                  className="font-semibold text-primary hover:underline"
                 >
                   {s.studentName}
                 </Link>
-                <span className="text-xs text-muted-foreground tabular-nums">
+                <span className="text-xs tabular-nums text-muted-foreground">
                   {s.missingCount} missing · {s.upcomingCount} upcoming
                 </span>
               </div>
 
-              {s.missing.length > 0 && (
+              {s.missing.length > 0 ? (
                 <ul className="space-y-1.5">
                   {s.missing.slice(0, 6).map((m) => (
                     <li
                       key={m.assignmentId}
-                      className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50/50 px-3 py-2 text-sm dark:border-rose-900/40 dark:bg-rose-950/20"
+                      className="flex items-start gap-2 rounded-xl border border-danger/20 bg-danger-soft/50 px-3 py-2 text-sm"
                     >
-                      <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
                       <div className="min-w-0">
                         <p className="font-medium leading-snug">{m.title}</p>
                         <p className="text-xs text-muted-foreground">
@@ -81,22 +77,22 @@ export function MissingWorkRadar({
                       </div>
                     </li>
                   ))}
-                  {s.missing.length > 6 && (
-                    <li className="text-xs text-muted-foreground pl-6">
+                  {s.missing.length > 6 ? (
+                    <li className="pl-6 text-xs text-muted-foreground">
                       +{s.missing.length - 6} more
                     </li>
-                  )}
+                  ) : null}
                 </ul>
-              )}
+              ) : null}
 
-              {s.upcoming.length > 0 && (
+              {s.upcoming.length > 0 ? (
                 <ul className="space-y-1.5">
                   {s.upcoming.slice(0, 3).map((m) => (
                     <li
                       key={m.assignmentId}
-                      className="flex items-start gap-2 rounded-xl border border-sky-100 bg-sky-50/40 px-3 py-2 text-sm dark:border-sky-900/40 dark:bg-sky-950/20"
+                      className="flex items-start gap-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-sm"
                     >
-                      <CalendarClock className="h-4 w-4 shrink-0 text-sky-600 mt-0.5" />
+                      <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                       <div className="min-w-0">
                         <p className="font-medium leading-snug">{m.title}</p>
                         <p className="text-xs text-muted-foreground">
@@ -106,7 +102,7 @@ export function MissingWorkRadar({
                     </li>
                   ))}
                 </ul>
-              )}
+              ) : null}
             </div>
           ))
         )}

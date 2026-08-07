@@ -11,6 +11,7 @@ import {
   loadStudent,
   parentCanViewStudent,
 } from '@/lib/gradebook-data'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function StudentGradePage({
   params,
@@ -44,28 +45,29 @@ export default async function StudentGradePage({
   const name = `${studentRow.first_name} ${studentRow.last_name}`
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-          <Link href="/dashboard" className="hover:underline">
-            Dashboard
-          </Link>
-          {' / '}
-          <Link href={`/classes/${classId}`} className="hover:underline">
-            {classRow.name}
-          </Link>
-          {' / '}
-          Student
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        eyebrow={
+          <>
+            <Link href="/dashboard" className="hover:underline">
+              Dashboard
+            </Link>
+            {' · '}
+            <Link href={`/classes/${classId}`} className="hover:underline">
+              {classRow.name}
+            </Link>
+            {' · Student'}
+          </>
+        }
+        title={name}
+        description="Transparent grade calculation for this class."
+      />
 
-      <div className="rounded-2xl border bg-background p-6 shadow-sm">
-        <TransparentGradeView
+      <TransparentGradeView
           result={result}
           studentName={name}
           photoUrl={studentRow.photo_url}
         />
-      </div>
     </div>
   )
 }

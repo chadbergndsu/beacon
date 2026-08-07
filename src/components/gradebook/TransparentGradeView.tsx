@@ -23,13 +23,13 @@ interface Props {
 }
 
 function letterTone(letter: string | null) {
-  if (!letter) return 'from-slate-400 to-slate-500'
+  if (!letter) return 'bg-muted text-muted-foreground'
   const L = letter[0]
-  if (L === 'A') return 'from-emerald-500 to-teal-600'
-  if (L === 'B') return 'from-sky-500 to-blue-600'
-  if (L === 'C') return 'from-amber-500 to-orange-500'
-  if (L === 'D') return 'from-orange-500 to-rose-500'
-  return 'from-rose-500 to-red-600'
+  if (L === 'A') return 'bg-success text-white'
+  if (L === 'B') return 'bg-primary text-primary-foreground'
+  if (L === 'C') return 'bg-warning text-white'
+  if (L === 'D') return 'bg-orange-500 text-white'
+  return 'bg-danger text-white'
 }
 
 export function TransparentGradeView({
@@ -59,36 +59,25 @@ export function TransparentGradeView({
 
   return (
     <div className={cn('space-y-5 animate-beacon-in', className)}>
-      {/* Hero */}
-      <div
-        className={cn(
-          'relative overflow-hidden rounded-3xl border border-sky-100/80 dark:border-sky-900/50',
-          'bg-gradient-to-br from-white via-sky-50/80 to-slate-50',
-          'dark:from-slate-900 dark:via-slate-900 dark:to-sky-950',
-          'shadow-[var(--shadow-soft)]',
-          compact ? 'p-5' : 'p-6 sm:p-8'
-        )}
-      >
-        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-sky-400/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-navy/10 blur-3xl" />
-
-        <div className="relative flex flex-wrap items-center gap-5">
+      <Card className={cn('overflow-hidden', compact ? '' : '')}>
+        <CardContent
+          className={cn('flex flex-wrap items-center gap-5', compact ? 'pt-5' : 'pt-6 sm:pt-7')}
+        >
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={photoUrl}
               alt={studentName}
               className={cn(
-                'rounded-2xl object-cover border-2 border-white shadow-md dark:border-slate-700',
-                compact ? 'h-14 w-14' : 'h-20 w-20'
+                'rounded-xl object-cover border border-border',
+                compact ? 'h-12 w-12' : 'h-16 w-16'
               )}
             />
           ) : (
             <div
               className={cn(
-                'flex items-center justify-center rounded-2xl bg-navy text-white font-bold shadow-md',
-                'ring-4 ring-sky-100 dark:ring-sky-900/50',
-                compact ? 'h-14 w-14 text-lg' : 'h-20 w-20 text-2xl'
+                'flex items-center justify-center rounded-lg bg-primary font-medium text-primary-foreground',
+                compact ? 'h-12 w-12 text-base' : 'h-16 w-16 text-xl'
               )}
             >
               {initials || studentName.charAt(0)}
@@ -96,82 +85,78 @@ export function TransparentGradeView({
           )}
 
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 dark:text-sky-300">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
               Current grade
             </p>
             <h1
               className={cn(
-                'font-bold tracking-tight text-navy dark:text-sky-50 truncate',
-                compact ? 'text-xl' : 'text-2xl sm:text-3xl'
+                'truncate font-semibold tracking-tight',
+                compact ? 'text-lg' : 'text-xl sm:text-2xl'
               )}
             >
               {studentName}
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-0.5 text-sm text-muted-foreground">
               Transparent calculation — same math teachers use
             </p>
           </div>
 
-          <div className="flex items-center gap-4 ml-auto">
+          <div className="ml-auto flex items-center gap-3">
             <div
               className={cn(
-                'relative flex flex-col items-center justify-center rounded-3xl text-white shadow-lg',
-                'bg-gradient-to-br',
+                'flex flex-col items-center justify-center rounded-lg',
                 letterTone(result.letter),
-                compact ? 'h-20 w-20' : 'h-28 w-28 sm:h-32 sm:w-32'
+                compact ? 'h-16 w-16' : 'h-20 w-20'
               )}
             >
               <div
                 className={cn(
-                  'font-black tabular-nums leading-none tracking-tight',
-                  compact ? 'text-2xl' : 'text-3xl sm:text-4xl'
+                  'font-semibold tabular-nums leading-none tracking-tight',
+                  compact ? 'text-xl' : 'text-2xl'
                 )}
               >
                 {result.overall != null ? result.overall : '—'}
               </div>
-              {result.overall != null && (
-                <div className="text-[10px] font-semibold uppercase tracking-widest opacity-90">
-                  percent
+              {result.overall != null ? (
+                <div className="text-[9px] font-semibold uppercase tracking-wider opacity-90">
+                  %
                 </div>
-              )}
+              ) : null}
             </div>
-            {result.letter && (
+            {result.letter ? (
               <div className="text-center">
                 <div
                   className={cn(
-                    'font-black text-navy dark:text-sky-50 leading-none',
-                    compact ? 'text-4xl' : 'text-5xl sm:text-6xl'
+                    'font-semibold leading-none tracking-tight',
+                    compact ? 'text-3xl' : 'text-4xl'
                   )}
                 >
                   {result.letter}
                 </div>
-                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Letter
                 </p>
               </div>
-            )}
+            ) : null}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* How calculated */}
-      <Card className="overflow-hidden border-sky-100 dark:border-sky-900/40">
-        <div className="flex items-start gap-3 border-b border-border/70 bg-gradient-to-r from-sky-50 to-transparent dark:from-sky-950/40 px-5 py-4">
-          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-200">
+      <Card className="overflow-hidden">
+        <div className="flex items-start gap-3 border-b border-border/70 bg-muted/30 px-5 py-4">
+          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Sparkles className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-navy dark:text-sky-50">
-              How this grade was calculated
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Category averages × weights — fully transparent, never a black box
+            <h3 className="font-semibold tracking-tight">How this grade was calculated</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Category averages × weights — never a black box
             </p>
           </div>
         </div>
         <CardContent className="pt-4">
-          <div className="rounded-xl border border-dashed border-sky-200/80 dark:border-sky-800 bg-slate-50/80 dark:bg-slate-900/50 px-4 py-3">
-            <p className="font-mono text-[13px] sm:text-sm leading-relaxed text-navy dark:text-sky-100 break-words">
+          <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3">
+            <p className="break-words font-mono text-[13px] leading-relaxed sm:text-sm">
               {result.formula}
             </p>
           </div>
@@ -220,7 +205,7 @@ export function TransparentGradeView({
                   key={cat.name}
                   className={cn(
                     'overflow-hidden transition-shadow duration-200',
-                    open && 'shadow-[var(--shadow-lift)] border-sky-200/80 dark:border-sky-800'
+                    open && 'border-primary/30'
                   )}
                 >
                   <button
@@ -228,7 +213,7 @@ export function TransparentGradeView({
                     onClick={() => hasAssignments && toggle(cat.name)}
                     className={cn(
                       'w-full text-left px-5 py-4 flex flex-wrap items-center gap-4',
-                      'hover:bg-sky-50/50 dark:hover:bg-sky-950/30 transition-colors',
+                      'hover:bg-muted/40 transition-colors',
                       hasAssignments ? 'cursor-pointer' : 'cursor-default'
                     )}
                   >
@@ -246,8 +231,8 @@ export function TransparentGradeView({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="font-semibold text-navy dark:text-sky-50">{cat.name}</h4>
-                        <Badge variant="sky">{cat.weight}% of grade</Badge>
+                        <h4 className="font-medium text-foreground">{cat.name}</h4>
+                        <Badge variant="outline">{cat.weight}% of grade</Badge>
                         {cat.dropped > 0 && (
                           <Badge variant="muted">Dropped {cat.dropped} lowest</Badge>
                         )}
@@ -263,9 +248,9 @@ export function TransparentGradeView({
                           </>
                         )}
                       </p>
-                      <div className="mt-2.5 h-1.5 max-w-xs rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div className="mt-2.5 h-1.5 max-w-xs rounded-full bg-muted overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-sky-400 to-sky-600 transition-all duration-500"
+                          className="h-full rounded-full bg-primary transition-all duration-500"
                           style={{
                             width: `${cat.average != null ? Math.min(100, cat.average) : 0}%`,
                           }}
@@ -274,7 +259,7 @@ export function TransparentGradeView({
                     </div>
 
                     <div className="text-right shrink-0">
-                      <div className="text-2xl font-bold tabular-nums text-navy dark:text-sky-50">
+                      <div className="text-xl font-semibold tabular-nums text-foreground">
                         {cat.average != null ? `${cat.average}%` : '—'}
                       </div>
                       <div className="text-[11px] font-medium text-muted-foreground">
@@ -284,7 +269,7 @@ export function TransparentGradeView({
                   </button>
 
                   {open && hasAssignments && (
-                    <div className="border-t border-border bg-slate-50/60 dark:bg-slate-900/40 px-3 py-2 sm:px-4">
+                    <div className="border-t border-border bg-muted/30 px-3 py-2 sm:px-4">
                       <ul className="divide-y divide-border/70">
                         {cat.assignments!.map((a, idx) => (
                           <li
@@ -331,7 +316,7 @@ export function TransparentGradeView({
                                     : a.pct >= 90
                                       ? 'text-success'
                                       : a.pct >= 70
-                                        ? 'text-sky-700 dark:text-sky-300'
+                                        ? 'text-primary'
                                         : 'text-muted-foreground'
                                 )}
                               >

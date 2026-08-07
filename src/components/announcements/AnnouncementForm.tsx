@@ -4,6 +4,12 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition } from 'react'
 import { createAnnouncement } from '@/app/actions/announcements'
 import { previewComposeRecipients } from '@/app/actions/communications'
+import { Button } from '@/components/ui/button'
+import { Field, FieldError, FieldHint } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 
 type ClassOption = { id: string; name: string }
 
@@ -32,7 +38,7 @@ export function AnnouncementForm({ classes }: { classes: ClassOption[] }) {
 
   return (
     <form
-      className="space-y-4 max-w-xl"
+      className="max-w-xl space-y-4"
       onSubmit={(e) => {
         e.preventDefault()
         const fd = new FormData(e.currentTarget)
@@ -57,50 +63,50 @@ export function AnnouncementForm({ classes }: { classes: ClassOption[] }) {
         })
       }}
     >
-      <label className="block text-sm font-medium">
-        Title
-        <input
+      <Field>
+        <Label htmlFor="title">Title</Label>
+        <Input
+          id="title"
           name="title"
           required
-          className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
           placeholder="e.g. Early dismissal Friday"
         />
-      </label>
+      </Field>
 
-      <label className="block text-sm font-medium">
-        Message
-        <textarea
+      <Field>
+        <Label htmlFor="body">Message</Label>
+        <Textarea
+          id="body"
           name="body"
           required
           rows={6}
-          className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
           placeholder="Write the announcement parents/staff will see…"
         />
-      </label>
+      </Field>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm font-medium">
-          Audience
-          <select
+        <Field>
+          <Label htmlFor="audience">Audience</Label>
+          <Select
+            id="audience"
             name="audience"
             value={audience}
             onChange={(e) => setAudience(e.target.value)}
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
           >
             <option value="parents">Parents</option>
             <option value="teachers">Teachers</option>
             <option value="staff">All staff</option>
             <option value="all">Everyone (parents + staff)</option>
-          </select>
-        </label>
+          </Select>
+        </Field>
 
-        <label className="block text-sm font-medium">
-          Limit to class (optional)
-          <select
+        <Field>
+          <Label htmlFor="class_id">Limit to class (optional)</Label>
+          <Select
+            id="class_id"
             name="class_id"
             value={classId}
             onChange={(e) => setClassId(e.target.value)}
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
           >
             <option value="">Whole school</option>
             {classes.map((c) => (
@@ -108,49 +114,47 @@ export function AnnouncementForm({ classes }: { classes: ClassOption[] }) {
                 {c.name}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </Field>
       </div>
 
-      <label className="flex items-start gap-2 text-sm">
+      <label className="flex items-start gap-2.5 text-sm">
         <input
           name="send_email"
           type="checkbox"
           checked={sendEmail}
           onChange={(e) => setSendEmail(e.target.checked)}
-          className="mt-1 h-4 w-4"
+          className="mt-1 h-4 w-4 rounded border-input text-primary focus:ring-ring"
         />
         <span>
-          <strong>Email recipients</strong>
-          <span className="block text-muted-foreground text-xs mt-0.5">
+          <strong className="font-semibold">Email recipients</strong>
+          <FieldHint className="mt-0.5">
             School-branded mail via Resend when live; always logged in Comms outbox.
-            {sendEmail && recipientCount != null && (
-              <> · <strong>{recipientCount}</strong> address{recipientCount === 1 ? '' : 'es'} will receive it</>
-            )}
-          </span>
+            {sendEmail && recipientCount != null ? (
+              <>
+                {' '}
+                · <strong className="text-foreground">{recipientCount}</strong> address
+                {recipientCount === 1 ? '' : 'es'} will receive it
+              </>
+            ) : null}
+          </FieldHint>
         </span>
       </label>
 
-      {error && (
-        <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
-      )}
-      {note && (
-        <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+      <FieldError>{error}</FieldError>
+      {note ? (
+        <p className="rounded-xl border border-amber-200 bg-warning-soft px-3.5 py-2.5 text-sm text-warning">
           {note}
         </p>
-      )}
+      ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg bg-sky-600 text-white px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending
           ? 'Publishing…'
           : sendEmail && recipientCount != null
             ? `Publish & email ${recipientCount}`
             : 'Publish announcement'}
-      </button>
+      </Button>
     </form>
   )
 }

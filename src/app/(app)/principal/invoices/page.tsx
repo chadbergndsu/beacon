@@ -2,20 +2,18 @@ import { requirePrincipal } from '@/lib/principal'
 import { loadBillingState } from '@/lib/billing/store'
 import { isStripeConfigured } from '@/lib/billing/stripe'
 import { InvoicesPanel } from '@/components/principal/InvoicesPanel'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function PrincipalInvoicesPage() {
   const { schoolId } = await requirePrincipal()
   const state = await loadBillingState(schoolId)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-navy dark:text-sky-50">Family billing</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Invoices, pay portals, payment plans, recurring tuition, reminders — owned by your school
-          in Beacon (not a third-party biller).
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        title="Family billing"
+        description="Invoices, pay portals, payment plans, recurring tuition, reminders — owned by your school in Beacon (not a third-party biller)."
+      />
       <InvoicesPanel
         products={state.products}
         invoices={state.invoices}
