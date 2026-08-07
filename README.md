@@ -50,6 +50,7 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 | **Communications** | Compose to families, announcements, Dinner Table Digest email, grade/attendance notices, outbox + resend |
 | **Principal office** | Tuition, family billing portal, QuickBooks, videos, **cameras**, pulse, **Go-live** |
 | **Family billing** | Pay portal `/pay/[token]`, email reminders, payment plans, recurring schedules, optional Stripe + QBO push — **school-owned** (not BillerGenie/third-party biller) |
+| **LBC Snack Shack** | Prepaid snack wallet — parents load funds; office debits purchases (`snack_accounts` / `snack_ledger`) |
 | **Campus cameras** | Principal live wall — EasyCamera LiveGrid pattern + go2rtc/MediaMTX HLS + hls.js simulator fallback |
 | **Missing Work Radar** | Calm past-due vs upcoming list (parent + teacher Today) |
 | **Teacher Today** | Per-class missing-work focus without district dashboards |
@@ -70,7 +71,7 @@ Exact allowlist in `src/lib/supabase/proxy.ts`: `/`, `/login`, `/about`, `/schoo
 | District analytics | Beacon Signal + Teacher Today (small-school scale) |
 | Slow PTC prep | Conference Brief one-pager |
 | Grades only | Beacon Pulse whole-child |
-| Teacher desktop-only | Quick Mode phone-first |
+| Incidental / snack prepaid buried in suite Financial Intelligence | **LBC Snack Shack** — school-owned prepaid wallet parents load |
 
 ## Live
 
@@ -103,7 +104,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auth + client |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server actions / admin client (never expose to browser) |
 
-Then apply **migrations 001–022** (see below) and:
+Then apply **migrations 001–023** (see below) and:
 
 ```bash
 npm run dev
@@ -137,7 +138,7 @@ Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, securit
 
 ### Database migrations
 
-**Source of truth:** `supabase/migrations/` files **001–022** in filename order.
+**Source of truth:** `supabase/migrations/` files **001–023** in filename order.
 
 ```bash
 # Preferred
@@ -166,8 +167,9 @@ POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate -- 017
 | **020** | Stripe payment columns (`stripe_checkout_session_id`, payment intent) |
 | **021** | P0 money settle: one succeeded payment per invoice |
 | **022** | BeaconCraft Realtime: `badge_scans` on `supabase_realtime` publication |
+| **023** | **LBC Snack Shack** prepaid wallets (`snack_accounts` / `snack_ledger`) |
 
-**Billing money path** uses tables only. Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`.
+**Billing money path** uses tables only. Aftercare invoices are idempotent via `source_key = aftercare_session:<id>`. LBC parent top-ups use `source_key = snack_topup:<studentId>:<uuid>` and credit the wallet when Stripe settles.
 
 **Kiosk / device tokens** expire (fail closed on resolve). TTL default **90 days** (`BEACON_ACCESS_TOKEN_TTL_DAYS`). Opening Principal → Badges regenerates expired halves; tablets/ESP32 must re-open the kiosk link or update the device token.
 

@@ -141,5 +141,25 @@ export async function applyStripePaidSession(
     },
   })
 
+  // LBC Snack Shack: credit prepaid wallet when this was a parent top-up invoice
+  if (invoice.sourceKey?.startsWith('snack_topup:')) {
+    try {
+      const { creditSnackFromPaidInvoice } = await import('@/lib/snack/store')
+      const credit = await creditSnackFromPaidInvoice({
+        schoolId: paid.schoolId,
+        invoiceId: paid.invoiceId,
+        paymentId,
+      })
+      if (!credit.ok) {
+        reportError(new Error(credit.error), {
+          surface: 'snack-topup-credit',
+          invoiceId: paid.invoiceId,
+        })
+      }
+    } catch (e) {
+      reportError(e, { surface: 'snack-topup-credit', invoiceId: paid.invoiceId })
+    }
+  }
+
   return { ok: true }
 }

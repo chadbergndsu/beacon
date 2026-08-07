@@ -10,6 +10,7 @@ import {
 } from '@/lib/insights/load-missing-work'
 import { ParentFeed } from '@/components/parent/ParentFeed'
 import { ParentBillingCard } from '@/components/parent/ParentBillingCard'
+import { ParentLbcCard } from '@/components/parent/ParentLbcCard'
 import { MissingWorkRadar } from '@/components/insights/MissingWorkRadar'
 import { TeacherTodayCard } from '@/components/insights/TeacherTodayCard'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
@@ -155,6 +156,18 @@ export default async function DashboardPage() {
     }
   }
 
+  let lbcAccounts: Awaited<
+    ReturnType<typeof import('@/lib/snack/store').listSnackAccountsForParent>
+  > = []
+  if (role === 'parent' && schoolId) {
+    try {
+      const { listSnackAccountsForParent } = await import('@/lib/snack/store')
+      lbcAccounts = await listSnackAccountsForParent(schoolId, user.id)
+    } catch {
+      lbcAccounts = []
+    }
+  }
+
   const presentSectionIds = [
     'header',
     'announcements',
@@ -162,6 +175,7 @@ export default async function DashboardPage() {
     ...(teacherToday ? (['teacher_today'] as const) : []),
     ...(isStaffHome ? (['classes'] as const) : []),
     ...(role === 'parent' && schoolId ? (['parent_billing'] as const) : []),
+    ...(role === 'parent' && schoolId ? (['parent_lbc'] as const) : []),
     ...(role === 'parent' && parentMissing.length > 0 ? (['parent_missing'] as const) : []),
     ...(role === 'parent' ? (['children'] as const) : []),
     ...(role === 'parent' && schoolId && children.length > 0
@@ -173,7 +187,7 @@ export default async function DashboardPage() {
 
   const welcomeDescription =
     role === 'parent'
-      ? 'Balances, Dinner Table Digest, grades, and Pulse — your family’s home.'
+      ? 'Balances, LBC Snack Shack, Dinner Table Digest, grades, and Pulse — your family’s home.'
       : isPrincipal
         ? 'School-wide hub. Open Office for tuition, go-live, and climate.'
         : 'Your classroom home. Use Edit view to show only what you need.'
@@ -327,6 +341,15 @@ export default async function DashboardPage() {
           <section id="billing" className="max-w-2xl space-y-3">
             <h2 className="text-lg font-semibold tracking-tight">Balances &amp; pay</h2>
             <ParentBillingCard invoices={parentInvoices} />
+          </section>
+        </ViewSection>
+      ) : null}
+
+      {role === 'parent' && schoolId ? (
+        <ViewSection id="parent_lbc" title="LBC Snack Shack">
+          <section id="lbc" className="max-w-2xl space-y-3">
+            <h2 className="text-lg font-semibold tracking-tight">LBC Snack Shack</h2>
+            <ParentLbcCard accounts={lbcAccounts} />
           </section>
         </ViewSection>
       ) : null}
