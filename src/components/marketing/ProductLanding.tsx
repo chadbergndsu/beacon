@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { FactsLandingTabs } from '@/components/marketing/FactsLandingTabs'
 import { SchoolInquiryForm } from '@/components/marketing/SchoolInquiryForm'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { buttonClassName } from '@/components/ui/button'
@@ -27,6 +28,12 @@ export function ProductLanding() {
             >
               vs FACTS
             </Link>
+            <a
+              href="#fun-facts"
+              className="hidden text-navy-foreground/75 transition hover:text-navy-foreground sm:inline"
+            >
+              Fun Facts
+            </a>
             <Link
               href="/about"
               className="hidden text-navy-foreground/75 transition hover:text-navy-foreground sm:inline"
@@ -130,37 +137,8 @@ export function ProductLanding() {
         </ul>
       </section>
 
-      {/* FACTS fight */}
-      <section className="border-y border-border bg-navy text-navy-foreground">
-        <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-300/90">
-            Going after FACTS
-          </p>
-          <h2 className="mt-2 max-w-2xl text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-            They won on tuition scale. We’re winning on whether families open anything.
-          </h2>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-sky-100/85 sm:text-[15px]">
-            FACTS claims 15,000+ schools. Fine. FACTS is Nelnet (NYSE: NNI) — a commercial brand that
-            sells into Christian schools, not a Christian ministry. Independent schools still tell us
-            the same story: two portals, a tired family app, and an office that can’t prove a message
-            landed. Beacon is ministry-stewarded and communications-first.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/vs/facts"
-              className="inline-flex h-11 items-center justify-center rounded-md bg-white px-5 text-sm font-semibold text-navy transition hover:bg-sky-50"
-            >
-              Full Beacon vs FACTS compare
-            </Link>
-            <a
-              href="#inquiry"
-              className="inline-flex h-11 items-center justify-center rounded-md border border-white/30 px-5 text-sm font-semibold text-white transition hover:bg-white/10"
-            >
-              We’re on FACTS — talk to us
-            </a>
-          </div>
-        </div>
-      </section>
+      {/* FACTS: The case | Fun Facts */}
+      <FactsLandingTabs />
 
       {/* Inquiry */}
       <section className="border-t border-border bg-muted/30">
@@ -202,6 +180,9 @@ export function ProductLanding() {
             <Link href="/vs/facts" className="hover:text-white">
               vs FACTS
             </Link>
+            <a href="#fun-facts" className="hover:text-white">
+              Fun Facts
+            </a>
             <Link href="/vs/renweb" className="hover:text-white">
               RenWeb alt
             </Link>
