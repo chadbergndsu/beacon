@@ -3,11 +3,18 @@ import type { DinnerTableDigest } from '@/lib/insights/dinner-table'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-export function DinnerTableCard({ digest }: { digest: DinnerTableDigest }) {
+export function DinnerTableCard({
+  digest,
+  emailAction,
+}: {
+  digest: DinnerTableDigest
+  /** Staff-only: Email digest CTA on the card (parents never see this). */
+  emailAction?: React.ReactNode
+}) {
   return (
     <Card className="overflow-hidden">
       <div className="border-b border-border/70 bg-muted/30 px-5 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2.5">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
               <Utensils className="h-5 w-5" aria-hidden />
@@ -25,9 +32,12 @@ export function DinnerTableCard({ digest }: { digest: DinnerTableDigest }) {
               </p>
             </div>
           </div>
-          <Badge variant="muted" className="shrink-0">
-            Family exclusive
-          </Badge>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <Badge variant="muted" className="shrink-0">
+              Family exclusive
+            </Badge>
+            {emailAction}
+          </div>
         </div>
       </div>
       <CardContent className="space-y-5 pt-5">

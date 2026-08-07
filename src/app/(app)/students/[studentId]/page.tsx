@@ -151,7 +151,15 @@ export default async function StudentOverviewPage({
       </ViewSection>
 
       <ViewSection id="dinner_table" title="Dinner Table Digest">
-        <DinnerTableCard digest={dinner} />
+        <DinnerTableCard
+          digest={dinner}
+          emailAction={
+            profile &&
+            ['admin', 'staff', 'teacher', 'principal'].includes(profile.role) ? (
+              <EmailDigestButton studentId={studentId} variant="card" />
+            ) : null
+          }
+        />
       </ViewSection>
 
       <ViewSection id="missing_work" title="Missing work">
