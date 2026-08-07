@@ -35,8 +35,9 @@ export default defineConfig({
           ...process.env,
           PORT: port,
           NEXT_TELEMETRY_DISABLED: '1',
-          NEXT_PUBLIC_SUPABASE_URL:
-            process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54329',
+          // Browser tests intentionally use the loopback readiness fixture,
+          // even when CI injects a placeholder Supabase URL globally.
+          NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54329',
           NEXT_PUBLIC_SUPABASE_ANON_KEY:
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'ci-anon-key',
           SUPABASE_SERVICE_ROLE_KEY:
