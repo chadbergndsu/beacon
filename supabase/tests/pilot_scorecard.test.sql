@@ -2,7 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
-SELECT plan(40);
+SELECT plan(48);
 
 INSERT INTO public.schools (id, name, slug) VALUES
   ('00000000-0000-0000-0000-000000000001', 'Pilot Test School', 'pilot-test-school'),
@@ -133,8 +133,58 @@ SELECT results_eq(
     WHERE has_table_privilege('authenticated', 'public.parent_experience_feedback', privilege)
     ORDER BY privilege
   $$,
-  $$ VALUES ('INSERT'), ('SELECT'), ('UPDATE') $$,
-  'authenticated callers have exactly SELECT, INSERT, and UPDATE on parent feedback'
+  $$ VALUES ('SELECT') $$,
+  'authenticated callers have only table-level SELECT on parent feedback'
+);
+SELECT results_eq(
+  $$
+    SELECT column_name::text COLLATE "C"
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'parent_experience_feedback'
+      AND has_column_privilege(
+        'authenticated',
+        format('%I.%I', table_schema, table_name),
+        column_name,
+        'INSERT'
+      )
+    ORDER BY column_name
+  $$,
+  $$
+    VALUES
+      ('comment'::text COLLATE "C"),
+      ('parent_id'::text COLLATE "C"),
+      ('rating'::text COLLATE "C"),
+      ('school_id'::text COLLATE "C"),
+      ('surface'::text COLLATE "C"),
+      ('week_start'::text COLLATE "C")
+  $$,
+  'authenticated callers can insert only the current upsert payload columns'
+);
+SELECT results_eq(
+  $$
+    SELECT column_name::text COLLATE "C"
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'parent_experience_feedback'
+      AND has_column_privilege(
+        'authenticated',
+        format('%I.%I', table_schema, table_name),
+        column_name,
+        'UPDATE'
+      )
+    ORDER BY column_name
+  $$,
+  $$
+    VALUES
+      ('comment'::text COLLATE "C"),
+      ('parent_id'::text COLLATE "C"),
+      ('rating'::text COLLATE "C"),
+      ('school_id'::text COLLATE "C"),
+      ('surface'::text COLLATE "C"),
+      ('week_start'::text COLLATE "C")
+  $$,
+  'authenticated callers can update only the current upsert payload columns'
 );
 SELECT results_eq(
   $$
@@ -191,6 +241,29 @@ SELECT is(
   (SELECT count(*)::int FROM public.parent_experience_feedback),
   1,
   'a parent can select only their own current-week response'
+);
+SELECT lives_ok(
+  $$INSERT INTO public.parent_experience_feedback
+      (school_id, parent_id, rating, comment, surface, week_start)
+    VALUES
+      ('00000000-0000-0000-0000-000000000001',
+       '00000000-0000-0000-0000-000000000101',
+       'not_yet', 'Updated through the real upsert shape', 'parent_dashboard',
+       date_trunc('week', timezone('utc', now()))::date)
+    ON CONFLICT (school_id, parent_id, surface, week_start)
+    DO UPDATE SET
+      school_id = EXCLUDED.school_id,
+      parent_id = EXCLUDED.parent_id,
+      rating = EXCLUDED.rating,
+      comment = EXCLUDED.comment,
+      surface = EXCLUDED.surface,
+      week_start = EXCLUDED.week_start$$,
+  'the authenticated client upsert remains allowed without server-owned columns'
+);
+SELECT is(
+  (SELECT comment FROM public.parent_experience_feedback),
+  'Updated through the real upsert shape',
+  'the allowed upsert updates the current-week response'
 );
 WITH changed AS (
   UPDATE public.parent_experience_feedback
@@ -291,6 +364,49 @@ SELECT throws_ok(
   '42501',
   'new row violates row-level security policy for table "parent_experience_feedback"',
   'a parent cannot move a response to another week'
+);
+
+SELECT throws_ok(
+  $$INSERT INTO public.parent_experience_feedback
+      (id, school_id, parent_id, rating, surface, week_start)
+    VALUES
+      ('00000000-0000-0000-0000-000000000999',
+       '00000000-0000-0000-0000-000000000001',
+       '00000000-0000-0000-0000-000000000101',
+       'helpful', 'parent_dashboard', date_trunc('week', timezone('utc', now()))::date)$$,
+  '42501',
+  NULL,
+  'a parent cannot set the server-owned feedback id'
+);
+SELECT throws_ok(
+  $$INSERT INTO public.parent_experience_feedback
+      (school_id, parent_id, rating, surface, week_start, created_at)
+    VALUES
+      ('00000000-0000-0000-0000-000000000001',
+       '00000000-0000-0000-0000-000000000101',
+       'helpful', 'parent_dashboard', date_trunc('week', timezone('utc', now()))::date,
+       now() - interval '10 years')$$,
+  '42501',
+  NULL,
+  'a parent cannot set the server-owned feedback creation time'
+);
+SELECT throws_ok(
+  $$UPDATE public.parent_experience_feedback
+    SET id = '00000000-0000-0000-0000-000000000998'
+    WHERE parent_id = '00000000-0000-0000-0000-000000000101'
+      AND week_start = date_trunc('week', timezone('utc', now()))::date$$,
+  '42501',
+  NULL,
+  'a parent cannot change the server-owned feedback id'
+);
+SELECT throws_ok(
+  $$UPDATE public.parent_experience_feedback
+    SET created_at = now() - interval '10 years'
+    WHERE parent_id = '00000000-0000-0000-0000-000000000101'
+      AND week_start = date_trunc('week', timezone('utc', now()))::date$$,
+  '42501',
+  NULL,
+  'a parent cannot change the server-owned feedback creation time'
 );
 
 SELECT throws_ok(

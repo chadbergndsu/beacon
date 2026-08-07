@@ -36,7 +36,7 @@ describe('PilotScorecard', () => {
     expect(html).toContain('4 school days · 86 records')
     expect(html).toContain('Grade activity')
     expect(html).toContain('7 assignments · 112 records')
-    expect(html).toContain('Email delivery')
+    expect(html).toContain('Family email delivery')
     expect(html).toContain('32 delivered')
     expect(html).toContain('2 failed')
     expect(html).toContain('3 unsent')

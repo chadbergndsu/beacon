@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   admin: null as null | { from: (table: string) => unknown },
+  reportError: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -9,6 +10,10 @@ vi.mock('@/lib/supabase/admin', () => ({
     if (!mocks.admin) throw new Error('admin mock not set')
     return mocks.admin
   },
+}))
+
+vi.mock('@/lib/ops/report-error', () => ({
+  reportError: mocks.reportError,
 }))
 
 import {
@@ -91,6 +96,7 @@ describe('parentExperienceFeedbackSchema', () => {
 describe('listParentExperienceFeedbackForLeadership', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.admin = null
   })
 
   it('returns newest nonblank comments with only leadership-safe fields', async () => {
@@ -153,20 +159,23 @@ describe('listParentExperienceFeedbackForLeadership', () => {
 
     await expect(
       listParentExperienceFeedbackForLeadership('school-1', 25)
-    ).resolves.toEqual([
-      {
-        id: 'feedback-2',
-        rating: 'not_yet',
-        comment: 'I could use a clearer weekly summary.',
-        created_at: '2026-08-07T14:00:00.000Z',
-      },
-      {
-        id: 'feedback-1',
-        rating: 'helpful',
-        comment: 'The feed helped our family plan.',
-        created_at: '2026-08-06T12:00:00.000Z',
-      },
-    ])
+    ).resolves.toEqual({
+      state: 'ready',
+      items: [
+        {
+          id: 'feedback-2',
+          rating: 'not_yet',
+          comment: 'I could use a clearer weekly summary.',
+          created_at: '2026-08-07T14:00:00.000Z',
+        },
+        {
+          id: 'feedback-1',
+          rating: 'helpful',
+          comment: 'The feed helped our family plan.',
+          created_at: '2026-08-06T12:00:00.000Z',
+        },
+      ],
+    })
     expect(query).toEqual([
       ['from', 'parent_experience_feedback'],
       ['select', 'id, rating, comment, created_at'],
@@ -176,21 +185,110 @@ describe('listParentExperienceFeedbackForLeadership', () => {
       ['order', 'created_at', { ascending: false }],
       ['limit', 25],
     ])
+    expect(mocks.reportError).not.toHaveBeenCalled()
   })
 
-  it('returns an empty list when leadership feedback cannot be loaded', async () => {
+  it('returns a ready empty state when the query succeeds without comments', async () => {
     const chain = {
       select: () => chain,
       eq: () => chain,
       not: () => chain,
       neq: () => chain,
       order: () => chain,
-      limit: () => Promise.resolve({ data: null, error: { message: 'offline' } }),
+      limit: () => Promise.resolve({ data: [], error: null }),
     }
     mocks.admin = { from: () => chain }
 
     await expect(
       listParentExperienceFeedbackForLeadership('school-1')
-    ).resolves.toEqual([])
+    ).resolves.toEqual({ state: 'ready', items: [] })
+    expect(mocks.reportError).not.toHaveBeenCalled()
+  })
+
+  const databaseError = {
+    code: '08006',
+    message: 'database unavailable',
+    sensitive: 'private row',
+  }
+  const queryRejection = new Error('network rejected with private details')
+  const constructionError = new Error('query builder failed with private details')
+
+  it.each([
+    {
+      name: 'a database-returned error',
+      expectedError: databaseError,
+      install() {
+        const chain = {
+          select: () => chain,
+          eq: () => chain,
+          not: () => chain,
+          neq: () => chain,
+          order: () => chain,
+          limit: () => Promise.resolve({ data: null, error: databaseError }),
+        }
+        mocks.admin = { from: () => chain }
+      },
+    },
+    {
+      name: 'null data without a database error',
+      install() {
+        const chain = {
+          select: () => chain,
+          eq: () => chain,
+          not: () => chain,
+          neq: () => chain,
+          order: () => chain,
+          limit: () => Promise.resolve({ data: null, error: null }),
+        }
+        mocks.admin = { from: () => chain }
+      },
+    },
+    {
+      name: 'a rejected query promise',
+      expectedError: queryRejection,
+      install() {
+        const chain = {
+          select: () => chain,
+          eq: () => chain,
+          not: () => chain,
+          neq: () => chain,
+          order: () => chain,
+          limit: () => Promise.reject(queryRejection),
+        }
+        mocks.admin = { from: () => chain }
+      },
+    },
+    {
+      name: 'query construction throwing',
+      expectedError: constructionError,
+      install() {
+        mocks.admin = {
+          from() {
+            throw constructionError
+          },
+        }
+      },
+    },
+    {
+      name: 'admin client creation throwing',
+      install() {
+        mocks.admin = null
+      },
+    },
+  ])('returns unavailable and reports $name with safe context', async ({ install, expectedError }) => {
+    install()
+
+    const result = await listParentExperienceFeedbackForLeadership('school-sensitive')
+
+    expect(result).toEqual({
+      state: 'unavailable',
+      reason: 'Parent comments are temporarily unavailable.',
+    })
+    expect(JSON.stringify(result)).not.toContain('private')
+    expect(mocks.reportError).toHaveBeenCalledTimes(1)
+    expect(mocks.reportError).toHaveBeenCalledWith(
+      expectedError ?? expect.any(Error),
+      { source: 'parent_experience_feedback', schoolId: 'school-sensitive' }
+    )
   })
 })

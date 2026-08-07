@@ -1,11 +1,24 @@
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
-import type { ParentExperienceFeedbackItem } from '@/lib/pilot-analytics/parent-feedback'
+import type { ParentExperienceFeedbackListResult } from '@/lib/pilot-analytics/parent-feedback'
+
+function SubmittedDate({ value }: { value: string }) {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) {
+    return <span className="text-xs text-muted-foreground">Date unavailable</span>
+  }
+
+  return (
+    <time dateTime={value} className="text-xs text-muted-foreground">
+      {format(date, 'MMM d, yyyy')}
+    </time>
+  )
+}
 
 export function ParentExperienceFeedbackInbox({
   initialItems,
 }: {
-  initialItems: ParentExperienceFeedbackItem[]
+  initialItems: ParentExperienceFeedbackListResult
 }) {
   return (
     <section aria-labelledby="parent-experience-heading" className="space-y-3">
@@ -18,24 +31,23 @@ export function ParentExperienceFeedbackInbox({
         </p>
       </div>
 
-      {initialItems.length === 0 ? (
+      {initialItems.state === 'unavailable' ? (
+        <p className="rounded-xl border border-dashed bg-card p-6 text-sm text-muted-foreground">
+          Temporarily unavailable
+        </p>
+      ) : initialItems.items.length === 0 ? (
         <p className="rounded-xl border border-dashed bg-card p-6 text-sm text-muted-foreground">
           No parent comments yet.
         </p>
       ) : (
         <ul className="space-y-3">
-          {initialItems.map((item) => (
+          {initialItems.items.map((item) => (
             <li key={item.id} className="rounded-lg border bg-card p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Badge variant={item.rating === 'helpful' ? 'outline' : 'warning'}>
                   {item.rating === 'helpful' ? 'Helpful' : 'Not yet'}
                 </Badge>
-                <time
-                  dateTime={item.created_at}
-                  className="text-xs text-muted-foreground"
-                >
-                  {format(new Date(item.created_at), 'MMM d, yyyy')}
-                </time>
+                <SubmittedDate value={item.created_at} />
               </div>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
                 {item.comment}

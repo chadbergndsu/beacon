@@ -12,6 +12,14 @@ const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 const PAGE_SIZE = 1000
 // Keeps UUID-based PostgREST `in` filters to only a few KB before URL encoding.
 const ID_FILTER_CHUNK_SIZE = 100
+const INHERENTLY_FAMILY_EMAIL_KINDS = new Set([
+  'grade_notice',
+  'attendance_notice',
+  'aftercare_notice',
+  'dinner_digest',
+  'missing_work',
+  'invoice',
+])
 
 type QueryResponse<Row> = {
   data: Row[] | null
@@ -47,6 +55,14 @@ function distinctStrings<Row>(rows: Row[], key: keyof Row): string[] {
       })
     ),
   ]
+}
+
+function isFamilyFacingEmail(row: { kind: string; meta: unknown }): boolean {
+  if (INHERENTLY_FAMILY_EMAIL_KINDS.has(row.kind)) return true
+  if (row.kind !== 'announcement' && row.kind !== 'message') return false
+  if (!row.meta || typeof row.meta !== 'object' || Array.isArray(row.meta)) return false
+
+  return (row.meta as Record<string, unknown>).recipient_role === 'parent'
 }
 
 async function loadQueryRows<Row>(
@@ -349,13 +365,13 @@ export async function loadPilotScorecard(
       ['id']
     ),
     loadGradeActivity(admin, schoolId, timestampStart, timestampEnd),
-    loadRows<{ status: string }>(
+    loadRows<{ status: string; kind: string; meta: unknown }>(
       schoolId,
       'email_outbox',
       () =>
         admin
           .from('email_outbox')
-          .select('status')
+          .select('status, kind, meta')
           .eq('school_id', schoolId)
           .gte('created_at', timestampStart)
           .lt('created_at', timestampEnd),
@@ -432,7 +448,7 @@ export async function loadPilotScorecard(
     : { state: 'unavailable', reason: 'Attendance activity data is unavailable.' }
 
   const emailDelivery: PilotEvidenceScorecard['emailDelivery'] = emailRows.ok
-    ? emailRows.value.reduce<PilotEvidenceScorecard['emailDelivery']>(
+    ? emailRows.value.filter(isFamilyFacingEmail).reduce<PilotEvidenceScorecard['emailDelivery']>(
         (metric, row) => {
           if (metric.state !== 'ready') return metric
           if (row.status === 'sent') metric.delivered += 1

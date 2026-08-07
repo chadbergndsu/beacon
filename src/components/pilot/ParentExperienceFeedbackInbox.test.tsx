@@ -24,7 +24,7 @@ describe('ParentExperienceFeedbackInbox', () => {
     ]
 
     const html = renderToStaticMarkup(
-      <ParentExperienceFeedbackInbox initialItems={items} />
+      <ParentExperienceFeedbackInbox initialItems={{ state: 'ready', items }} />
     )
 
     expect(html).toContain('Helpful')
@@ -40,9 +40,47 @@ describe('ParentExperienceFeedbackInbox', () => {
 
   it('renders the prescribed empty state', () => {
     const html = renderToStaticMarkup(
-      <ParentExperienceFeedbackInbox initialItems={[]} />
+      <ParentExperienceFeedbackInbox
+        initialItems={{ state: 'ready', items: [] }}
+      />
     )
 
     expect(html).toContain('No parent comments yet.')
+  })
+
+  it('renders unavailable separately from a successful empty result', () => {
+    const html = renderToStaticMarkup(
+      <ParentExperienceFeedbackInbox
+        initialItems={{
+          state: 'unavailable',
+          reason: 'Parent comments are temporarily unavailable.',
+        }}
+      />
+    )
+
+    expect(html).toContain('Temporarily unavailable')
+    expect(html).not.toContain('No parent comments yet.')
+    expect(html).not.toContain('private')
+  })
+
+  it('does not crash when a legacy comment has an unrenderable creation date', () => {
+    const html = renderToStaticMarkup(
+      <ParentExperienceFeedbackInbox
+        initialItems={{
+          state: 'ready',
+          items: [
+            {
+              id: 'feedback-legacy',
+              rating: 'helpful',
+              comment: 'Legacy comment remains reviewable.',
+              created_at: 'infinity',
+            },
+          ],
+        }}
+      />
+    )
+
+    expect(html).toContain('Legacy comment remains reviewable.')
+    expect(html).toContain('Date unavailable')
   })
 })

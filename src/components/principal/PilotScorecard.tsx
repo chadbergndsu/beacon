@@ -151,7 +151,7 @@ export function PilotScorecard({ scorecard }: { scorecard: PilotEvidenceScorecar
         <Metric label="Grade activity">
           <WorkflowValue metric={scorecard.gradeActivity} primaryLabel="assignments" />
         </Metric>
-        <Metric label="Email delivery">
+        <Metric label="Family email delivery">
           <DeliveryValue metric={scorecard.emailDelivery} />
         </Metric>
         <Metric label="Parent helpfulness">
