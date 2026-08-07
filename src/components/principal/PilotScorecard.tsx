@@ -155,24 +155,23 @@ export function PilotScorecard({ scorecard }: { scorecard: PilotEvidenceScorecar
           <DeliveryValue metric={scorecard.emailDelivery} />
         </Metric>
         <Metric label="Parent helpfulness">
+          <span className="mb-1 block text-[11px] text-muted-foreground">Last 30 days</span>
           <HelpfulnessValue metric={scorecard.parentHelpfulness} />
         </Metric>
         <Metric label="Feedback received">
           {scorecard.feedbackReceived.state === 'ready' ? (
-            <>
-              <span className="font-semibold tabular-nums">
-                {scorecard.feedbackReceived.count} responses
-              </span>
-              <Link
-                href="/principal/feedback"
-                className="mt-1 block w-fit text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                Review feedback
-              </Link>
-            </>
+            <span className="font-semibold tabular-nums">
+              {scorecard.feedbackReceived.count} feedback items
+            </span>
           ) : (
             <UnavailableMetric />
           )}
+          <Link
+            href="/principal/feedback"
+            className="mt-1 block w-fit text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Review feedback
+          </Link>
         </Metric>
       </dl>
 

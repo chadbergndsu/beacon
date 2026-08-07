@@ -134,3 +134,86 @@ The full suite emitted only the repository's expected test logging from client-s
 ## Independent review
 
 A read-only reviewer inspected the complete working-tree diff against the task brief and approved it with no Critical, Important, or Minor findings. The review specifically confirmed the authorization ordering, parallel server work, principal/admin layouts, legacy layout insertion, server-only component boundary, discriminated unavailable handling, neutral responsive semantics, and test coverage.
+
+## Fix Round 1
+
+### Findings addressed
+
+1. Parent helpfulness now carries an explicit `Last 30 days` qualifier inside its metric card, distinguishing its feedback window from the card header's seven-day activity window.
+2. The combined general-suggestion and parent-comment count now uses the factual wording `feedback items` instead of `responses` for both nonzero and zero counts.
+3. `Review feedback` now renders outside the count-state conditional, so `/principal/feedback` remains reachable when the combined count is temporarily unavailable.
+
+Singular/plural polish was intentionally not added in this round, per the scoped fix request.
+
+### RED evidence
+
+Test file changed first:
+
+- `src/components/principal/PilotScorecard.test.tsx`
+
+Command:
+
+```text
+npm test -- src/components/principal/PilotScorecard.test.tsx
+```
+
+Observed before production changes:
+
+```text
+Test Files 1 failed (1)
+Tests 4 failed | 5 passed (9)
+```
+
+The four failures independently demonstrated the three factual/guardrail defects:
+
+```text
+renders the ready evidence model with neutral method context
+  missing Parent helpfulness -> Last 30 days -> 75% helpful sequence
+
+describes the combined feedback count as feedback items
+  missing "5 feedback items"
+
+renders zero feedback as observed data
+  missing "0 feedback items"
+
+keeps review access when the feedback count is unavailable
+  missing href="/principal/feedback"
+```
+
+### GREEN evidence
+
+Minimal component cycle:
+
+```text
+npm test -- src/components/principal/PilotScorecard.test.tsx
+Test Files 1 passed (1)
+Tests 9 passed (9)
+```
+
+Requested final focused verification:
+
+```text
+npm test -- src/components/principal/PilotScorecard.test.tsx 'src/app/(app)/principal/page.test.tsx'
+Test Files 2 passed (2)
+Tests 13 passed (13)
+```
+
+Static gates:
+
+```text
+npm run typecheck
+exit 0, no diagnostics
+
+npm run lint
+exit 0, no diagnostics
+```
+
+### Files changed in Fix Round 1
+
+- `src/components/principal/PilotScorecard.test.tsx`
+- `src/components/principal/PilotScorecard.tsx`
+- `.superpowers/sdd/2026-08-07-pilot-scorecard-implementation/task-6-report.md`
+
+### Fix Round 1 concerns
+
+No known concern remains within the requested guardrails. Singular/plural wording remains deliberately deferred rather than broadened into this fix.

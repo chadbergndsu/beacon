@@ -41,9 +41,9 @@ describe('PilotScorecard', () => {
     expect(html).toContain('2 failed')
     expect(html).toContain('3 unsent')
     expect(html).toContain('Parent helpfulness')
+    expect(html).toMatch(/Parent helpfulness[\s\S]*Last 30 days[\s\S]*75% helpful/)
     expect(html).toContain('75% helpful · 8 responses')
     expect(html).toContain('Feedback received')
-    expect(html).toContain('5 responses')
     expect(html).toContain('href="/principal/feedback"')
     expect(html).toContain('Review feedback')
     expect(html).toContain('Activity is deduplicated by person, workflow, and UTC day.')
@@ -119,17 +119,30 @@ describe('PilotScorecard', () => {
     expect(unavailable).not.toContain('0%')
   })
 
-  it('renders zero feedback as observed data and unavailable feedback without a zero', () => {
+  it('describes the combined feedback count as feedback items', () => {
+    const html = renderScorecard()
+
+    expect(html).toContain('5 feedback items')
+    expect(html).not.toContain('5 responses')
+  })
+
+  it('renders zero feedback as observed data', () => {
     const zeroFeedback = renderScorecard({
       feedbackReceived: { state: 'ready', count: 0 },
     })
+
+    expect(zeroFeedback).toContain('0 feedback items')
+  })
+
+  it('keeps review access when the feedback count is unavailable', () => {
     const unavailable = renderScorecard({
       feedbackReceived: { state: 'unavailable', reason: 'Feedback source offline.' },
     })
 
-    expect(zeroFeedback).toContain('0 responses')
     expect(unavailable).toContain('Temporarily unavailable')
-    expect(unavailable).not.toContain('0 responses')
+    expect(unavailable).not.toContain('0 feedback items')
+    expect(unavailable).toContain('href="/principal/feedback"')
+    expect(unavailable).toContain('Review feedback')
   })
 
   it('does not add judgement, targets, rankings, or person-name language', () => {
