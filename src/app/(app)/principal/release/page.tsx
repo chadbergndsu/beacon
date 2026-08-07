@@ -37,8 +37,10 @@ export default async function PrincipalReleasePage() {
     listRooms(schoolId).catch(() => []),
   ])
 
-  const done = RELEASE_CHECKLIST.filter((i) => checklist[i.id]).length
-  const total = RELEASE_CHECKLIST.length
+  const requiredChecklist = RELEASE_CHECKLIST.filter((item) => !item.optional)
+  const requiredDone = requiredChecklist.filter((item) => checklist[item.id]).length
+  const optionalChecklist = RELEASE_CHECKLIST.filter((item) => item.optional)
+  const optionalDone = optionalChecklist.filter((item) => checklist[item.id]).length
   const suggestions = buildLaunchSuggestions({
     health,
     checklist,
@@ -58,6 +60,7 @@ export default async function PrincipalReleasePage() {
     hasTeacher,
     hasParentLinks,
     brandOk,
+    hasBlockingHealthFailure: health.checks.some((check) => check.status === 'fail'),
   })
   const nextPilot = pilotStatuses.find((s) => !s.done)
   const parentPilotReady = isParentPilotReady({
@@ -89,7 +92,7 @@ export default async function PrincipalReleasePage() {
         <Card>
           <CardContent className="pt-5">
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              Ready score
+              Platform health
             </p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">
               {health.readyScore}
@@ -100,11 +103,16 @@ export default async function PrincipalReleasePage() {
         <Card>
           <CardContent className="pt-5">
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              Checklist
+              Required checklist
             </p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">
-              {done}
-              <span className="text-base font-semibold text-muted-foreground">/{total}</span>
+              {requiredDone}
+              <span className="text-base font-semibold text-muted-foreground">
+                /{requiredChecklist.length}
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {optionalDone}/{optionalChecklist.length} optional items complete
             </p>
           </CardContent>
         </Card>
@@ -126,16 +134,6 @@ export default async function PrincipalReleasePage() {
       </div>
 
       <OnboardingProgress status={onboarding} parentPilotReady={parentPilotReady} />
-
-      <CraftSetupCard readiness={craftReadiness} />
-
-      <CraftLayoutEditor initialLayout={craftLayout} />
-
-      <CraftRoomMapPanel
-        layout={craftLayout}
-        schoolRooms={schoolRooms}
-        initialMap={roomMapping.layoutToDb}
-      />
 
       <Card>
         <div className="border-b border-border px-5 py-4">
@@ -174,6 +172,31 @@ export default async function PrincipalReleasePage() {
       </Card>
 
       <LaunchSuggestions items={suggestions} />
+
+      <section className="space-y-4" aria-labelledby="optional-campus-tools">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            Optional modules
+          </p>
+          <h2 id="optional-campus-tools" className="text-xl font-semibold text-foreground">
+            Campus twin setup
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Configure BeaconCraft when it supports your school’s rollout. It is not required for
+            an academics-first pilot or parent launch approval.
+          </p>
+        </div>
+
+        <CraftSetupCard readiness={craftReadiness} />
+
+        <CraftLayoutEditor initialLayout={craftLayout} />
+
+        <CraftRoomMapPanel
+          layout={craftLayout}
+          schoolRooms={schoolRooms}
+          initialMap={roomMapping.layoutToDb}
+        />
+      </section>
     </div>
   )
 }

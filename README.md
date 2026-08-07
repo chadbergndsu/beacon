@@ -12,7 +12,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 |-------|--------|--------|
 | App | Next.js 16 App Router + React 19 + TypeScript + Tailwind 4 | Portable web frontend |
 | Auth edge | `src/proxy.ts` → Supabase SSR session | Public routes listed below; fail-closed without Supabase env on prod/preview |
-| DB | Supabase Postgres | Schema owned in `supabase/migrations/` (**001–023 plus timestamped hardening migrations**) |
+| DB | Supabase Postgres | Schema owned by **every SQL file** in `supabase/migrations/`, including timestamped hardening migrations |
 | Auth | Supabase Auth | App code uses `getUser()` before service-role; edge refreshes cookies via `getClaims()` |
 | Host | Vercel + HTTPS | Default per Solid Systems |
 | Email | Resend and/or SMTP (cascade) | Log-only outbox without live transport; never use `onboarding@resend.dev` in prod |

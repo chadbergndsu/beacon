@@ -39,6 +39,21 @@ describe('buildLaunchSuggestions', () => {
     expect(items.find((i) => i.id === 'env_office_email')?.done).toBe(true)
   })
 
+  it('uses explicit checklist optionality instead of the broad launch group', () => {
+    const items = buildLaunchSuggestions({
+      health: health({}),
+      checklist: {},
+      brand,
+      checklistItems: RELEASE_CHECKLIST,
+    })
+
+    expect(items.find((item) => item.id === 'check_brand')?.optional).toBeFalsy()
+    expect(items.find((item) => item.id === 'check_soft_launch')?.optional).toBeFalsy()
+    expect(items.find((item) => item.id === 'check_craft_smoke')?.optional).toBe(true)
+    expect(items.find((item) => item.id === 'check_slack')?.optional).toBe(true)
+    expect(items.find((item) => item.id === 'check_pilot_owner_alerts')?.optional).toBe(true)
+  })
+
   it('partitions open before done', () => {
     const sample: LaunchSuggestion[] = [
       {

@@ -58,6 +58,11 @@ export function ReleaseChecklistForm({
                         )}
                       >
                         {item.label}
+                        {item.optional ? (
+                          <span className="ml-1.5 text-xs font-medium text-muted-foreground">
+                            (optional)
+                          </span>
+                        ) : null}
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
                         {item.help}

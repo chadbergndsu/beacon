@@ -13,11 +13,12 @@ export type HealthCheck = {
   status: CheckStatus
   detail: string
   category: 'platform' | 'data' | 'integrations' | 'trust'
+  optional?: boolean
 }
 
 export type OpsHealth = {
   generatedAt: string
-  readyScore: number // 0–100
+  readyScore: number // 0–100 platform health; launch approval is evaluated separately
   checks: HealthCheck[]
   emailLive: boolean
   qbLiveConfigured: boolean
@@ -208,9 +209,10 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
         checks.push({
           id: 'craft_twin',
           label: 'BeaconCraft room mapping',
-          status: craft.ready ? 'ok' : craft.roomsMapped > 0 ? 'warn' : 'info',
+          status: craft.ready ? 'ok' : 'info',
           detail: craft.detail,
           category: 'trust',
+          optional: true,
         })
       } catch {
         checks.push({
@@ -219,6 +221,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
           status: 'info',
           detail: 'Open Go-live to sync twin rooms for /craft',
           category: 'trust',
+          optional: true,
         })
       }
     } catch (e) {
@@ -259,6 +262,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
       ? 'Suggestions push to product owner phone via ntfy'
       : 'Optional: BEACON_NTFY_URL or BEACON_NTFY_TOPIC for instant pilot alerts',
     category: 'integrations',
+    optional: true,
   })
 
   const { isSlackConfigured, slackConfigMode } = await import('@/lib/notify/slack')
@@ -272,17 +276,19 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
       ? `Slack live (${slackMode === 'bot' ? 'bot API' : 'incoming webhook'}) — announcements, compose, attendance digests, pilot alerts`
       : 'Optional: BEACON_SLACK_WEBHOOK_URL or BEACON_SLACK_BOT_TOKEN + BEACON_SLACK_CHANNEL',
     category: 'integrations',
+    optional: true,
   })
 
   const feedbackTo = envSet('BEACON_FEEDBACK_TO') || envSet('BEACON_OWNER_EMAIL')
   checks.push({
     id: 'feedback_owner',
     label: 'Pilot owner email',
-    status: feedbackTo ? 'ok' : 'warn',
+    status: feedbackTo ? 'ok' : 'info',
     detail: feedbackTo
       ? 'BEACON_FEEDBACK_TO configured'
       : 'Set BEACON_FEEDBACK_TO so suggestions email you (not the principal)',
     category: 'integrations',
+    optional: true,
   })
 
   const qbLiveConfigured = isQuickBooksConfigured()
@@ -294,6 +300,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
       ? `Configured (${process.env.INTUIT_ENVIRONMENT || 'sandbox'})`
       : 'Not configured — Connect uses labeled sandbox demo only',
     category: 'integrations',
+    optional: true,
   })
 
   const {
@@ -333,20 +340,25 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
           ? `STRIPE_SECRET_KEY + webhook ready${schoolCount === 1 ? ' · single-school treasury' : ''}`
           : 'STRIPE_SECRET_KEY set but STRIPE_WEBHOOK_SECRET missing — success page can still confirm',
     category: 'integrations',
+    optional: true,
   })
 
   const { durableRateLimitOk, isUpstashConfigured, isProductionLike } = await import(
     '@/lib/security/rate-limit'
   )
   const durableRl = durableRateLimitOk()
+  const upstashOn = isUpstashConfigured()
+  const productionLike = isProductionLike()
   checks.push({
     id: 'rate_limit_durable',
-    label: 'Durable rate limits (Upstash)',
-    status: durableRl ? 'ok' : isProductionLike() ? 'fail' : 'warn',
-    detail: isUpstashConfigured()
+    label: 'Rate-limit protection',
+    status: upstashOn ? 'ok' : productionLike ? (durableRl ? 'warn' : 'fail') : 'info',
+    detail: upstashOn
       ? 'Upstash Redis configured — kiosk/device/login limits span instances'
-      : isProductionLike()
-        ? 'Production/preview without Upstash: limits are per-instance only. Set UPSTASH_REDIS_REST_URL + TOKEN (or RATE_LIMIT_ALLOW_MEMORY=1 break-glass).'
+      : productionLike && durableRl
+        ? 'Controlled non-public pilot uses approved in-memory break-glass limits. Configure Upstash before public or multi-instance traffic.'
+        : productionLike
+          ? 'Production/preview has no approved rate-limit path. Configure Upstash, or explicitly approve memory mode for a controlled non-public pilot only.'
         : 'Local/dev: in-memory rate limits OK. Set Upstash before public production traffic.',
     category: 'platform',
   })
@@ -355,11 +367,12 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
   checks.push({
     id: 'sentry',
     label: 'Error tracking (Sentry)',
-    status: isSentryConfigured() ? 'ok' : isProductionLike() ? 'warn' : 'info',
+    status: isSentryConfigured() ? 'ok' : 'info',
     detail: isSentryConfigured()
       ? 'SENTRY_DSN / NEXT_PUBLIC_SENTRY_DSN set — exceptions report via reportError + instrumentation'
       : 'Optional: set SENTRY_DSN (server) and NEXT_PUBLIC_SENTRY_DSN (browser) on Vercel',
     category: 'platform',
+    optional: true,
   })
 
   checks.push({
@@ -387,16 +400,7 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     category: 'data',
   })
 
-  // Score: fail=-30, warn=-10, info=0, ok=+full
-  const scorable = checks.filter((c) => c.status !== 'info')
-  let points = 0
-  let max = 0
-  for (const c of scorable) {
-    max += 10
-    if (c.status === 'ok') points += 10
-    else if (c.status === 'warn') points += 5
-  }
-  const readyScore = max ? Math.round((points / max) * 100) : 0
+  const readyScore = scoreHealthChecks(checks)
 
   return {
     generatedAt: new Date().toISOString(),
@@ -405,4 +409,23 @@ export async function probeOpsHealth(schoolId: string | null): Promise<OpsHealth
     emailLive: emailStack.live,
     qbLiveConfigured,
   }
+}
+
+export function scoreHealthChecks(checks: HealthCheck[]): number {
+  // Disabled/healthy optional modules do not change core health, but a warning
+  // or failure in an enabled optional workflow must remain visible in the score.
+  const scorable = checks.filter(
+    (check) =>
+      check.status !== 'info' &&
+      (!check.optional || check.status === 'warn' || check.status === 'fail')
+  )
+  let points = 0
+  let max = 0
+  for (const check of scorable) {
+    max += 10
+    if (check.status === 'ok') points += 10
+    else if (check.status === 'warn') points += 5
+  }
+
+  return max ? Math.round((points / max) * 100) : 0
 }

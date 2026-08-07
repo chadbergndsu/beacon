@@ -33,11 +33,9 @@ export function buildLaunchSuggestions(input: {
 }): LaunchSuggestion[] {
   const { health, checklist, brand, checklistItems } = input
 
-  const migrationsDone =
-    Boolean(checklist.migrations) ||
-    (checkStatus(health, 'table_billing_schedules') === 'ok' &&
-      checkStatus(health, 'table_billing_invoices') === 'ok' &&
-      checkStatus(health, 'table_school_access_tokens') === 'ok')
+  // Table presence cannot prove that the later authorization-policy migrations
+  // ran, so only the explicit all-migrations verification can complete this.
+  const migrationsDone = Boolean(checklist.migrations)
 
   const emailOk =
     Boolean(checklist.email_mode) ||
@@ -66,7 +64,7 @@ export function buildLaunchSuggestions(input: {
       group: 'env',
       label: 'Database migrations applied',
       detail:
-        'Migrations 001–023 on Supabase (craft realtime, office admin, family portal, Stripe, money settle).',
+        'Every file in supabase/migrations/ is applied, including timestamped authorization and tenant-integrity hardening.',
       done: migrationsDone,
     },
     {
@@ -155,7 +153,7 @@ export function buildLaunchSuggestions(input: {
     label: item.label,
     detail: item.help,
     done: Boolean(checklist[item.id]),
-    optional: item.group === 'launch' || item.id.startsWith('qb_') || item.id === 'stripe',
+    optional: item.optional,
   }))
 
   return [...envSteps, ...checklistSteps]

@@ -11,12 +11,19 @@ export type OnboardingStep = {
   done: boolean
   href: string
   detail: string
+  category: 'core' | 'optional'
 }
 
-export type OnboardingStatus = {
+export type OnboardingSummary = {
   complete: number
   total: number
   percent: number
+  steps: OnboardingStep[]
+}
+
+export type OnboardingStatus = {
+  core: OnboardingSummary
+  optional: OnboardingSummary
   steps: OnboardingStep[]
 }
 
@@ -109,6 +116,7 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
     {
       id: 'brand',
       label: 'School name & branding',
+      category: 'core',
       done: brandOk,
       href: '/principal/release',
       detail: brandOk ? school!.name! : 'Set name, mission, and contact on Go-live',
@@ -116,6 +124,7 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
     {
       id: 'students',
       label: 'Add students',
+      category: 'core',
       done: (students ?? 0) > 0,
       href: '/principal/roster',
       detail: `${students ?? 0} active students`,
@@ -123,6 +132,7 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
     {
       id: 'teachers',
       label: 'Teacher accounts',
+      category: 'core',
       done: (teachers ?? 0) > 0,
       href: '/principal/roster',
       detail: `${teachers ?? 0} teacher profiles`,
@@ -130,6 +140,7 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
     {
       id: 'classes',
       label: 'Create classes',
+      category: 'core',
       done: (classes ?? 0) > 0,
       href: '/principal/roster',
       detail: `${classes ?? 0} active classes`,
@@ -137,6 +148,7 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
     {
       id: 'assignments',
       label: 'At least one assignment',
+      category: 'core',
       done: schoolAssignments > 0,
       href: '/dashboard',
       detail: schoolAssignments > 0 ? `${schoolAssignments} assignments` : 'Teachers need something to grade',
@@ -144,6 +156,7 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
     {
       id: 'parents',
       label: 'Parent links',
+      category: 'core',
       done: schoolParentLinks > 0,
       href: '/principal/roster',
       detail:
@@ -154,29 +167,51 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
     {
       id: 'badges',
       label: 'Badge / kiosk ready',
+      category: 'optional',
       done: false, // filled below after room probe
       href: '/principal/badges',
       detail: 'Assign badge codes and open room kiosk',
     },
   ]
 
-  // Badge rooms table may be missing until 011
-  let roomsOk = false
+  // Badge tables may be missing until 011/015/018. Readiness is only true
+  // when a school has a room, a usable student code, and a live kiosk link.
+  let badgeReady = false
   try {
-    const { error: roomsErr, count: roomCount } = await admin
-      .from('school_rooms')
-      .select('*', { count: 'exact', head: true })
-      .eq('school_id', schoolId)
-    roomsOk = !roomsErr && (roomCount ?? 0) > 0
+    const [roomsResult, badgesResult, tokenResult] = await Promise.all([
+      admin
+        .from('school_rooms')
+        .select('*', { count: 'exact', head: true })
+        .eq('school_id', schoolId),
+      admin
+        .from('students')
+        .select('*', { count: 'exact', head: true })
+        .eq('school_id', schoolId)
+        .eq('active', true)
+        .not('badge_code', 'is', null),
+      admin
+        .from('school_access_tokens')
+        .select('kiosk_token, kiosk_token_expires_at')
+        .eq('school_id', schoolId)
+        .maybeSingle(),
+    ])
+    const kioskToken = tokenResult.data?.kiosk_token
+    const kioskExpiresAt = tokenResult.data?.kiosk_token_expires_at
+    badgeReady = isBadgeKioskReady({
+      roomCount: roomsResult.error ? 0 : (roomsResult.count ?? 0),
+      badgeCount: badgesResult.error ? 0 : (badgesResult.count ?? 0),
+      kioskToken: tokenResult.error ? null : kioskToken,
+      kioskExpiresAt: tokenResult.error ? null : kioskExpiresAt,
+    })
   } catch {
-    roomsOk = false
+    badgeReady = false
   }
   const badgeStep = steps.find((s) => s.id === 'badges')
   if (badgeStep) {
-    badgeStep.done = roomsOk
-    badgeStep.detail = roomsOk
-      ? 'Rooms configured — open kiosk from Badges'
-      : 'Apply migration 011 + open Principal → Badges'
+    badgeStep.done = badgeReady
+    badgeStep.detail = badgeReady
+      ? 'Room, student badge code, and live kiosk link ready'
+      : 'Open Principal → Badges to finish rooms, badge codes, and kiosk access'
   }
 
   let craftReady = false
@@ -191,6 +226,7 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
   steps.push({
     id: 'craft',
     label: 'BeaconCraft digital twin',
+    category: 'optional',
     done: craftReady,
     href: '/principal/release',
     detail: craftReady
@@ -202,11 +238,51 @@ export async function loadSchoolOnboarding(schoolId: string): Promise<Onboarding
   void parents
   void assignments
 
-  const complete = steps.filter((s) => s.done).length
-  const total = steps.length
-  const percent = Math.round((complete / total) * 100)
+  const { core, optional } = summarizeOnboardingSteps(steps)
 
-  return { complete, total, percent, steps }
+  return { core, optional, steps }
+}
+
+export function summarizeOnboardingSteps(steps: OnboardingStep[]): {
+  core: OnboardingSummary
+  optional: OnboardingSummary
+} {
+  const summarize = (category: OnboardingStep['category']): OnboardingSummary => {
+    const categorySteps = steps.filter((step) => step.category === category)
+    const complete = categorySteps.filter((step) => step.done).length
+    const total = categorySteps.length
+
+    return {
+      complete,
+      total,
+      percent: total === 0 ? 100 : Math.round((complete / total) * 100),
+      steps: categorySteps,
+    }
+  }
+
+  return {
+    core: summarize('core'),
+    optional: summarize('optional'),
+  }
+}
+
+export function isBadgeKioskReady(input: {
+  roomCount: number
+  badgeCount: number
+  kioskToken: unknown
+  kioskExpiresAt: unknown
+  now?: number
+}): boolean {
+  const { roomCount, badgeCount, kioskToken, kioskExpiresAt, now = Date.now() } = input
+
+  return Boolean(
+    roomCount > 0 &&
+      badgeCount > 0 &&
+      typeof kioskToken === 'string' &&
+      kioskToken.length >= 16 &&
+      typeof kioskExpiresAt === 'string' &&
+      Date.parse(kioskExpiresAt) > now
+  )
 }
 
 /**

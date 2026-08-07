@@ -16,7 +16,7 @@ DATABASE_URL='postgresql://…' npm run db:migrate
 POSTGRES_PASSWORD='…' SUPABASE_PROJECT_REF='…' npm run db:migrate
 ```
 
-Confirm `beacon_schema_migrations` includes through `023_office_admin.sql`. Critical: **016** RLS, **017** billing, **018** tokens, **019–021** money/portal, **022** craft realtime, **023** office admin seed.
+Confirm `beacon_schema_migrations` includes every file currently in `supabase/migrations/`, not only the numbered series through `023_office_admin.sql`. This includes the timestamped authorization, billing-boundary, helper-hardening, recursive-policy repair, and parent-link tenant-integrity migrations. Run `npm run db:migrate`, then compare the recorded migration names with the repository directory before approving parent access.
 
 ## 2. Production env (Vercel)
 

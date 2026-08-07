@@ -25,6 +25,7 @@ describe('resolvePilotPath', () => {
       hasTeacher: true,
       hasParentLinks: false,
       brandOk: true,
+      hasBlockingHealthFailure: false,
     })
     expect(statuses.find((s) => s.step.id === 'migrations')?.done).toBe(true)
     expect(statuses.find((s) => s.step.id === 'email')?.done).toBe(true)
@@ -54,7 +55,23 @@ describe('resolvePilotPath', () => {
       hasTeacher: true,
       hasParentLinks: true,
       brandOk: true,
+      hasBlockingHealthFailure: false,
     })
     expect(nextOpenPilotStep(statuses)).toBeNull()
+  })
+
+  it('does not approve the go-live step while a blocking health failure remains', () => {
+    const statuses = resolvePilotPath({
+      checklist: { brand: true },
+      healthById: {},
+      emailLive: false,
+      hasPrincipalOrAdmin: true,
+      hasTeacher: true,
+      hasParentLinks: true,
+      brandOk: true,
+      hasBlockingHealthFailure: true,
+    })
+
+    expect(statuses.find((status) => status.step.id === 'golive')?.done).toBe(false)
   })
 })
