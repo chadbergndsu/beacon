@@ -7,6 +7,7 @@ import {
   getFloor,
   getRoomById,
   getRoomCenter,
+  getRoomFloorId,
 } from '@/lib/craft/campus'
 import type { CraftCampusLayout, CraftTrailPoint, CraftVisibleMarker } from '@/lib/craft/types'
 
@@ -30,6 +31,9 @@ type CraftUiContextValue = {
   trails: CraftTrailPoint[]
   player: PlayerSnapshot
   setPlayer: (p: PlayerSnapshot) => void
+  /** One-shot camera snap consumed by PlayerController / TourCameraRig */
+  cameraSnap: PlayerSnapshot | null
+  clearCameraSnap: () => void
   flyMode: boolean
   setFlyMode: (v: boolean) => void
   teleportRoomId: string | null
@@ -38,6 +42,8 @@ type CraftUiContextValue = {
   setHighlightRoomId: (id: string | null) => void
   highlightMarkerId: string | null
   setHighlightMarkerId: (id: string | null) => void
+  followMarkerId: string | null
+  setFollowMarkerId: (id: string | null) => void
   pointerLocked: boolean
   setPointerLocked: (v: boolean) => void
   touchMove: TouchMove
@@ -78,12 +84,16 @@ export function CraftUiProvider({
     [layout, activeFloorId]
   )
   const [player, setPlayer] = useState<PlayerSnapshot>(() => initialPlayer(layout, defaultFloor))
+  const [cameraSnap, setCameraSnap] = useState<PlayerSnapshot | null>(null)
   const [teleportRoomId, setTeleportRoomId] = useState<string | null>(null)
   const [highlightRoomId, setHighlightRoomId] = useState<string | null>(null)
   const [highlightMarkerId, setHighlightMarkerId] = useState<string | null>(null)
+  const [followMarkerId, setFollowMarkerId] = useState<string | null>(null)
   const [pointerLocked, setPointerLocked] = useState(false)
   const [touchMove, setTouchMove] = useState<TouchMove>({ x: 0, y: 0 })
   const touchLookRef = useRef({ dx: 0, dy: 0 })
+
+  const clearCameraSnap = useCallback(() => setCameraSnap(null), [])
 
   const switchFloor = useCallback(
     (floorId: string, roomId?: string | null) => {
@@ -91,10 +101,49 @@ export function CraftUiProvider({
       const room = roomId ? getRoomById(layout, roomId) : getFloor(layout, floorId)?.rooms[0]
       if (room) {
         const [cx, cy, cz] = getRoomCenter(layout, room)
-        setPlayer({ x: cx, y: cy + 0.5, z: cz, yaw: player.yaw, pitch: player.pitch })
+        const snap: PlayerSnapshot = {
+          x: cx,
+          y: cy + 0.5,
+          z: cz,
+          yaw: player.yaw,
+          pitch: player.pitch,
+        }
+        setPlayer(snap)
+        setCameraSnap(snap)
       }
     },
     [layout, player.pitch, player.yaw]
+  )
+
+  const requestTeleport = useCallback(
+    (roomId: string | null) => {
+      if (!roomId) {
+        setTeleportRoomId(null)
+        return
+      }
+      const room = getRoomById(layout, roomId)
+      if (!room) {
+        setTeleportRoomId(null)
+        return
+      }
+      setTeleportRoomId(roomId)
+      const floorId = getRoomFloorId(layout, roomId)
+      if (floorId && floorId !== activeFloorId) {
+        setActiveFloorId(floorId)
+      }
+      const [cx, cy, cz] = getRoomCenter(layout, room)
+      const snap: PlayerSnapshot = {
+        x: cx,
+        y: cy + 0.5,
+        z: cz,
+        yaw: player.yaw,
+        pitch: player.pitch,
+      }
+      setPlayer(snap)
+      setCameraSnap(snap)
+      setHighlightRoomId(roomId)
+    },
+    [layout, activeFloorId, player.pitch, player.yaw]
   )
 
   const value = useMemo(
@@ -108,14 +157,18 @@ export function CraftUiProvider({
       trails,
       player,
       setPlayer,
+      cameraSnap,
+      clearCameraSnap,
       flyMode,
       setFlyMode,
       teleportRoomId,
-      requestTeleport: setTeleportRoomId,
+      requestTeleport,
       highlightRoomId,
       setHighlightRoomId,
       highlightMarkerId,
       setHighlightMarkerId,
+      followMarkerId,
+      setFollowMarkerId,
       pointerLocked,
       setPointerLocked,
       touchMove,
@@ -130,11 +183,15 @@ export function CraftUiProvider({
       markers,
       trails,
       player,
+      cameraSnap,
+      clearCameraSnap,
       flyMode,
       setFlyMode,
       teleportRoomId,
+      requestTeleport,
       highlightRoomId,
       highlightMarkerId,
+      followMarkerId,
       pointerLocked,
       touchMove,
     ]

@@ -38,7 +38,12 @@ const OFFICE_ADMIN_TASKS = [
   {
     href: '/admin/emails',
     label: 'Comms',
-    hint: 'Email outbox and sends',
+    hint: 'Email outbox, Slack test',
+  },
+  {
+    href: '/principal/release',
+    label: 'Go-live',
+    hint: 'Brand, Craft room map, checklist',
   },
   {
     href: '/craft',

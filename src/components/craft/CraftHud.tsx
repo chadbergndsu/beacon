@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import type { Role } from '@/lib/types'
 import type { CraftVisibleMarker } from '@/lib/craft/types'
-import { getRoomFloorId } from '@/lib/craft/campus'
 import { roleLabel } from '@/lib/roles'
 import { useCraftUi } from './CraftUiContext'
 import { FloorSwitcher } from './FloorSwitcher'
@@ -31,17 +30,21 @@ export function CraftHud({
   schoolId: string
   onRefresh: () => void
 }) {
-  const { flyMode, setFlyMode, requestTeleport, layout, pointerLocked, switchFloor, activeFloorId } =
-    useCraftUi()
+  const {
+    flyMode,
+    setFlyMode,
+    requestTeleport,
+    layout,
+    pointerLocked,
+    setHighlightMarkerId,
+    setFollowMarkerId,
+  } = useCraftUi()
   const [toolsOpen, setToolsOpen] = useState(false)
 
   function focusPerson(marker: CraftVisibleMarker) {
-    const floorId = getRoomFloorId(layout, marker.roomId)
-    if (floorId && floorId !== activeFloorId) {
-      switchFloor(floorId, marker.roomId)
-    } else {
-      requestTeleport(marker.roomId)
-    }
+    setHighlightMarkerId(marker.id)
+    setFollowMarkerId(marker.id)
+    requestTeleport(marker.roomId)
   }
 
   return (

@@ -2,35 +2,12 @@
 
 import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Sky, Stars } from '@react-three/drei'
+import { Sky, Stars } from '@react-three/drei'
 import { VoxelSchool } from './VoxelSchool'
 import { OccupancyParticles, PresenceMarkers, RoomLabels } from './PresenceLayer'
 import { SceneEnvironment } from './SceneEnvironment'
 import { ScenePostProcessing } from './ScenePostProcessing'
-import { layoutBounds } from '@/lib/craft/campus'
-import { useCraftUi } from './CraftUiContext'
-
-function TourCameraRig() {
-  const { layout, activeFloorId } = useCraftUi()
-  const bounds = layoutBounds(layout, activeFloorId)
-  const cx = (bounds.minX + bounds.maxX) / 2
-  const cz = (bounds.minZ + bounds.maxZ) / 2
-  const span = Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ)
-
-  return (
-    <OrbitControls
-      target={[cx, 2, cz]}
-      enablePan
-      enableDamping
-      dampingFactor={0.08}
-      minDistance={8}
-      maxDistance={span * 1.4}
-      maxPolarAngle={Math.PI / 2.15}
-      autoRotate
-      autoRotateSpeed={0.35}
-    />
-  )
-}
+import { TourCameraRig } from './TourCameraRig'
 
 export function TourVoxelScene() {
   return (

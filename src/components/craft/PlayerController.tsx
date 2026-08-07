@@ -5,7 +5,7 @@ import { useEffect, useRef, type ComponentRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { PointerLockControls } from '@react-three/drei'
 import * as THREE from 'three'
-import { getRoomById, getRoomCenter, getRoomFloorId, portalsOnFloor, worldPortalAabb } from '@/lib/craft/campus'
+import { portalsOnFloor, worldPortalAabb } from '@/lib/craft/campus'
 import { clampToBounds, resolvePlayerCollision } from '@/lib/craft/collision'
 import { useCraftUi } from './CraftUiContext'
 
@@ -22,6 +22,8 @@ export function PlayerController() {
     setPlayer,
     teleportRoomId,
     requestTeleport,
+    cameraSnap,
+    clearCameraSnap,
     layout,
     geometry,
     activeFloorId,
@@ -53,22 +55,24 @@ export function PlayerController() {
     }
   }, [])
 
+  // Apply one-shot camera snaps from teleports / floor portals
+  useEffect(() => {
+    if (!cameraSnap) return
+    camera.position.set(cameraSnap.x, cameraSnap.y, cameraSnap.z)
+    yaw.current = cameraSnap.yaw
+    pitch.current = cameraSnap.pitch
+    camera.rotation.order = 'YXZ'
+    camera.rotation.y = cameraSnap.yaw
+    camera.rotation.x = cameraSnap.pitch
+    velocity.current.set(0, 0, 0)
+    clearCameraSnap()
+  }, [cameraSnap, camera, clearCameraSnap])
+
   useEffect(() => {
     if (!teleportRoomId) return
-    const room = getRoomById(layout, teleportRoomId)
-    if (!room) {
-      requestTeleport(null)
-      return
-    }
-    const floorId = getRoomFloorId(layout, teleportRoomId)
-    if (floorId) switchFloor(floorId, teleportRoomId)
-    else {
-      const [cx, cy, cz] = getRoomCenter(layout, room)
-      camera.position.set(cx, cy + 0.5, cz)
-    }
-    velocity.current.set(0, 0, 0)
+    // requestTeleport already snapped camera + player; clear the flag
     requestTeleport(null)
-  }, [teleportRoomId, layout, camera, requestTeleport, switchFloor])
+  }, [teleportRoomId, requestTeleport])
 
   useFrame((_, delta) => {
     camera.rotation.order = 'YXZ'

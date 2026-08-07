@@ -1,7 +1,7 @@
 # ADR 001 — Campus twin presence + kiosk welcome
 
-**Status:** Accepted (product plan) · **Date:** 2026-08-05  
-**Context:** Beacon badges/kiosk + BeaconCraft 3D twin (separate deploy)
+**Status:** Accepted · **Updated:** 2026-08-07  
+**Context:** Beacon badges/kiosk + integrated BeaconCraft at `/craft` (legacy external twin optional)
 
 ## Decision
 
@@ -9,20 +9,21 @@ When a student **scans in** at a room kiosk (or RFID device):
 
 1. **Beacon** remains source of truth for attendance, aftercare, billing, and audit (`badge_scans`).
 2. The **kiosk screen** shows a short, friendly **welcome** (name + room + IN/OUT).
-3. Beacon **fans out** a presence event to **BeaconCraft** so the 3D twin places that student **in the matching room** (live markers / glow).
-4. Scan-out moves them out of the room (twin room → exit/off-campus or cleared).
+3. Beacon **fans out** presence to the **campus twin** so markers appear in the matching room.
+4. Scan-out clears the twin overlay for that student (badge presence is still authoritative).
 
-Public marketing tour (`/?tour=1`) stays privacy-first (no real student names). Staff twin views can show real first names once SSO/session is wired.
+**Default twin:** same-origin `/craft` using Go-live room mapping (`settings.craft.roomIdMap`) + name heuristics (`craft-demo-*` layout ids).  
+**Legacy:** if `BEACONCRAFT_URL` is an **external** host and `BEACONCRAFT_SCAN_API_KEY` is set, also `POST /api/scans` to that deploy.
 
-## Why separate apps
+Public marketing tour (`/craft/tour`) stays privacy-first (demo markers + guided stops). Staff `/craft` can show real first names.
+
+## Why (current)
 
 | Concern | Choice |
 |---------|--------|
-| School suite (grades, money, auth) | **Beacon** · https://beacon.commoncentsip.com |
-| 3D property + live presence viz | **BeaconCraft** · https://beaconcraft.vercel.app |
-| Coupling | HTTP scan bridge only (`POST /api/scans` + `SCAN_API_KEY`) — no shared DB yet |
-
-Keeps R3F/three bundle out of the suite app and allows independent deploy.
+| School suite + twin | **Beacon** · `/craft` integrated |
+| Legacy 3D-only deploy | Optional `BEACONCRAFT_URL` external fan-out |
+| Coupling | Badge DB presence + soft mock upsert; HTTP bridge only for external |
 
 ## Target experience (Chris / LCA)
 
@@ -34,31 +35,28 @@ Keeps R3F/three bundle out of the suite app and allows independent deploy.
 
 ## Implementation phases
 
-### Phase A — shipped / in progress
+### Phase A — shipped
 
 - [x] Beacon rooms, badges, public `/kiosk`, RFID `POST /api/kiosk/device-scan`
-- [x] BeaconCraft orbit + walk campus, SSE presence, mock `POST /api/scans`
-- [x] Production fail-closed `SCAN_API_KEY` on BeaconCraft
-- [x] Login + school site links to twin / tour
+- [x] Integrated `/craft` walk campus + presence + mock scan
+- [x] Public `/craft/tour` with guided stops
+- [x] Login + school site links default same-origin
 - [x] Kiosk large welcome flash after successful scan
-- [x] Optional fire-and-forget twin notify from Beacon when env configured
+- [x] Soft twin notify after badge scan (integrated + optional external)
 
-### Phase B — wire real kids (next)
+### Phase B — wire real kids
 
-- [ ] Map Beacon `school_rooms.id` → craft `roomId` (`room-a101`, …)  
-  - Prefer column `school_rooms.twin_room_id` (migration)  
-  - Interim: `BEACONCRAFT_ROOM_MAP` JSON env `{ "<uuid>": "room-a101" }` + name heuristics
-- [ ] Vercel: `BEACONCRAFT_URL`, `BEACONCRAFT_SCAN_API_KEY` (same secret as craft `SCAN_API_KEY`)
-- [ ] On successful `processBadgeScan`: async POST to craft (never block attendance write)
-- [ ] OUT scans: craft room `room-parking` or explicit clear API
-- [ ] Principal → Badges: “Open campus twin” + room mapping UI
+- [x] Map Beacon `school_rooms.id` → craft layout room id (Go-live panel + `BEACONCRAFT_ROOM_MAP` + heuristics)
+- [x] On successful `processBadgeScan`: async twin update (never block attendance write)
+- [x] OUT scans: clear integrated mock overlay
+- [x] Principal → Badges / Go-live: campus twin + room mapping UI
+- [ ] Optional: persist `school_rooms.twin_room_id` column (settings map is enough for pilot)
 
 ### Phase C — polish
 
-- [ ] Shared auth so staff twin uses real roster (no mock seeds in prod)
-- [ ] Redis/Postgres presence store (multi-instance Vercel)
-- [ ] Kiosk hardware: small always-on welcome display (current tablet UI is enough for pilot)
+- [ ] Redis/Postgres presence store (multi-instance Vercel) beyond badge sessions + mock map
 - [ ] Family portal: “where is my child” only for linked students (already filtered in craft)
+- [ ] Longer camera follow of live markers after person search (teleport + highlight shipped)
 
 ## Non-goals (now)
 
@@ -68,28 +66,20 @@ Keeps R3F/three bundle out of the suite app and allows independent deploy.
 
 ## Security
 
-- Craft scans: `x-api-key` required in production
+- External craft scans: `x-api-key` required on that deploy
 - Kiosk tokens expire (migrations 015/018)
-- Twin fan-out uses server-only secret; never expose scan key to browser
+- Twin fan-out uses server-only secret when external; never expose scan key to browser
 - Family views must keep RBAC filter (`presence-filter`)
 
-## Env (Beacon → Craft)
+## Env
 
 ```bash
-# Beacon (server)
+# Optional explicit map (uuid → craft-demo-room-101)
+BEACONCRAFT_ROOM_MAP={"…":"craft-demo-room-101"}
+
+# Legacy external twin only
 BEACONCRAFT_URL=https://beaconcraft.vercel.app
-BEACONCRAFT_SCAN_API_KEY=<same as BeaconCraft SCAN_API_KEY>
-# Optional explicit map
-# BEACONCRAFT_ROOM_MAP={"uuid-of-room":"room-a101"}
-
-# Beacon (public links)
-NEXT_PUBLIC_BEACONCRAFT_URL=https://beaconcraft.vercel.app
-
-# BeaconCraft
-SCAN_API_KEY=<long random>
+BEACONCRAFT_SCAN_API_KEY=…
 ```
 
-## Related code
-
-- Beacon: `src/lib/badge/store.ts` (`processBadgeScan`), `src/components/badge/KioskScanner.tsx`, `src/lib/badge/campus-twin.ts`
-- Craft: `src/app/api/scans/route.ts`, `src/lib/presence-store.ts`, `src/lib/school.ts`
+Prefer Go-live **Craft room mapping** over env JSON when possible.

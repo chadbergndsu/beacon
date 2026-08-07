@@ -161,7 +161,7 @@ export default async function SchoolWebsitePage({
                 Explore campus in 3D
               </h2>
               <p className="mt-3 text-muted-foreground leading-relaxed">
-                Take a guided tour of {brand.name} — entrance, classrooms, chapel, gym, and yard —
+                Take a guided tour of {brand.name} — entrance, hall, classrooms, office, and gym —
                 in a live digital twin. No login required for the public tour.
               </p>
               <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
@@ -195,7 +195,7 @@ export default async function SchoolWebsitePage({
                   </p>
                   <p className="mt-1 text-lg font-semibold tracking-tight">Live campus twin</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    Classroom blocks, course glow, and a step-by-step walkthrough of the property.
+                    Guided stops through the property, classroom blocks, and free orbit when you want to explore.
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">

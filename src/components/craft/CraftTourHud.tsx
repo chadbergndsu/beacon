@@ -2,24 +2,41 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { getRoomFloorId } from '@/lib/craft/campus'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { TOUR_STOPS } from '@/lib/craft/tour-stops'
 import { useCraftUi } from './CraftUiContext'
 import { FloorSwitcher } from './FloorSwitcher'
 import { Minimap } from './Minimap'
 import { PersonSearch, RoomSearch } from './CraftPanels'
 import { TourVoxelScene } from './TourVoxelScene'
 
-export function CraftTourHud({ markers }: { markers: { id: string; label: string; roomId: string; since: string; anonymized: boolean }[] }) {
-  const { layout, requestTeleport, activeFloorId, switchFloor } = useCraftUi()
+export function CraftTourHud({
+  markers,
+}: {
+  markers: { id: string; label: string; roomId: string; since: string; anonymized: boolean }[]
+}) {
+  const {
+    layout,
+    requestTeleport,
+    setHighlightRoomId,
+    setHighlightMarkerId,
+  } = useCraftUi()
   const [toolsOpen, setToolsOpen] = useState(false)
+  const [stopIndex, setStopIndex] = useState(0)
+  const stop = TOUR_STOPS[stopIndex]!
+
+  function goToStop(next: number) {
+    const idx = ((next % TOUR_STOPS.length) + TOUR_STOPS.length) % TOUR_STOPS.length
+    const s = TOUR_STOPS[idx]!
+    setStopIndex(idx)
+    setHighlightRoomId(s.roomId)
+    requestTeleport(s.roomId)
+  }
 
   function focusPerson(marker: (typeof markers)[number]) {
-    const floorId = getRoomFloorId(layout, marker.roomId)
-    if (floorId && floorId !== activeFloorId) {
-      switchFloor(floorId, marker.roomId)
-    } else {
-      requestTeleport(marker.roomId)
-    }
+    setHighlightMarkerId(marker.id)
+    setHighlightRoomId(marker.roomId)
+    requestTeleport(marker.roomId)
   }
 
   return (
@@ -28,7 +45,7 @@ export function CraftTourHud({ markers }: { markers: { id: string; label: string
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-white">{layout.name} · Campus tour</p>
           <p className="truncate text-[10px] text-slate-300">
-            Public preview · drag to orbit · no login required
+            Public preview · guided stops or free orbit · no login required
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5 text-xs">
@@ -52,13 +69,49 @@ export function CraftTourHud({ markers }: { markers: { id: string; label: string
         <TourVoxelScene />
         <FloorSwitcher />
         <Minimap />
+
         <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-3">
-          <p className="rounded-full bg-black/55 px-3 py-1 text-[11px] text-white backdrop-blur-sm">
-            Demo markers only · real badge presence after staff sign-in at{' '}
-            <Link href="/craft" className="pointer-events-auto font-semibold underline">
-              /craft
-            </Link>
-          </p>
+          <div className="pointer-events-auto w-full max-w-lg rounded-xl border border-white/15 bg-black/70 px-3 py-2.5 text-white shadow-lg backdrop-blur-md">
+            <div className="flex items-start gap-2">
+              <button
+                type="button"
+                aria-label="Previous stop"
+                className="mt-0.5 rounded-md border border-white/20 bg-white/10 p-1.5 hover:bg-white/20"
+                onClick={() => goToStop(stopIndex - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300">
+                  Stop {stopIndex + 1} of {TOUR_STOPS.length}
+                </p>
+                <p className="truncate text-sm font-semibold">{stop.title}</p>
+                <p className="mt-0.5 text-[11px] leading-snug text-slate-200">{stop.blurb}</p>
+              </div>
+              <button
+                type="button"
+                aria-label="Next stop"
+                className="mt-0.5 rounded-md border border-white/20 bg-white/10 p-1.5 hover:bg-white/20"
+                onClick={() => goToStop(stopIndex + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-2 flex justify-center gap-1">
+              {TOUR_STOPS.map((s, i) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  aria-label={`Go to ${s.title}`}
+                  aria-current={i === stopIndex}
+                  className={`h-1.5 w-4 rounded-full transition ${
+                    i === stopIndex ? 'bg-sky-400' : 'bg-white/25 hover:bg-white/40'
+                  }`}
+                  onClick={() => goToStop(i)}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
