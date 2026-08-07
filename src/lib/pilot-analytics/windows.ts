@@ -29,6 +29,10 @@ export function isoWeekStart(now: Date): string {
 }
 
 export function trailingWindow(now: Date, days: number): { start: string; end: string } {
+  if (!Number.isInteger(days) || days <= 0) {
+    throw new Error('days must be a positive integer')
+  }
+
   const end = utcDateKey(now)
   const endMidnight = utcMidnightMilliseconds(end)
 
@@ -76,6 +80,10 @@ export function buildRatioMetric(input: {
   assertNonNegative(eligible, 'eligible')
 
   if (eligible === 0) {
+    if (active !== 0) {
+      throw new Error('active must be zero when eligible is zero')
+    }
+
     return { state: 'no_eligible', active: 0, eligible: 0 }
   }
 

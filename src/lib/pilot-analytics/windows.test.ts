@@ -26,6 +26,10 @@ describe('UTC date windows', () => {
       end: '2026-08-10',
     })
   })
+
+  it.each([0, -1, 1.5])('rejects a non-positive or fractional trailing window length of %s days', (days) => {
+    expect(() => trailingWindow(new Date('2026-08-10T00:00:00Z'), days)).toThrow()
+  })
 })
 
 describe('baseline window', () => {
@@ -65,6 +69,10 @@ describe('ratio metrics', () => {
   it('rejects negative ratio counts', () => {
     expect(() => buildRatioMetric({ active: -1, eligible: 8 })).toThrow()
     expect(() => buildRatioMetric({ active: 1, eligible: -8 })).toThrow()
+  })
+
+  it('rejects activity when no users are eligible', () => {
+    expect(() => buildRatioMetric({ active: 1, eligible: 0 })).toThrow()
   })
 })
 
