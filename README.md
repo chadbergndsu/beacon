@@ -357,7 +357,7 @@ Minecraft-style voxel campus driven by badge presence. Not the same product as *
 
 **Controls:** click the world to capture mouse · **WASD / arrow keys** · Shift sprint · Space/Shift fly (admin) · Floor 1↔2 switcher · Mobile: on-screen stick.
 
-**Privacy (minors):** public tour / twin labels never show real student names (fictional demos only). Staff twin shows **real teacher names** (Leigh Evans, Debbie, Jen Berg, John/Lexie Lynn, Frank, Marian, Chris Cowan) + **enrollment counts** (~110, younger-heavy). Student avatars stay anonymous. Parents see **where their linked child is** (real name + room). Mock scans accept fictional demo kids only.
+**Privacy (minors):** public tour / twin labels never show real student names (fictional demos only). Staff twin shows **real teacher names** (Leigh Evans, Debbie, Jen Berg, John/Lexie Lynn, Frank, Marian, Will Gordon · chapel, Chris Cowan) + **enrollment counts** (~110, younger-heavy). Student avatars stay anonymous. Parents see **where their linked child is** (real name + room). Mock scans accept fictional demo kids only.
 
 **Extend:** edit layout on Go-live or import JSON/SVG (`src/lib/craft/svg-import.ts`); custom layout stored in `schools.settings.craft.customLayout`. Wire hardware scans via existing `POST /api/kiosk/device-scan` — presence API merges DB scans when room names align.
 

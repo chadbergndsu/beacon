@@ -84,6 +84,7 @@ describe('staffMarkersForLayout', () => {
     expect(staff.some((m) => m.label === 'Jen Berg')).toBe(true)
     expect(staff.some((m) => m.label === 'Chris Cowan')).toBe(true)
     expect(staff.some((m) => m.label === 'Marian')).toBe(true)
+    expect(staff.some((m) => m.label === 'Will Gordon')).toBe(true)
     const jen = staff.find((m) => m.label === 'Jen Berg')
     expect(jen?.look?.hair).toBe('#f5d76e')
     const chris = staff.find((m) => m.label === 'Chris Cowan')

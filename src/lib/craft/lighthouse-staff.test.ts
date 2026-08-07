@@ -33,8 +33,12 @@ describe('Lighthouse staff + enrollment', () => {
         'Frank',
         'Marian',
         'Chris Cowan',
+        'Will Gordon',
       ])
     )
+    const will = LIGHTHOUSE_STAFF.find((s) => s.staffId === 'will-gordon')
+    expect(will?.title).toMatch(/chapel/i)
+    expect(will?.roomId).toBe('craft-demo-chapel')
     const jen = LIGHTHOUSE_STAFF.find((s) => s.staffId === 'jen-berg')
     expect(jen?.look.hair).toBe('#f5d76e')
     const chris = LIGHTHOUSE_STAFF.find((s) => s.staffId === 'chris-cowan')

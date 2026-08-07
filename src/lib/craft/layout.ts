@@ -41,6 +41,7 @@ export const DEMO_SCHOOL_LAYOUT: CraftCampusLayout = {
       elevationY: 0,
       rooms: [
         room(CRAFT_DEMO_ROOM_IDS.entrance, 'Main Entrance', 'other', [18, 0, 28], [12, 4, 4], '#cbd5e1'),
+        room(CRAFT_DEMO_ROOM_IDS.chapel, 'Chapel', 'other', [4, 0, 28], [12, 4.5, 6], '#ddd6fe'),
         room(CRAFT_DEMO_ROOM_IDS.hall, 'Main Hall', 'other', [20, 0, 8], [8, 4, 20], '#e2e8f0'),
         room(CRAFT_DEMO_ROOM_IDS.room101, 'Room 101', 'classroom', [4, 0, 16], [14, 4, 10], '#bfdbfe'),
         room(CRAFT_DEMO_ROOM_IDS.room102, 'Room 102', 'classroom', [4, 0, 4], [14, 4, 10], '#93c5fd'),

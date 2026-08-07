@@ -103,6 +103,6 @@ Kid review of the School Digital Twin asked for:
 3. **Teachers in rooms** — staff markers (prefer **real** teacher names from roster mapping)
 4. **People not creepy** — low-poly block people with faces (no glowing capsules / blank spheres)
 
-**Minor privacy (follow-up):** public/tour surfaces use fictional student names only. Staff twin shows real teachers + enrollment counts (~110 at Lighthouse, heavier younger); parents see where their linked child is. Public twin fan-out never sends real `displayName`s. Named staff: Leigh Evans (1st), Debbie (2–3), Jen Berg (4–5, blond), John/Lexie Lynn (middle/HS), Frank (HS), Marian (secretary), Chris Cowan (principal, larger avatar).
+**Minor privacy (follow-up):** public/tour surfaces use fictional student names only. Staff twin shows real teachers + enrollment counts (~110 at Lighthouse, heavier younger); parents see where their linked child is. Public twin fan-out never sends real `displayName`s. Named staff: Leigh Evans (1st), Debbie (2–3), Jen Berg (4–5, blond), John/Lexie Lynn (middle/HS), Frank (HS), Marian (secretary), Will Gordon (chapel), Chris Cowan (principal, larger avatar).
 
 In-app BeaconCraft at `/craft` is the primary surface for this feedback; external `beaconcraft.vercel.app` remains the marketing tour host.

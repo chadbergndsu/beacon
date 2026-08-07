@@ -142,6 +142,20 @@ export const LIGHTHOUSE_STAFF: LighthouseStaffDef[] = [
       roleLabel: 'principal',
     },
   },
+  {
+    staffId: 'will-gordon',
+    name: 'Will Gordon',
+    roomId: CRAFT_DEMO_ROOM_IDS.chapel,
+    title: 'Chapel',
+    look: {
+      hair: '#44403c',
+      skin: '#e2b089',
+      shirt: '#1e3a5f',
+      pants: '#0f172a',
+      scale: 1.08,
+      roleLabel: 'chapel',
+    },
+  },
 ]
 
 export function lighthouseEnrollmentByRoom(
