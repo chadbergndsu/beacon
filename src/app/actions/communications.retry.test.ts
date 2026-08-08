@@ -116,6 +116,28 @@ describe('sender-owned outbox retry', () => {
     expect(mocks.resendOutboxRow).toHaveBeenNthCalledWith(2, expect.anything(), expect.anything(), nextKey)
   })
 
+  it('reports a queued replay as in progress and incomplete', async () => {
+    mocks.resendOutboxRow.mockResolvedValue({ id: 'retry-queued', status: 'queued' })
+
+    await expect(resendFailedEmail('row-1', attemptKey)).resolves.toEqual({
+      ok: true,
+      emailed: 0,
+      emailNote: 'Retry is still processing. Check the outbox for its current status.',
+      attemptCompleted: false,
+    })
+  })
+
+  it.each(['sent', 'skipped'] as const)('marks a completed %s retry as completed', async (status) => {
+    mocks.resendOutboxRow.mockResolvedValue({
+      id: `retry-${status}`, status, attemptCompleted: true,
+    })
+
+    await expect(resendFailedEmail('row-1', attemptKey)).resolves.toMatchObject({
+      ok: true,
+      attemptCompleted: true,
+    })
+  })
+
   it('tags every Groups manual compose row with the verified sender', async () => {
     await expect(composeFamilyMessage({
       subject: 'Faculty update', body: 'Private update', audience: 'teachers', class_id: null,

@@ -179,3 +179,47 @@ Node 26.7 exposes an experimental global Web Storage implementation without a pe
 - The focus transition is tied to explicit reset state and verified in both component and browser tests. No automatic draft loss remains after any accepted People outcome.
 - Existing non-People send callers remain compatible because `attemptCompleted` is an optional return-only field. No database upgrade or remote operation was required.
 - Known environment-only warnings remain unchanged: Node's experimental Web Storage requires `NODE_OPTIONS=--no-webstorage` for jsdom, Next reports the existing multiple-lockfile root warning, and Playwright reports Node deprecation/color warnings. None affected gate results.
+
+## Final Fix Round 3 — clean draft reset and queued retry replay
+
+### Architecture and behavior
+
+- The People form now advances a controlled draft generation when `Start a new message` is activated. That generation remounts the recipient combobox, clearing its private query, results, pending, empty, active-option, and error state while the old instance's unmount guard invalidates every in-flight search callback. The form's post-render focus effect targets the newly mounted To input.
+- The remounted combobox performs its ordinary recent-reference reauthorization through the existing server action. It does not carry old rendered results across drafts, and a late result from the completed draft cannot populate the new draft.
+- Retry actions now explicitly return `attemptCompleted: false` for `queued` replay and `attemptCompleted: true` for completed `sent` and `skipped` outcomes. A failed result still propagates completion only when the lower send lifecycle confirms transport completed.
+- The retry button treats incomplete success as processing: it keeps the same retry-action UUID, renders a neutral outbox-status message, and does not call `router.refresh()`. Repeated clicks therefore replay the same queued claim. Completed sent, skipped, or failed attempts rotate; thrown/unknown actions retain the key.
+- No migration, RLS, recipient metadata, or email payload changed in Round 3.
+
+### TDD RED/GREEN evidence
+
+- RED — clean new draft: the new stateful form test completed a send while a deferred People search was pending, activated `Start a new message`, and found the exact same To input instance with its private query/search state intact.
+- GREEN — clean new draft: the form test proves the To input is a new instance with an empty value, no stale pending announcement or option, focus restored to the new input, and a late old-draft promise unable to repopulate it. Existing combobox authorization/recents tests remain green.
+- RED — queued replay semantics: action tests showed queued retry returned generic `ok: true` without completion, sent/skipped omitted completion, and the button had no processing message and unconditionally rotated/refreshed every `ok: true` result.
+- GREEN — queued replay semantics: action/button tests prove queued replay carries `attemptCompleted: false`, retains the same UUID over repeated clicks, renders calm processing copy, and performs no client refresh. Sent/skipped and confirmed failed completion rotate; rejected/unknown actions retain; synchronous double click remains latched.
+- GREEN — durable replay: the send lifecycle test invokes the same duplicate queued claim twice and proves both return the prior `queued` row with zero transport calls.
+
+### Round 3 verification
+
+- Focused combobox/form/retry/action/send tests: 7 files / 83 tests passed.
+- Full `npm run ci`: lint, typecheck, 105 test files / 546 tests, coverage thresholds, and Next production build passed.
+- Full local Playwright: 18/18 passed, including both desktop and mobile People new-message journeys.
+- `git diff --check`: passed before final commit.
+- Database gates were not repeated because Round 3 changes no migration, query, policy, or database shape; the immediately preceding full local pgTAP result remains 4 files / 99 tests passed.
+
+### Round 3 files
+
+- `src/components/comms/PeopleMessageForm.tsx`
+- `src/components/comms/PeopleMessageForm.test.tsx`
+- `src/components/comms/ResendEmailButton.tsx`
+- `src/components/comms/ResendEmailButton.test.tsx`
+- `src/app/actions/communications.ts`
+- `src/app/actions/communications.retry.test.ts`
+- `src/lib/email/send.lifecycle.test.ts`
+
+### Round 3 self-review and concerns
+
+- The combobox generation boundary is scoped only to deliberate new-draft reset. It does not clear accepted completed content before the user acts, and it does not weaken recent-recipient authorization.
+- Old search promises close over the unmounted combobox request counter; cleanup increments that counter before any late callback can apply results. New-instance requests use independent state.
+- A queued retry never creates another transport claim from the button: the same client key reaches the same case-normalized unique claim, and the send layer returns the existing queued row without transport.
+- No misleading resend-success copy is shown for queued replay. The neutral processing message directs the user to current outbox state without claiming delivery.
+- No blocking concern remains. Existing Node/Next/Playwright environment warnings are unchanged.

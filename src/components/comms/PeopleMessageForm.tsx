@@ -39,6 +39,7 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
   const [sendStatus, setSendStatus] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [attemptLocked, setAttemptLocked] = useState(false)
+  const [draftGeneration, setDraftGeneration] = useState(0)
 
   const refsKey = selected.map((item) => item.key).join('|')
   const readyPreview = preview?.forKey === refsKey ? preview.value : null
@@ -74,7 +75,7 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
     if (!focusNewDraft.current || attemptLocked) return
     focusNewDraft.current = false
     formRef.current?.querySelector<HTMLInputElement>('[role="combobox"]')?.focus()
-  }, [attemptLocked, selected.length])
+  }, [attemptLocked, draftGeneration, selected.length])
 
   useEffect(() => {
     if (selected.length === 0) return
@@ -139,6 +140,7 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
     setSendError(null)
     setSendStatus(null)
     setAttemptLocked(false)
+    setDraftGeneration((generation) => generation + 1)
     onDirtyChange?.(false)
   }
 
@@ -197,6 +199,7 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
 
       <div>
         <PeopleRecipientCombobox
+          key={draftGeneration}
           selected={selected}
           onChange={updateSelected}
           disabled={sending || attemptLocked}

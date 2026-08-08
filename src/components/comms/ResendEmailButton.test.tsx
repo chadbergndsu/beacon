@@ -37,6 +37,35 @@ describe('ResendEmailButton attempt lifecycle', () => {
     expect(mocks.resendFailedEmail.mock.calls[1][1]).not.toBe(firstKey)
   })
 
+  it('retains the attempt key and avoids refresh while a queued replay is processing', async () => {
+    mocks.resendFailedEmail.mockResolvedValue({
+      ok: true,
+      emailed: 0,
+      emailNote: 'Retry is still processing. Check the outbox for its current status.',
+      attemptCompleted: false,
+    })
+    render(<ResendEmailButton outboxId="row-1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resend' }))
+    expect(await screen.findByText('Retry is still processing. Check the outbox for its current status.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Resend' }))
+    await waitFor(() => expect(mocks.resendFailedEmail).toHaveBeenCalledTimes(2))
+    expect(mocks.resendFailedEmail.mock.calls[1][1]).toBe(mocks.resendFailedEmail.mock.calls[0][1])
+    expect(mocks.refresh).not.toHaveBeenCalled()
+  })
+
+  it.each(['sent', 'skipped'])('rotates and refreshes after a completed %s retry', async () => {
+    mocks.resendFailedEmail.mockResolvedValue({ ok: true, emailed: 1, attemptCompleted: true })
+    render(<ResendEmailButton outboxId="row-1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resend' }))
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalledTimes(1))
+    const firstKey = mocks.resendFailedEmail.mock.calls[0][1]
+    fireEvent.click(screen.getByRole('button', { name: 'Resend' }))
+    await waitFor(() => expect(mocks.resendFailedEmail).toHaveBeenCalledTimes(2))
+    expect(mocks.resendFailedEmail.mock.calls[1][1]).not.toBe(firstKey)
+  })
+
   it('retains the attempt key after a rejected action or unknown failure', async () => {
     mocks.resendFailedEmail
       .mockRejectedValueOnce(new Error('network unavailable'))
@@ -51,7 +80,7 @@ describe('ResendEmailButton attempt lifecycle', () => {
   })
 
   it('synchronously latches double click while one retry is pending', async () => {
-    const pending = deferred<{ ok: true; emailed: number }>()
+    const pending = deferred<{ ok: true; emailed: number; attemptCompleted: true }>()
     mocks.resendFailedEmail.mockReturnValue(pending.promise)
     render(<ResendEmailButton outboxId="row-1" />)
     const button = screen.getByRole('button', { name: 'Resend' })
@@ -60,7 +89,7 @@ describe('ResendEmailButton attempt lifecycle', () => {
     button.click()
 
     expect(mocks.resendFailedEmail).toHaveBeenCalledTimes(1)
-    pending.resolve({ ok: true, emailed: 1 })
+    pending.resolve({ ok: true, emailed: 1, attemptCompleted: true })
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalledTimes(1))
   })
 })

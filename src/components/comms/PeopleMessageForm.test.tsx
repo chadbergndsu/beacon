@@ -312,6 +312,33 @@ describe('PeopleMessageForm', () => {
     expect(mocks.sendPeopleMessage.mock.calls[1][0].attempt_key).not.toBe(firstAttempt)
   })
 
+  it('starts with a clean To field and ignores an in-flight search from the completed draft', async () => {
+    const staleSearch = deferred<{ ok: true; results: PeopleSearchResult[] }>()
+    mocks.sendPeopleMessage.mockResolvedValueOnce({ ok: true, sent: 2, failed: 0, skipped: 0 })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync })
+    render(<PeopleMessageForm />)
+    await fillValidPeopleMessage(user)
+
+    const completedTo = screen.getByRole('combobox', { name: 'To' })
+    mocks.searchPeopleRecipients.mockReturnValueOnce(staleSearch.promise)
+    await user.type(completedTo, 'Bl')
+    await advance(250)
+    expect(screen.getByText('1 selected. Searching recipients.')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Send to 2 recipients' }))
+
+    await user.click(await screen.findByRole('button', { name: 'Start a new message' }))
+    const newTo = screen.getByRole('combobox', { name: 'To' })
+    expect(newTo).not.toBe(completedTo)
+    expect((newTo as HTMLInputElement).value).toBe('')
+    expect(document.activeElement).toBe(newTo)
+    expect(screen.queryByText('1 selected. Searching recipients.')).toBeNull()
+    expect(screen.queryByRole('option', { name: /Blair Faculty/ })).toBeNull()
+
+    await act(async () => staleSearch.resolve({ ok: true, results: [blairFaculty] }))
+    expect(screen.queryByRole('option', { name: /Blair Faculty/ })).toBeNull()
+    expect((newTo as HTMLInputElement).value).toBe('')
+  })
+
   it('uses alerts for preview failures and keeps send unavailable', async () => {
     mocks.previewPeopleRecipients.mockResolvedValueOnce({
       ok: false,

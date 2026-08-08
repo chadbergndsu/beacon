@@ -113,6 +113,27 @@ describe('durable email delivery lifecycle', () => {
     expect(mocks.deliverWithCascade).not.toHaveBeenCalled()
   })
 
+  it('keeps a queued replay in progress across repeated claims without transport', async () => {
+    const insert = thenable({ data: null, error: { code: '23505', message: 'duplicate' } })
+    const prior = thenable({
+      data: { id: 'row-prior', status: 'queued', provider: null, error: null, sent_at: null },
+      error: null,
+    })
+    let calls = 0
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn(() => (++calls % 2 === 1 ? insert : prior)),
+    })
+
+    const first = await queueAndSendEmail(email)
+    const second = await queueAndSendEmail(email)
+
+    expect(first).toMatchObject({ id: 'row-prior', status: 'queued', replayed: true })
+    expect(second).toMatchObject({ id: 'row-prior', status: 'queued', replayed: true })
+    expect(first.attemptCompleted).toBeUndefined()
+    expect(second.attemptCompleted).toBeUndefined()
+    expect(mocks.deliverWithCascade).not.toHaveBeenCalled()
+  })
+
   it('keeps truthful delivery status and adds a calm note when final bookkeeping fails', async () => {
     const insert = thenable({ data: { id: 'row-1', status: 'queued' }, error: null })
     const update = thenable({ data: null, error: { message: 'private update failure' } })

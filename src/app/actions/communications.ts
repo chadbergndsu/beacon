@@ -35,8 +35,9 @@ export type CommsResult =
       emailNote?: string
       count?: number
       sample?: string[]
+      attemptCompleted?: boolean
     }
-  | { ok: false; error: string; attemptCompleted?: true }
+  | { ok: false; error: string; attemptCompleted?: boolean }
 
 async function requireStaff() {
   const supabase = await createClient()
@@ -398,12 +399,13 @@ export async function resendFailedEmail(outboxId: string, attemptKey: string): P
   return {
     ok: true,
     emailed: result.status === 'queued' ? 0 : 1,
+    attemptCompleted: result.status !== 'queued',
     emailNote:
       result.status === 'skipped'
         ? 'Still log-only — configure RESEND_API_KEY.'
         : result.status === 'queued'
-          ? 'Retry is already queued or in progress.'
-        : 'Resent successfully.',
+          ? 'Retry is still processing. Check the outbox for its current status.'
+          : 'Resent successfully.',
   }
 }
 
