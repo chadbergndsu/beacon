@@ -28,6 +28,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
 const FACULTY_ROLES: FacultyRole[] = ['admin', 'staff', 'principal', 'teacher']
+const AUDIT_FAILURE_NOTE = 'Delivery completed. Activity history may be incomplete.'
 
 function emptyPeoplePreview(): PeoplePreview {
   return {
@@ -195,28 +196,67 @@ export async function sendPeopleMessage(input: {
     }))
 
     const delivery = await queueAndSendBatch(emails, { brand })
-    await access.admin.from('audit_logs').insert({
-      school_id: access.sender.schoolId,
-      user_id: access.user.id,
-      action: 'comms.people',
-      table_name: 'email_outbox',
-      details: {
-        mode: 'people',
-        selected: refs.length,
-        recipients: emails.length,
-        sent: delivery.sent,
-        failed: delivery.failed,
-        skipped: delivery.skipped,
-      },
-    })
+    const bookkeepingContext = {
+      schoolId: access.sender.schoolId,
+      userId: access.user.id,
+      selected: refs.length,
+      recipients: emails.length,
+      sent: delivery.sent,
+      failed: delivery.failed,
+      skipped: delivery.skipped,
+    }
+    let auditFailed = false
+    try {
+      const { error: auditError } = await access.admin.from('audit_logs').insert({
+        school_id: access.sender.schoolId,
+        user_id: access.user.id,
+        action: 'comms.people',
+        table_name: 'email_outbox',
+        details: {
+          mode: 'people',
+          selected: refs.length,
+          recipients: emails.length,
+          sent: delivery.sent,
+          failed: delivery.failed,
+          skipped: delivery.skipped,
+        },
+      })
+      if (auditError) {
+        auditFailed = true
+        reportError(new Error('People messaging audit failed'), {
+          surface: 'people_messaging',
+          operation: 'audit',
+          ...bookkeepingContext,
+        })
+      }
+    } catch {
+      auditFailed = true
+      reportError(new Error('People messaging audit failed'), {
+        surface: 'people_messaging',
+        operation: 'audit',
+        ...bookkeepingContext,
+      })
+    }
 
-    revalidatePath('/admin/emails')
+    try {
+      revalidatePath('/admin/emails')
+    } catch {
+      reportError(new Error('People messaging revalidation failed'), {
+        surface: 'people_messaging',
+        operation: 'revalidate',
+        ...bookkeepingContext,
+      })
+    }
+
+    const note = [delivery.note, auditFailed ? AUDIT_FAILURE_NOTE : undefined]
+      .filter(Boolean)
+      .join(' ')
     return {
       ok: true,
       sent: delivery.sent,
       failed: delivery.failed,
       skipped: delivery.skipped,
-      ...(delivery.note ? { note: delivery.note } : {}),
+      ...(note ? { note } : {}),
     }
   } catch {
     reportError(new Error('People messaging send failed'), {

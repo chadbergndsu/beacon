@@ -144,6 +144,7 @@ describe('People messaging actions', () => {
     mocks.subjectTag.mockReturnValue('Beacon')
     mocks.appBaseUrl.mockReturnValue('https://beacon.test')
     mocks.auditInsert.mockResolvedValue({ data: null, error: null })
+    mocks.revalidatePath.mockImplementation(() => undefined)
   })
 
   it('rejects an absent user before directory access', async () => {
@@ -463,6 +464,115 @@ describe('People messaging actions', () => {
         },
       })
     )
+  })
+
+  it('preserves delivery counts and reports safely when audit insert resolves with an error', async () => {
+    mocks.auditInsert.mockResolvedValue({
+      data: null,
+      error: { message: 'private audit database error' },
+    })
+
+    await expect(sendPeopleMessage(validInput)).resolves.toEqual({
+      ok: true,
+      sent: 1,
+      failed: 0,
+      skipped: 0,
+      note: 'Delivery completed. Activity history may be incomplete.',
+    })
+    expect(mocks.queueAndSendBatch).toHaveBeenCalledTimes(1)
+    expect(mocks.reportError).toHaveBeenCalledWith(expect.any(Error), {
+      surface: 'people_messaging',
+      operation: 'audit',
+      schoolId,
+      userId: teacherId,
+      selected: 1,
+      recipients: 1,
+      sent: 1,
+      failed: 0,
+      skipped: 0,
+    })
+    const reported = JSON.stringify(mocks.reportError.mock.calls)
+    expect(reported).not.toContain(validInput.subject)
+    expect(reported).not.toContain(validInput.body)
+    expect(reported).not.toContain('parent@school.test')
+    expect(reported).not.toContain('Parent')
+    expect(reported).not.toContain(studentId)
+  })
+
+  it('preserves delivery counts when audit insert rejects', async () => {
+    mocks.auditInsert.mockRejectedValue(new Error('private audit rejection'))
+
+    await expect(sendPeopleMessage(validInput)).resolves.toEqual({
+      ok: true,
+      sent: 1,
+      failed: 0,
+      skipped: 0,
+      note: 'Delivery completed. Activity history may be incomplete.',
+    })
+    expect(mocks.queueAndSendBatch).toHaveBeenCalledTimes(1)
+    expect(mocks.reportError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ operation: 'audit' })
+    )
+  })
+
+  it('preserves delivery counts when path revalidation throws', async () => {
+    mocks.revalidatePath.mockImplementation(() => {
+      throw new Error('private revalidation failure')
+    })
+
+    await expect(sendPeopleMessage(validInput)).resolves.toEqual({
+      ok: true,
+      sent: 1,
+      failed: 0,
+      skipped: 0,
+    })
+    expect(mocks.queueAndSendBatch).toHaveBeenCalledTimes(1)
+    expect(mocks.reportError).toHaveBeenCalledWith(expect.any(Error), {
+      surface: 'people_messaging',
+      operation: 'revalidate',
+      schoolId,
+      userId: teacherId,
+      selected: 1,
+      recipients: 1,
+      sent: 1,
+      failed: 0,
+      skipped: 0,
+    })
+  })
+
+  it('combines the transport and audit notes without changing partial delivery counts', async () => {
+    const deliveries = makeDeliveries(3)
+    mocks.resolvePeopleDirectory.mockResolvedValue({
+      preview: {
+        selectedCount: 1,
+        recipientCount: 3,
+        selections: [],
+        unavailableCount: 0,
+      },
+      deliveries,
+      rejectedKeys: [],
+    })
+    mocks.queueAndSendBatch.mockResolvedValue({
+      sent: 1,
+      failed: 1,
+      skipped: 1,
+      total: 3,
+      note: 'Emails logged only.',
+    })
+    mocks.auditInsert.mockResolvedValue({
+      data: null,
+      error: { message: 'private audit database error' },
+    })
+
+    await expect(sendPeopleMessage(validInput)).resolves.toEqual({
+      ok: true,
+      sent: 1,
+      failed: 1,
+      skipped: 1,
+      note: 'Emails logged only. Delivery completed. Activity history may be incomplete.',
+    })
+    expect(mocks.queueAndSendBatch).toHaveBeenCalledTimes(1)
   })
 
   it('returns a stable send error without reporting message or recipient details', async () => {
