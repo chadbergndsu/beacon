@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
+import { createHmac, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
@@ -22,24 +22,45 @@ import {
 type LocalStatus = {
   ANON_KEY: string
   API_URL: string
+  JWT_SECRET: string
   SERVICE_ROLE_KEY: string
 }
-type TablePrivilege = 'SELECT' | 'INSERT' | 'DELETE'
-type PrivilegeSnapshot = {
-  schemaUsage: boolean
-  tables: Record<string, Record<TablePrivilege, boolean>>
+type CanonicalAclRow = {
+  object_type: string
+  object_name: string
+  grantor: string
+  grantee: string
+  privilege_type: string
+  is_grantable: boolean
+}
+type CanonicalMembershipRow = {
+  role_name: string
+  member_name: string
+  grantor: string
+  admin_option: boolean
+  inherit_option: boolean
+  set_option: boolean
+}
+type CanonicalAccessSnapshot = {
+  acl: CanonicalAclRow[]
+  memberships: CanonicalMembershipRow[]
+}
+type DisposableDataRole = {
+  dataRole: string
+  jwt: string
+  loginRole: string
 }
 type TestIdentity = { id: string; client: SupabaseClient }
 
 const TABLES = ['schools', 'profiles', 'students', 'parent_students'] as const
-const TABLE_PRIVILEGES: TablePrivilege[] = ['SELECT', 'INSERT', 'DELETE']
 const schoolId = randomUUID()
 const outsideSchoolId = randomUUID()
 const studentId = randomUUID()
 const outsideStudentId = randomUUID()
 const reservedFirstName = 'R,()"\\%_'
 const createdUserIds: string[] = []
-let admin: SupabaseClient | null = null
+let authAdmin: SupabaseClient | null = null
+let dataAdmin: SupabaseClient | null = null
 let status: LocalStatus
 let principalIdentity: TestIdentity
 let nullSchoolIdentity: TestIdentity
@@ -48,10 +69,10 @@ let anonymousClient: SupabaseClient
 let principalSender: PeopleSender
 let localParentId = ''
 let outsideParentId = ''
-let hostPrivilegeSnapshot: PrivilegeSnapshot | null = null
-let priorPrivilegeSnapshot: PrivilegeSnapshot | null = null
+let hostAccessSnapshot: CanonicalAccessSnapshot | null = null
+let dataRole: DisposableDataRole | null = null
 let fixturesCleaned = false
-let hostPrivilegesRestored = false
+let dataRoleCleaned = false
 
 function localSupabaseStatus(): LocalStatus {
   const raw = execFileSync('npx', ['supabase', 'status', '-o', 'json'], {
@@ -64,7 +85,7 @@ function localSupabaseStatus(): LocalStatus {
   if (!['127.0.0.1', 'localhost', '::1'].includes(url.hostname)) {
     throw new Error(`Refusing non-local Supabase integration target: ${url.hostname}`)
   }
-  if (!result.ANON_KEY || !result.SERVICE_ROLE_KEY) {
+  if (!result.ANON_KEY || !result.JWT_SECRET || !result.SERVICE_ROLE_KEY) {
     throw new Error('Local Supabase API keys are unavailable')
   }
   return result
@@ -83,61 +104,138 @@ function queryLocalDatabase(sql: string) {
   return JSON.parse(raw) as { rows: Record<string, unknown>[] }
 }
 
-function snapshotPrivileges(): PrivilegeSnapshot {
-  const columns = [
-    `has_schema_privilege('service_role', 'public', 'USAGE') AS schema_usage`,
-    ...TABLES.flatMap((table) =>
-      TABLE_PRIVILEGES.map(
-        (privilege) =>
-          `has_table_privilege('service_role', 'public.${table}', '${privilege}') AS ${table}_${privilege.toLowerCase()}`
+function snapshotCanonicalAcl(): CanonicalAclRow[] {
+  return queryLocalDatabase(`
+    WITH objects AS (
+      SELECT 'schema'::text AS object_type, n.nspname::text AS object_name,
+        COALESCE(n.nspacl, acldefault('n', n.nspowner)) AS acl
+      FROM pg_namespace n
+      WHERE n.nspname = 'public'
+      UNION ALL
+      SELECT 'table'::text, c.relname::text,
+        COALESCE(c.relacl, acldefault('r', c.relowner))
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public'
+        AND c.relname IN ('schools', 'profiles', 'students', 'parent_students')
+    )
+    SELECT object_type, object_name,
+      grantor.rolname AS grantor,
+      CASE WHEN expanded.grantee = 0 THEN 'PUBLIC' ELSE grantee.rolname END AS grantee,
+      expanded.privilege_type, expanded.is_grantable
+    FROM objects
+    CROSS JOIN LATERAL aclexplode(objects.acl) expanded
+    JOIN pg_roles grantor ON grantor.oid = expanded.grantor
+    LEFT JOIN pg_roles grantee ON grantee.oid = expanded.grantee
+    ORDER BY object_type, object_name, grantor, grantee, privilege_type, is_grantable
+  `).rows as CanonicalAclRow[]
+}
+
+function snapshotCanonicalAccess(): CanonicalAccessSnapshot {
+  const memberships = queryLocalDatabase(`
+    SELECT role.rolname AS role_name, member.rolname AS member_name,
+      grantor.rolname AS grantor, membership.admin_option,
+      membership.inherit_option, membership.set_option
+    FROM pg_auth_members membership
+    JOIN pg_roles role ON role.oid = membership.roleid
+    JOIN pg_roles member ON member.oid = membership.member
+    JOIN pg_roles grantor ON grantor.oid = membership.grantor
+    ORDER BY role_name, member_name, grantor, admin_option, inherit_option, set_option
+  `).rows as CanonicalMembershipRow[]
+  return { acl: snapshotCanonicalAcl(), memberships }
+}
+
+function createTestJwt(role: string) {
+  const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url')
+  const header = encode({ alg: 'HS256', typ: 'JWT' })
+  const payload = encode({
+    exp: Math.floor(Date.now() / 1000) + 60 * 60,
+    iss: 'supabase-demo',
+    role,
+  })
+  const signature = createHmac('sha256', status.JWT_SECRET)
+    .update(`${header}.${payload}`)
+    .digest('base64url')
+  return `${header}.${payload}.${signature}`
+}
+
+function generatedRoleName(kind: 'data' | 'login') {
+  return `people_${kind}_${randomUUID().replaceAll('-', '')}`
+}
+
+function cleanupDisposableDataRole(role: Partial<DisposableDataRole>) {
+  if (role.loginRole) {
+    runLocalDatabase(`REVOKE ${role.loginRole} FROM authenticator`)
+  }
+  if (role.dataRole && role.loginRole) {
+    runLocalDatabase(`REVOKE ${role.dataRole} FROM ${role.loginRole}`)
+  }
+  if (role.dataRole) {
+    runLocalDatabase(
+      `REVOKE SELECT, INSERT, DELETE ON TABLE ${TABLES.map((table) => `public.${table}`).join(', ')} FROM ${role.dataRole}`
+    )
+  }
+  if (role.loginRole) runLocalDatabase(`DROP ROLE ${role.loginRole}`)
+  if (role.dataRole) runLocalDatabase(`DROP ROLE ${role.dataRole}`)
+}
+
+function setupDisposableDataRole(): DisposableDataRole {
+  const role: Partial<DisposableDataRole> = {}
+  try {
+    const dataRoleName = generatedRoleName('data')
+    runLocalDatabase(`CREATE ROLE ${dataRoleName} NOLOGIN`)
+    role.dataRole = dataRoleName
+    const loginRoleName = generatedRoleName('login')
+    runLocalDatabase(`CREATE ROLE ${loginRoleName} NOLOGIN BYPASSRLS`)
+    role.loginRole = loginRoleName
+    runLocalDatabase(`GRANT ${role.dataRole} TO ${role.loginRole}`)
+    runLocalDatabase(`GRANT ${role.loginRole} TO authenticator`)
+    runLocalDatabase(
+      `GRANT SELECT, INSERT, DELETE ON TABLE ${TABLES.map((table) => `public.${table}`).join(', ')} TO ${role.dataRole}`
+    )
+
+    const access = queryLocalDatabase(`
+      SELECT has_schema_privilege('${role.loginRole}', 'public', 'USAGE') AS public_usage,
+        has_table_privilege('${role.loginRole}', 'public.students', 'SELECT') AS inherited_select,
+        EXISTS (
+          SELECT 1
+          FROM aclexplode((SELECT relacl FROM pg_class WHERE oid = 'public.students'::regclass)) acl
+          JOIN pg_roles grantee ON grantee.oid = acl.grantee
+          WHERE grantee.rolname = '${role.loginRole}' AND acl.privilege_type = 'SELECT'
+        ) AS direct_select
+    `).rows[0]
+    if (access.public_usage !== true || access.inherited_select !== true || access.direct_select !== false) {
+      throw new Error(
+        'Local Supabase ACL setup error: disposable role lacks PUBLIC schema usage or inherited table access'
       )
-    ),
-  ]
-  const row = queryLocalDatabase(`SELECT ${columns.join(', ')}`).rows[0]
-  return {
-    schemaUsage: row.schema_usage === true,
-    tables: Object.fromEntries(
-      TABLES.map((table) => [
-        table,
-        Object.fromEntries(
-          TABLE_PRIVILEGES.map((privilege) => [
-            privilege,
-            row[`${table}_${privilege.toLowerCase()}`] === true,
-          ])
-        ) as Record<TablePrivilege, boolean>,
-      ])
-    ),
+    }
+
+    return {
+      dataRole: role.dataRole,
+      loginRole: role.loginRole,
+      jwt: createTestJwt(role.loginRole),
+    }
+  } catch (error) {
+    cleanupDisposableDataRole(role)
+    throw error
   }
 }
 
-function setPrivilege(granted: boolean, privilege: string, target: string) {
-  runLocalDatabase(`${granted ? 'GRANT' : 'REVOKE'} ${privilege} ON ${target} ${granted ? 'TO' : 'FROM'} service_role`)
-}
-
-function restorePrivileges(snapshot: PrivilegeSnapshot) {
-  setPrivilege(snapshot.schemaUsage, 'USAGE', 'SCHEMA public')
-  for (const table of TABLES) {
-    for (const privilege of TABLE_PRIVILEGES) {
-      setPrivilege(snapshot.tables[table][privilege], privilege, `TABLE public.${table}`)
-    }
-  }
-}
-
-function grantTemporaryPrivileges() {
-  setPrivilege(true, 'USAGE', 'SCHEMA public')
-  for (const table of TABLES) {
-    for (const privilege of TABLE_PRIVILEGES) {
-      setPrivilege(true, privilege, `TABLE public.${table}`)
-    }
+async function withDisposableDataRole<T>(callback: (role: DisposableDataRole) => Promise<T>) {
+  const role = setupDisposableDataRole()
+  try {
+    return await callback(role)
+  } finally {
+    cleanupDisposableDataRole(role)
   }
 }
 
 async function createAuthIdentity(prefix: string): Promise<TestIdentity> {
-  if (!admin) throw new Error('Integration admin is unavailable')
+  if (!authAdmin) throw new Error('Integration Auth admin is unavailable')
   const marker = randomUUID()
   const email = `${prefix}-${marker}@local.test`
   const password = `Local-only-${randomUUID()}`
-  const { data: userData, error: userError } = await admin.auth.admin.createUser({
+  const { data: userData, error: userError } = await authAdmin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
@@ -159,9 +257,9 @@ async function createProfile(opts: {
   role: 'parent' | 'principal'
   schoolId: string | null
 }) {
-  if (!admin) throw new Error('Integration admin is unavailable')
+  if (!dataAdmin) throw new Error('Integration data admin is unavailable')
   const identity = await createAuthIdentity(opts.prefix)
-  const { error: profileError } = await admin.from('profiles').insert({
+  const { error: profileError } = await dataAdmin.from('profiles').insert({
     id: identity.id,
     school_id: opts.schoolId,
     role: opts.role,
@@ -172,46 +270,67 @@ async function createProfile(opts: {
   return identity
 }
 
-async function cleanupFixturesAndRestorePriorPrivileges() {
+async function cleanupFixturesAndDataRole() {
   if (fixturesCleaned) return
+  let cleanupError: unknown = null
+  const rememberError = (error: unknown) => {
+    cleanupError ??= error
+  }
   try {
-    if (admin) {
-      await admin.from('parent_students').delete().in('student_id', [studentId, outsideStudentId])
-      await admin.from('students').delete().in('id', [studentId, outsideStudentId])
-      for (const userId of createdUserIds) await admin.auth.admin.deleteUser(userId)
-      await admin.from('schools').delete().in('id', [schoolId, outsideSchoolId])
+    if (dataAdmin) {
+      const parentLinks = await dataAdmin
+        .from('parent_students')
+        .delete()
+        .in('student_id', [studentId, outsideStudentId])
+      if (parentLinks.error) rememberError(parentLinks.error)
+      const students = await dataAdmin
+        .from('students')
+        .delete()
+        .in('id', [studentId, outsideStudentId])
+      if (students.error) rememberError(students.error)
+    }
+    if (authAdmin) {
+      for (const userId of createdUserIds) {
+        const { error } = await authAdmin.auth.admin.deleteUser(userId)
+        if (error) rememberError(error)
+      }
+    }
+    if (dataAdmin) {
+      const { error } = await dataAdmin.from('schools').delete().in('id', [schoolId, outsideSchoolId])
+      if (error) rememberError(error)
     }
   } finally {
-    if (priorPrivilegeSnapshot) restorePrivileges(priorPrivilegeSnapshot)
+    if (!dataRoleCleaned && dataRole) {
+      try {
+        cleanupDisposableDataRole(dataRole)
+        dataRoleCleaned = true
+      } catch (error) {
+        rememberError(error)
+      }
+    }
     fixturesCleaned = true
   }
-}
-
-function restoreHostPrivileges() {
-  if (hostPrivilegesRestored || !hostPrivilegeSnapshot) return
-  restorePrivileges(hostPrivilegeSnapshot)
-  hostPrivilegesRestored = true
+  if (cleanupError) throw cleanupError
 }
 
 beforeAll(async () => {
   status = localSupabaseStatus()
   process.env.NEXT_PUBLIC_SUPABASE_URL = status.API_URL
-  process.env.SUPABASE_SERVICE_ROLE_KEY = status.SERVICE_ROLE_KEY
-  hostPrivilegeSnapshot = snapshotPrivileges()
+  hostAccessSnapshot = snapshotCanonicalAccess()
 
   try {
-    // Simulate a legitimate pre-existing grant so teardown proves it restores rather than revokes.
-    setPrivilege(true, 'SELECT', 'TABLE public.students')
-    priorPrivilegeSnapshot = snapshotPrivileges()
-    grantTemporaryPrivileges()
-
-    admin = createClient(status.API_URL, status.SERVICE_ROLE_KEY, {
+    dataRole = setupDisposableDataRole()
+    process.env.SUPABASE_SERVICE_ROLE_KEY = dataRole.jwt
+    authAdmin = createClient(status.API_URL, status.SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    dataAdmin = createClient(status.API_URL, dataRole.jwt, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
     anonymousClient = createClient(status.API_URL, status.ANON_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
-    const { error: schoolError } = await admin.from('schools').insert([
+    const { error: schoolError } = await dataAdmin.from('schools').insert([
       { id: schoolId, name: 'People Boundary School' },
       { id: outsideSchoolId, name: 'Outside Boundary School' },
     ])
@@ -246,7 +365,7 @@ beforeAll(async () => {
     outsideParentId = outsideParentIdentity.id
     principalSender = { id: principalIdentity.id, schoolId, role: 'principal' }
 
-    const { error: studentError } = await admin.from('students').insert([
+    const { error: studentError } = await dataAdmin.from('students').insert([
       {
         id: studentId,
         school_id: schoolId,
@@ -266,7 +385,7 @@ beforeAll(async () => {
     ])
     if (studentError) throw studentError
 
-    const { error: linksError } = await admin.from('parent_students').insert([
+    const { error: linksError } = await dataAdmin.from('parent_students').insert([
       { student_id: studentId, parent_id: localParentId },
       // Deliberately malformed cross-tenant link. The directory must still enforce school scope.
       { student_id: studentId, parent_id: outsideParentId },
@@ -274,9 +393,9 @@ beforeAll(async () => {
     if (linksError) throw linksError
   } catch (error) {
     try {
-      await cleanupFixturesAndRestorePriorPrivileges()
+      await cleanupFixturesAndDataRole()
     } finally {
-      restoreHostPrivileges()
+      expect(snapshotCanonicalAccess()).toEqual(hostAccessSnapshot)
     }
     throw error
   }
@@ -288,9 +407,9 @@ beforeEach(() => {
 
 afterAll(async () => {
   try {
-    await cleanupFixturesAndRestorePriorPrivileges()
+    await cleanupFixturesAndDataRole()
   } finally {
-    restoreHostPrivileges()
+    expect(snapshotCanonicalAccess()).toEqual(hostAccessSnapshot)
   }
 })
 
@@ -373,11 +492,21 @@ describe('People directory real local PostgREST boundary', () => {
     })
   })
 
-  it('restores pre-existing and host privilege state exactly', async () => {
-    await cleanupFixturesAndRestorePriorPrivileges()
-    expect(snapshotPrivileges()).toEqual(priorPrivilegeSnapshot)
+  it('preserves canonical ACLs and memberships even when isolated setup use throws', async () => {
+    const beforeFailure = snapshotCanonicalAccess()
+    await expect(
+      withDisposableDataRole(async (probeRole) => {
+        const probe = createClient(status.API_URL, probeRole.jwt, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+        const { error } = await probe.from('students').select('id').limit(1)
+        expect(error).toBeNull()
+        throw new Error('intentional disposable-role failure')
+      })
+    ).rejects.toThrow('intentional disposable-role failure')
+    expect(snapshotCanonicalAccess()).toEqual(beforeFailure)
 
-    restoreHostPrivileges()
-    expect(snapshotPrivileges()).toEqual(hostPrivilegeSnapshot)
+    await cleanupFixturesAndDataRole()
+    expect(snapshotCanonicalAccess()).toEqual(hostAccessSnapshot)
   })
 })
