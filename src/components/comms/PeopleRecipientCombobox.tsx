@@ -97,6 +97,7 @@ export function PeopleRecipientCombobox({
   const [activeKey, setActiveKey] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emptyResult, setEmptyResult] = useState(false)
 
   const selectedKeys = useMemo(() => new Set(selected.map((result) => result.key)), [selected])
   const visibleResults = useMemo(
@@ -128,6 +129,7 @@ export function PeopleRecipientCombobox({
     setResults(limitedResults)
     setActiveKey(null)
     setOpen(limitedResults.length > 0)
+    setEmptyResult(limitedResults.length === 0)
     setPending(false)
   }, [])
 
@@ -206,6 +208,7 @@ export function PeopleRecipientCombobox({
       setOpen(false)
       setActiveKey(null)
       setPending(false)
+      setEmptyResult(false)
     },
     [disabled, onChange, selected, selectedKeys]
   )
@@ -249,6 +252,7 @@ export function PeopleRecipientCombobox({
     setOpen(false)
     setActiveKey(null)
     setError(null)
+    setEmptyResult(false)
     setPending(nextQuery.trim().length >= 2)
   }
 
@@ -346,6 +350,11 @@ export function PeopleRecipientCombobox({
             )
           })}
         </div>
+      ) : null}
+      {emptyResult && query.trim().length >= 2 && !pending && !error ? (
+        <p role="status" className="mt-2 text-sm text-muted-foreground">
+          No permitted people found
+        </p>
       ) : null}
       <p role="status" aria-live="polite" className="sr-only">
         {announcement}

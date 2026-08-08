@@ -44,7 +44,8 @@ export default defineConfig({
             process.env.SUPABASE_SERVICE_ROLE_KEY || 'ci-service-role-key',
           BEACON_FEEDBACK_TO:
             process.env.BEACON_FEEDBACK_TO || 'owner@beacon.local',
-          RESEND_API_KEY: process.env.RESEND_API_KEY || 're_test_key',
+          EMAIL_TRANSPORTS: 'log',
+          RESEND_API_KEY: '',
           EMAIL_FROM: process.env.EMAIL_FROM || 'Beacon <hello@beacon.test>',
         },
       },
