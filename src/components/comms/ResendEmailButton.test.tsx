@@ -20,7 +20,10 @@ function deferred<T>() {
 }
 
 describe('ResendEmailButton attempt lifecycle', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    mocks.resendFailedEmail.mockReset()
+    mocks.refresh.mockReset()
+  })
   afterEach(cleanup)
 
   it('rotates the attempt key after a confirmed completed failed delivery', async () => {
@@ -74,6 +77,7 @@ describe('ResendEmailButton attempt lifecycle', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Resend' }))
     expect(await screen.findByText('Unable to retry this email right now.')).toBeTruthy()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Resend' })).not.toHaveProperty('disabled', true))
     fireEvent.click(screen.getByRole('button', { name: 'Resend' }))
     await waitFor(() => expect(mocks.resendFailedEmail).toHaveBeenCalledTimes(2))
     expect(mocks.resendFailedEmail.mock.calls[1][1]).toBe(mocks.resendFailedEmail.mock.calls[0][1])
