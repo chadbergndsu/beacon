@@ -1,86 +1,171 @@
 import { beforeEach } from 'vitest'
 
-type StorageLike = Pick<Storage, 'clear' | 'getItem' | 'key' | 'removeItem' | 'setItem'> & {
+export type StorageLike = Pick<Storage, 'clear' | 'getItem' | 'key' | 'removeItem' | 'setItem'> & {
   readonly length: number
 }
 
-function createInMemoryStorage(): StorageLike {
-  const values = new Map<string, string>()
+export type StorageHost = { localStorage?: unknown }
 
-  return {
-    get length() {
-      return values.size
-    },
-    clear() {
-      values.clear()
-    },
-    getItem(key) {
-      return values.get(String(key)) ?? null
-    },
-    key(index) {
-      return [...values.keys()][Number(index)] ?? null
-    },
-    removeItem(key) {
-      values.delete(String(key))
-    },
-    setItem(key, value) {
-      values.set(String(key), String(value))
-    },
-  }
+function toUnsignedLong(value: number): number {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue) || numericValue === 0) return 0
+  return Math.trunc(numericValue) >>> 0
 }
 
-function hasWorkingStorage(value: unknown): value is StorageLike {
-  if (
-    value === null ||
-    typeof value !== 'object' ||
-    !('clear' in value) ||
-    !('getItem' in value) ||
-    !('key' in value) ||
-    !('removeItem' in value) ||
-    !('setItem' in value)
-  ) {
-    return false
-  }
+export function createInMemoryStorage(): StorageLike {
+  const values = new Map<string, string>()
+  const storage = {}
+
+  Object.defineProperties(storage, {
+    length: {
+      configurable: true,
+      enumerable: false,
+      get: () => values.size,
+    },
+    clear: {
+      configurable: true,
+      enumerable: false,
+      value: () => values.clear(),
+      writable: true,
+    },
+    getItem: {
+      configurable: true,
+      enumerable: false,
+      value: (key: unknown) => values.get(String(key)) ?? null,
+      writable: true,
+    },
+    key: {
+      configurable: true,
+      enumerable: false,
+      value: (index: number) => [...values.keys()][toUnsignedLong(index)] ?? null,
+      writable: true,
+    },
+    removeItem: {
+      configurable: true,
+      enumerable: false,
+      value: (key: unknown) => values.delete(String(key)),
+      writable: true,
+    },
+    setItem: {
+      configurable: true,
+      enumerable: false,
+      value: (key: unknown, value: unknown) => values.set(String(key), String(value)),
+      writable: true,
+    },
+  })
+
+  return storage as StorageLike
+}
+
+function isStorageLike(value: unknown): value is StorageLike {
+  if (value === null || typeof value !== 'object') return false
 
   const storage = value as StorageLike
-  const hasStorageMethods =
-    typeof storage.clear === 'function' &&
-    typeof storage.getItem === 'function' &&
-    typeof storage.key === 'function' &&
-    typeof storage.removeItem === 'function' &&
-    typeof storage.setItem === 'function'
-
-  if (!hasStorageMethods) return false
-
-  const probeKey = '__beacon_vitest_local_storage_probe__'
-
   try {
-    const originalValue = storage.getItem(probeKey)
-    storage.setItem(probeKey, 'probe')
-    const wroteProbe = storage.getItem(probeKey) === 'probe'
-
-    if (originalValue === null) {
-      storage.removeItem(probeKey)
-    } else {
-      storage.setItem(probeKey, originalValue)
-    }
-
-    return wroteProbe && storage.getItem(probeKey) === originalValue
+    return (
+      typeof storage.clear === 'function' &&
+      typeof storage.getItem === 'function' &&
+      typeof storage.key === 'function' &&
+      typeof storage.removeItem === 'function' &&
+      typeof storage.setItem === 'function'
+    )
   } catch {
     return false
   }
 }
 
-if (typeof window !== 'undefined') {
-  const nativeStorage = hasWorkingStorage(window.localStorage) ? window.localStorage : null
-  const storage = nativeStorage ?? createInMemoryStorage()
-
-  Object.defineProperty(window, 'localStorage', { configurable: true, value: storage })
-  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: storage })
-
-  if (nativeStorage === null) {
-    beforeEach(() => {
-      storage.clear()
-    })
+function snapshotStorage(storage: StorageLike): Array<[string, string]> {
+  const length = storage.length
+  if (!Number.isSafeInteger(length) || length < 0) {
+    throw new TypeError('Storage length must be a non-negative safe integer')
   }
+
+  const entries: Array<[string, string]> = []
+  for (let index = 0; index < length; index += 1) {
+    const key = storage.key(index)
+    if (typeof key !== 'string') throw new TypeError('Storage key must be a string')
+    const value = storage.getItem(key)
+    if (typeof value !== 'string') throw new TypeError('Storage value must be a string')
+    entries.push([key, value])
+  }
+  return entries
+}
+
+function restoreStorage(storage: StorageLike, entries: Array<[string, string]>) {
+  storage.clear()
+  for (const [key, value] of entries) {
+    storage.setItem(key, value)
+  }
+}
+
+function entriesMatch(storage: StorageLike, expectedEntries: Array<[string, string]>): boolean {
+  return JSON.stringify(snapshotStorage(storage)) === JSON.stringify(expectedEntries)
+}
+
+function hasWorkingStorage(value: unknown): value is StorageLike {
+  if (!isStorageLike(value)) return false
+
+  const storage = value
+  let entries: Array<[string, string]> | null = null
+
+  try {
+    entries = snapshotStorage(storage)
+    const existingKeys = new Set(entries.map(([key]) => key))
+    let probeIndex = 0
+    let probeKey = '__beacon_vitest_local_storage_probe__0'
+    while (existingKeys.has(probeKey)) {
+      probeIndex += 1
+      probeKey = `__beacon_vitest_local_storage_probe__${probeIndex}`
+    }
+    const initialLength = storage.length
+
+    storage.setItem(probeKey, 'probe')
+    const wroteProbe =
+      storage.length === initialLength + 1 &&
+      storage.getItem(probeKey) === 'probe' &&
+      storage.key(initialLength) === probeKey
+    storage.removeItem(probeKey)
+    const removedProbe = storage.getItem(probeKey) === null && storage.length === initialLength
+
+    storage.clear()
+    const cleared = storage.length === 0 && storage.key(0) === null
+    restoreStorage(storage, entries)
+
+    return wroteProbe && removedProbe && cleared && entriesMatch(storage, entries)
+  } catch {
+    if (entries !== null) {
+      try {
+        restoreStorage(storage, entries)
+      } catch {
+        // The inaccessible native storage will be replaced below.
+      }
+    }
+    return false
+  }
+}
+
+function readStorage(host: StorageHost): unknown {
+  try {
+    return host.localStorage
+  } catch {
+    return undefined
+  }
+}
+
+export function installLocalStorage(windowTarget: StorageHost, globalTarget: StorageHost): StorageLike {
+  const candidate = readStorage(windowTarget)
+  const storage = hasWorkingStorage(candidate) ? candidate : createInMemoryStorage()
+
+  Object.defineProperty(windowTarget, 'localStorage', { configurable: true, value: storage })
+  Object.defineProperty(globalTarget, 'localStorage', { configurable: true, value: storage })
+
+  return storage
+}
+
+if (typeof window !== 'undefined') {
+  const storage = installLocalStorage(window, globalThis)
+
+  beforeEach(() => {
+    storage.clear()
+  })
 }

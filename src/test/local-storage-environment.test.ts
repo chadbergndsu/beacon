@@ -20,8 +20,11 @@ describe('jsdom localStorage environment', () => {
     globalThis.localStorage.removeItem('answer')
     expect(window.localStorage.getItem('answer')).toBeNull()
 
-    globalThis.localStorage.clear()
-    expect(window.localStorage.length).toBe(0)
-    expect(window.localStorage.key(0)).toBeNull()
+    window.localStorage.setItem('must-not-leak', 'between tests')
+  })
+
+  it('starts each test with empty storage', () => {
+    expect(window.localStorage.getItem('must-not-leak')).toBeNull()
+    expect(globalThis.localStorage.length).toBe(0)
   })
 })

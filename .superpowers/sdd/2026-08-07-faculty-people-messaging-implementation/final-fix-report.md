@@ -248,3 +248,12 @@ Node 26.7 exposes an experimental global Web Storage implementation without a pe
 ### Concern
 
 - Node 26 still emits its own experimental-Web-Storage warning when Vitest initializes jsdom without a persistence file. The repository-level setup makes storage usable and no test command requires an environment flag; the warning is upstream Node behavior only.
+
+### Round 1 review follow-up
+
+- RED: direct setup tests showed the module could not be exercised for an opaque-origin `localStorage` getter or malformed Storage candidates; the two-test jsdom regression also failed on Node 22 because validated native storage leaked between tests.
+- GREEN: the setup now reads `window.localStorage` safely, validates the complete behavior needed here (`length`, `key`, set/get/remove, and clear), restores every pre-existing entry in insertion order after probing, and falls back on every getter/capability failure. A probe key is chosen outside existing keys and removed before clear validation, so a clear failure cannot leave probe state behind.
+- Every jsdom test now begins with a cleared, shared `window.localStorage`/`globalThis.localStorage` instance, whether native jsdom Storage was retained or the fallback was installed. Node-environment tests remain untouched.
+- The fallback uses non-enumerable Storage methods and the Web IDL unsigned-long conversion for `key()` (including NaN, fractions, negatives, and 32-bit wrapping). It deliberately does not emulate Storage's named-property enumeration because no application code relies on it; the exercised API surface is covered directly.
+- Focused review coverage: 5 files / 43 tests passed under both plain Node 26.7.0 and Node 22.23.2, with no environment flag.
+- Full plain `npm run ci`: lint, typecheck, 107 test files / 553 tests, coverage thresholds, and production build passed. Full `npm run test:e2e`: 18/18 passed. `git diff --check` passed.
