@@ -40,6 +40,15 @@ const principal = {
   phone: null,
 }
 
+const teacher = {
+  id: 'teacher-1',
+  school_id: 'school-1',
+  role: 'teacher' as const,
+  full_name: 'Terry Teacher',
+  email: 'teacher@example.com',
+  phone: null,
+}
+
 describe('AppHeader navigation feedback', () => {
   beforeEach(() => {
     mocks.pathname = '/dashboard'
@@ -81,5 +90,52 @@ describe('AppHeader navigation feedback', () => {
 
     expect(screen.queryByRole('status')).toBeNull()
     queryLink.remove()
+  })
+
+  it('keeps teacher More menus outside horizontally scrollable primary rails', () => {
+    render(<AppHeader profile={teacher} />)
+
+    const primaryRails = screen.getAllByRole('navigation', { name: 'Main navigation' })
+    const moreButtons = screen.getAllByRole('button', { name: 'More' })
+
+    expect(primaryRails).toHaveLength(2)
+    expect(primaryRails.every((rail) => rail.className.includes('overflow-x-auto'))).toBe(true)
+    expect(primaryRails.every((rail) => rail.textContent?.includes('Classroom'))).toBe(true)
+    expect(moreButtons).toHaveLength(2)
+    moreButtons.forEach((button) => {
+      expect(button.closest('.overflow-x-auto')).toBeNull()
+    })
+  })
+
+  it('toggles the teacher More menu and closes it for navigation, Escape, and outside clicks', () => {
+    render(<AppHeader profile={teacher} />)
+
+    const [moreButton] = screen.getAllByRole('button', { name: 'More' })
+    fireEvent.click(moreButton)
+
+    expect(moreButton.getAttribute('aria-haspopup')).toBe('menu')
+    expect(moreButton.getAttribute('aria-expanded')).toBe('true')
+    const menu = screen.getAllByRole('menu')[0]
+    expect(menu).toBeTruthy()
+    expect(menu.textContent).toContain('Lessons')
+    expect(menu.textContent).toContain('Calendar')
+    expect(menu.textContent).toContain('Printables')
+    expect(menu.textContent).toContain('Scan')
+    expect(menu.textContent).toContain('Craft')
+    expect(menu.textContent).toContain('Comms')
+    expect(menu.textContent).toContain('School site')
+    expect(screen.getAllByRole('menuitem')).toHaveLength(7)
+
+    fireEvent.click(screen.getAllByRole('menuitem', { name: 'Lessons' })[0])
+    expect(screen.queryByRole('menu')).toBeNull()
+
+    fireEvent.click(moreButton)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('menu')).toBeNull()
+
+    fireEvent.click(moreButton)
+    fireEvent.mouseDown(document.body)
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(moreButton.getAttribute('aria-expanded')).toBe('false')
   })
 })

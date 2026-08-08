@@ -153,7 +153,7 @@ function MoreMenu({
       {open ? (
         <div
           role="menu"
-          className="absolute left-0 top-full z-[60] mt-1 min-w-[10.5rem] rounded-xl border border-chrome-border bg-chrome-elevated py-1 shadow-lg"
+          className="absolute right-0 top-full z-[60] mt-1 min-w-[10.5rem] rounded-xl border border-chrome-border bg-chrome-elevated py-1 shadow-lg"
         >
           {items.map((item) => {
             const active = item.href === activeHref
@@ -224,15 +224,17 @@ export function AppHeader({
           </div>
         </Link>
 
-        <nav
-          className="hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto md:flex [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          aria-label="Main navigation"
-        >
-          {primary.map((item) => (
-            <NavLink key={item.href} item={item} active={item.href === activeHref} />
-          ))}
+        <div className="hidden min-w-0 flex-1 items-center gap-0.5 md:flex">
+          <nav
+            className="min-w-0 flex-1 items-center gap-0.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Main navigation"
+          >
+            {primary.map((item) => (
+              <NavLink key={item.href} item={item} active={item.href === activeHref} />
+            ))}
+          </nav>
           {more.length > 0 ? <MoreMenu items={more} activeHref={activeHref} /> : null}
-        </nav>
+        </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           {profile ? (
@@ -272,20 +274,26 @@ export function AppHeader({
         </div>
       </div>
 
-      <nav
-        className="nav-scroll-mask flex items-center gap-0.5 overflow-x-auto border-t border-chrome-border px-2 py-1.5 pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        aria-label="Main navigation"
-      >
-        {mobilePrimary.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            active={item.href === activeHref}
-            className="text-xs"
-          />
-        ))}
-        {mobileMore.length > 0 ? <MoreMenu items={mobileMore} activeHref={activeHref} /> : null}
-      </nav>
+      <div className="flex items-center border-t border-chrome-border md:hidden">
+        <nav
+          className="nav-scroll-mask min-w-0 flex-1 items-center gap-0.5 overflow-x-auto px-2 py-1.5 pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          aria-label="Main navigation"
+        >
+          {mobilePrimary.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              active={item.href === activeHref}
+              className="text-xs"
+            />
+          ))}
+        </nav>
+        {mobileMore.length > 0 ? (
+          <div className="shrink-0 py-1.5 pr-[max(0.5rem,env(safe-area-inset-right))]">
+            <MoreMenu items={mobileMore} activeHref={activeHref} />
+          </div>
+        ) : null}
+      </div>
     </header>
   )
 }
