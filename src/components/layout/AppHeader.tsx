@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
@@ -115,6 +115,8 @@ function MoreMenu({
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const disclosureId = useId()
   const moreActive = items.some((i) => i.href === activeHref)
 
   useEffect(() => {
@@ -123,7 +125,10 @@ function MoreMenu({
       if (!ref.current?.contains(e.target as Node)) setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') {
+        setOpen(false)
+        buttonRef.current?.focus()
+      }
     }
     document.addEventListener('mousedown', onDoc)
     document.addEventListener('keydown', onKey)
@@ -137,8 +142,9 @@ function MoreMenu({
     <div className="relative" ref={ref}>
       <button
         type="button"
+        ref={buttonRef}
         aria-expanded={open}
-        aria-haspopup="menu"
+        aria-controls={open ? disclosureId : undefined}
         onClick={() => setOpen((v) => !v)}
         className={cn(
           'inline-flex shrink-0 items-center gap-0.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition whitespace-nowrap',
@@ -151,16 +157,16 @@ function MoreMenu({
         <ChevronDown className={cn('h-3.5 w-3.5 transition', open && 'rotate-180')} />
       </button>
       {open ? (
-        <div
-          role="menu"
-          className="absolute left-0 top-full z-[60] mt-1 min-w-[10.5rem] rounded-xl border border-chrome-border bg-chrome-elevated py-1 shadow-lg"
+        <nav
+          id={disclosureId}
+          aria-label="More links"
+          className="absolute right-0 top-full z-[60] mt-1 min-w-[10.5rem] rounded-xl border border-chrome-border bg-chrome-elevated py-1 shadow-lg"
         >
           {items.map((item) => {
             const active = item.href === activeHref
             return (
               <Link
                 key={item.href}
-                role="menuitem"
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className={cn(
@@ -174,7 +180,7 @@ function MoreMenu({
               </Link>
             )
           })}
-        </div>
+        </nav>
       ) : null}
     </div>
   )
@@ -224,15 +230,17 @@ export function AppHeader({
           </div>
         </Link>
 
-        <nav
-          className="hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto md:flex [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          aria-label="Main navigation"
-        >
-          {primary.map((item) => (
-            <NavLink key={item.href} item={item} active={item.href === activeHref} />
-          ))}
+        <div className="hidden min-w-0 flex-1 items-center gap-0.5 md:flex">
+          <nav
+            className="min-w-0 flex-1 items-center gap-0.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Main navigation"
+          >
+            {primary.map((item) => (
+              <NavLink key={item.href} item={item} active={item.href === activeHref} />
+            ))}
+          </nav>
           {more.length > 0 ? <MoreMenu items={more} activeHref={activeHref} /> : null}
-        </nav>
+        </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           {profile ? (
@@ -272,20 +280,26 @@ export function AppHeader({
         </div>
       </div>
 
-      <nav
-        className="nav-scroll-mask flex items-center gap-0.5 overflow-x-auto border-t border-chrome-border px-2 py-1.5 pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        aria-label="Main navigation"
-      >
-        {mobilePrimary.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            active={item.href === activeHref}
-            className="text-xs"
-          />
-        ))}
-        {mobileMore.length > 0 ? <MoreMenu items={mobileMore} activeHref={activeHref} /> : null}
-      </nav>
+      <div className="flex items-center border-t border-chrome-border md:hidden">
+        <nav
+          className="nav-scroll-mask min-w-0 flex-1 items-center gap-0.5 overflow-x-auto px-2 py-1.5 pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          aria-label="Main navigation"
+        >
+          {mobilePrimary.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              active={item.href === activeHref}
+              className="text-xs"
+            />
+          ))}
+        </nav>
+        {mobileMore.length > 0 ? (
+          <div className="shrink-0 py-1.5 pr-[max(0.5rem,env(safe-area-inset-right))]">
+            <MoreMenu items={mobileMore} activeHref={activeHref} />
+          </div>
+        ) : null}
+      </div>
     </header>
   )
 }

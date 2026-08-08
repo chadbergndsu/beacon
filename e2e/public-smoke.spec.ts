@@ -26,10 +26,18 @@ test.describe('public smoke', () => {
     )
     await expect(page.getByText('Current stage · design-partner program')).toBeVisible()
     const formButton = page.getByRole('button', { name: 'Send design-partner inquiry' })
-    await expect(formButton).toBeVisible()
     const conversation = page.getByRole('link', {
       name: 'Ask about a design-partner conversation',
     })
+    if (!process.env.PLAYWRIGHT_BASE_URL) {
+      await expect(
+        page.getByText('Direct design-partner inquiries are not configured on this deployment yet.')
+      ).toBeVisible()
+      await expect(formButton).toHaveCount(0)
+      await expect(conversation).toHaveCount(0)
+      return
+    }
+    await expect(formButton).toBeVisible()
     await expect(conversation).toHaveAttribute('href', '#contact')
   })
 
@@ -117,6 +125,17 @@ test.describe('public smoke', () => {
     const priority = page.getByRole('textbox', {
       name: 'What workflow would you most like to improve?',
     })
+    if (!process.env.PLAYWRIGHT_BASE_URL) {
+      await expect(
+        page.getByText('Direct design-partner inquiries are not configured on this deployment yet.')
+      ).toBeVisible()
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+        )
+      ).toBe(false)
+      return
+    }
     await expect(priority).toBeVisible()
     await expect(priority).toHaveAttribute('aria-describedby', 'design-partner-priority-hint')
     await expect(page.locator('#design-partner-priority-hint')).toContainText(

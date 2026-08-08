@@ -23,13 +23,13 @@ export default defineConfig({
       {
         command: 'node scripts/e2e-supabase-mock.mjs',
         url: 'http://127.0.0.1:54329/health',
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
         timeout: 30_000,
       },
       {
         command: `npx next start -p ${port}`,
         url: baseURL,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
         timeout: 120_000,
         env: {
           ...process.env,
@@ -44,7 +44,14 @@ export default defineConfig({
             process.env.SUPABASE_SERVICE_ROLE_KEY || 'ci-service-role-key',
           BEACON_FEEDBACK_TO:
             process.env.BEACON_FEEDBACK_TO || 'owner@beacon.local',
-          RESEND_API_KEY: process.env.RESEND_API_KEY || 're_test_key',
+          EMAIL_TRANSPORTS: 'log',
+          RESEND_API_KEY: '',
+          SMTP_HOST: '',
+          SMTP_PORT: '',
+          SMTP_USER: '',
+          SMTP_PASS: '',
+          SMTP_SECURE: '',
+          SMTP_URL: '',
           EMAIL_FROM: process.env.EMAIL_FROM || 'Beacon <hello@beacon.test>',
         },
       },

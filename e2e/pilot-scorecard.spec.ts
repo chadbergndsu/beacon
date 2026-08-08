@@ -5,19 +5,19 @@ type PilotRole = 'admin' | 'parent' | 'principal' | 'teacher'
 const actors: Record<PilotRole, { email: string; id: string }> = {
   admin: {
     email: 'pilot-admin@beacon.test',
-    id: '00000000-0000-0000-0000-000000000104',
+    id: '00000000-0000-4000-8000-000000000104',
   },
   parent: {
     email: 'pilot-parent@beacon.test',
-    id: '00000000-0000-0000-0000-000000000101',
+    id: '00000000-0000-4000-8000-000000000101',
   },
   principal: {
     email: 'pilot-principal@beacon.test',
-    id: '00000000-0000-0000-0000-000000000103',
+    id: '00000000-0000-4000-8000-000000000103',
   },
   teacher: {
     email: 'pilot-teacher@beacon.test',
-    id: '00000000-0000-0000-0000-000000000102',
+    id: '00000000-0000-4000-8000-000000000102',
   },
 }
 
@@ -224,8 +224,8 @@ test.describe('pilot scorecard journey', () => {
       'http://127.0.0.1:54329/rest/v1/parent_experience_feedback?on_conflict=school_id%2Cparent_id%2Csurface%2Cweek_start',
       {
         data: {
-          school_id: '00000000-0000-0000-0000-000000000001',
-          parent_id: '00000000-0000-0000-0000-000000000101',
+          school_id: '00000000-0000-4000-8000-000000000001',
+          parent_id: '00000000-0000-4000-8000-000000000101',
           rating: 'helpful',
           comment: null,
           surface: 'parent_dashboard',
@@ -237,12 +237,12 @@ test.describe('pilot scorecard journey', () => {
     expect.soft(staleWeekUpsert.status()).toBe(400)
 
     const incompleteCurrentWeekRead = await request.get(
-      'http://127.0.0.1:54329/rest/v1/parent_experience_feedback?select=rating%2Ccomment&parent_id=eq.00000000-0000-0000-0000-000000000101'
+      'http://127.0.0.1:54329/rest/v1/parent_experience_feedback?select=rating%2Ccomment&parent_id=eq.00000000-0000-4000-8000-000000000101'
     )
     expect.soft(incompleteCurrentWeekRead.status()).toBe(400)
 
     const staleWeekRead = await request.get(
-      'http://127.0.0.1:54329/rest/v1/parent_experience_feedback?select=rating%2Ccomment&school_id=eq.00000000-0000-0000-0000-000000000001&parent_id=eq.00000000-0000-0000-0000-000000000101&surface=eq.parent_dashboard&week_start=eq.1999-01-04'
+      'http://127.0.0.1:54329/rest/v1/parent_experience_feedback?select=rating%2Ccomment&school_id=eq.00000000-0000-4000-8000-000000000001&parent_id=eq.00000000-0000-4000-8000-000000000101&surface=eq.parent_dashboard&week_start=eq.1999-01-04'
     )
     expect(staleWeekRead.status()).toBe(400)
   })

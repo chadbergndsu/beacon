@@ -29,6 +29,7 @@ This repo follows **[Solid Systems Standards](https://github.com/chadbergndsu/so
 - **Suite modules (007):** prefer tables for attendance, lessons, pulse, videos; **JSON fallback** only if those tables are missing. **Cameras always stay in settings JSON.**
 - **Billing (006 + 017):** `billing_products` / `billing_invoices` / `billing_payments` / `quickbooks_connections` only — **no** `schools.settings.billing` money path
 - **Communications:** `email_outbox` + Resend→SMTP→log cascade; every attempt recorded
+- **People messaging:** faculty can search and select same-school recipients by name. Teachers can reach all faculty and families in their assigned classes; leadership can reach the full school. Student selections resolve to linked parent emails. Every delivery remains individually visible in the Comms outbox.
 - **Ops:** Principal Go-live UI (`probeOpsHealth`) + public `GET /api/health` (see Health below)
 
 ### Public (unauthenticated) routes
@@ -120,6 +121,7 @@ npm run lint:fix      # ESLint --fix only (no separate Prettier/Biome)
 npm run typecheck
 npm test                 # vitest unit tests
 npm run test:coverage    # vitest + coverage thresholds (gated files in vitest.config.ts)
+npm run test:people-directory-integration # requires a running local Supabase stack
 npm run build
 npm run ci               # lint + typecheck + test:coverage + build  (no e2e)
 ```
@@ -299,12 +301,16 @@ Platform-provided (do not put secrets in git): `VERCEL_URL`, `VERCEL_ENV`, `VERC
 
 - Parents only access students linked in `parent_students`
 - Staff scoped by `school_id`
+- People messaging requires a verified faculty session and sender profile in the same tenant. Teacher family searches, previews, and sends are additionally restricted to students enrolled in that teacher's assigned classes; selecting a student expands only to that student's linked parents, with duplicate email destinations collapsed before delivery.
+- Each People delivery remains an individual tenant-scoped `email_outbox` record. The deterministic browser fixture uses only synthetic local identities, forces log-only transport, and never contacts live email or external systems.
 - Principal office requires principal or **admin** role (office secretary / power user)
 - Service role used only after a verified session in app code; edge session refresh is cookie-based in `src/proxy.ts`
 - Production/preview without Supabase public env returns **503** on non-public routes (fail closed)
 - No hard-coded single-school principal identity
 - `.gitignore` blocks `.env*`; only `.env.example` is committed
 - There is **no** `AUTH_OPEN` break-glass in this product (that pattern appears only in global Solid Systems text)
+
+People messaging is a controlled-pilot capability, not a claim that Beacon's broader production identity and operations controls are complete. YardGUARD IT alignment still treats SSO, MFA, managed account lifecycle, account recovery, and incident-response procedures as separate production gates.
 
 ## Observability
 

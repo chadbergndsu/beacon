@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import { redirect } from 'next/navigation'
 import { Mail, Radio, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { SystemEmailForm } from '@/components/announcements/SystemEmailForm'
-import { ComposeMessageForm } from '@/components/comms/ComposeMessageForm'
+import { CommunicationsComposer } from '@/components/comms/CommunicationsComposer'
 import { TestEmailButton } from '@/components/comms/TestEmailButton'
 import { TestSlackButton } from '@/components/comms/TestSlackButton'
 import { ResendEmailButton } from '@/components/comms/ResendEmailButton'
@@ -31,10 +31,11 @@ export default async function CommunicationsPage() {
     redirect('/dashboard')
   }
   const schoolId = profile.school_id
+  const outboxFilter = profile.role === 'teacher' ? { senderId: user.id } : undefined
 
   const [emails, stats, brand] = await Promise.all([
-    listEmailOutbox(schoolId, 100),
-    getEmailDeliveryStats(schoolId),
+    listEmailOutbox(schoolId, 100, outboxFilter),
+    getEmailDeliveryStats(schoolId, outboxFilter),
     loadSchoolBrand(schoolId),
   ])
 
@@ -225,7 +226,7 @@ export default async function CommunicationsPage() {
       <ViewSection id="compose" title="Compose message">
         <Card>
           <CardContent className="pt-6">
-            <ComposeMessageForm classes={classes} canSchoolWide={canManual} />
+            <CommunicationsComposer classes={classes} canSchoolWide={canManual} />
           </CardContent>
         </Card>
       </ViewSection>
@@ -347,7 +348,8 @@ export default async function CommunicationsPage() {
                       ) : null}
                     </TD>
                     <TD>
-                      {canManual && (e.status === 'failed' || e.status === 'skipped') ? (
+                      {(canManual || (profile.role === 'teacher' && e.sender_id === user.id)) &&
+                      (e.status === 'failed' || e.status === 'skipped') ? (
                         <ResendEmailButton outboxId={e.id} />
                       ) : null}
                     </TD>
