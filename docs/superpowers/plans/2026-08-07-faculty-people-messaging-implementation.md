@@ -70,7 +70,7 @@ Broader YardGUARD enterprise gates—managed SSO/MFA and provisioning, backup/re
 - Produces: `PeopleRecipientRef`, `PeopleSearchResult`, `PeoplePreview`, `PeopleSelectionPreview`, `PeopleMessageResult`, `PEOPLE_SEARCH_MIN_CHARS`, `PEOPLE_SEARCH_RESULT_LIMIT`, `PEOPLE_RECENT_LIMIT`, `PEOPLE_SELECTION_LIMIT`, `PEOPLE_DELIVERY_LIMIT`, `normalizePeopleQuery()`, `peopleRefKey()`, and `normalizePeopleRefs()`.
 - Consumes: `Role` from `src/lib/types.ts`.
 
-- [ ] **Step 1: Write failing contract tests**
+- [x] **Step 1: Write failing contract tests**
 
 ```ts
 import { describe, expect, it } from 'vitest'
@@ -106,13 +106,13 @@ describe('people messaging contracts', () => {
 })
 ```
 
-- [ ] **Step 2: Run the test and capture RED**
+- [x] **Step 2: Run the test and capture RED**
 
 Run: `npx vitest run src/lib/email/people-types.test.ts`
 
 Expected: FAIL because `people-types.ts` does not exist.
 
-- [ ] **Step 3: Implement the contracts and pure guards**
+- [x] **Step 3: Implement the contracts and pure guards**
 
 ```ts
 import type { Role } from '@/lib/types'
@@ -186,13 +186,13 @@ export function normalizePeopleRefs(value: unknown): PeopleRecipientRef[] {
 }
 ```
 
-- [ ] **Step 4: Run the focused test and typecheck**
+- [x] **Step 4: Run the focused test and typecheck**
 
 Run: `npx vitest run src/lib/email/people-types.test.ts && npm run typecheck`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit the contracts**
+- [x] **Step 5: Commit the contracts**
 
 ```bash
 git add src/lib/email/people-types.ts src/lib/email/people-types.test.ts
@@ -212,7 +212,7 @@ git commit -m "feat: define people messaging contracts"
 - Consumes: `FacultyRole`, `PeopleRecipientRef`, `PeopleSearchResult`, `PeoplePreview`, and caps from `people-types.ts`.
 - Produces: `PeopleSender`, `ResolvedPeopleDelivery`, `ResolvedPeopleDirectory`, `searchPeopleDirectory()`, and `resolvePeopleDirectory()`.
 
-- [ ] **Step 1: Extend the fluent database mock and write failing authorization tests**
+- [x] **Step 1: Extend the fluent database mock and write failing authorization tests**
 
 Add `or()` and `is()` filters to the mock so tests can assert the exact tenant-bound query shape:
 
@@ -267,13 +267,13 @@ it('marks students without a linked parent email unavailable', async () => {
 
 Also assert query counts remain bounded as selected recipients grow: one scope wave, one referenced-profile wave, one student wave, one parent-link wave, and one linked-parent wave.
 
-- [ ] **Step 2: Run the directory tests and capture RED**
+- [x] **Step 2: Run the directory tests and capture RED**
 
 Run: `npx vitest run src/lib/email/people-directory.test.ts`
 
 Expected: FAIL because the directory module does not exist.
 
-- [ ] **Step 3: Implement server-only search and resolution**
+- [x] **Step 3: Implement server-only search and resolution**
 
 Start the module with `import 'server-only'`. Define exact public interfaces:
 
@@ -342,13 +342,13 @@ For resolution, load referenced profiles with both `.eq('school_id', sender.scho
 
 Return one selection preview per submitted reference. Use `No usable email address` for a direct profile without email and `No linked parent email` for a student without deliverable linked parents. Put missing, cross-school, and teacher-out-of-scope references in `rejectedKeys` without revealing why.
 
-- [ ] **Step 4: Run directory, existing recipient-boundary tests, and typecheck**
+- [x] **Step 4: Run directory, existing recipient-boundary tests, and typecheck**
 
 Run: `npx vitest run src/lib/email/people-directory.test.ts src/lib/email/recipients.school-bind.test.ts && npm run typecheck`
 
 Expected: PASS with bounded query-count assertions.
 
-- [ ] **Step 5: Commit the directory**
+- [x] **Step 5: Commit the directory**
 
 ```bash
 git add src/lib/email/people-directory.ts src/lib/email/people-directory.test.ts src/lib/test/mock-supabase.ts
@@ -367,7 +367,7 @@ git commit -m "feat: add authorized people directory"
 - Consumes: `searchPeopleDirectory()`, `resolvePeopleDirectory()`, `normalizePeopleQuery()`, `normalizePeopleRefs()`, `queueAndSendBatch()`, `familyMessageBodies()`, `loadSchoolBrand()`, and `subjectTag()`.
 - Produces: `searchPeopleRecipients()`, `previewPeopleRecipients()`, and `sendPeopleMessage()` server actions.
 
-- [ ] **Step 1: Write failing action tests**
+- [x] **Step 1: Write failing action tests**
 
 Mock session auth, the profile lookup, directory functions, email batching, branding, and audit insert. Cover these exact cases:
 
@@ -438,13 +438,13 @@ it('queues one branded email per unique resolved recipient and audits counts onl
 
 Add cases for an absent user, one-character search, malformed references, more than 50 refs, more than 100 resolved deliveries, missing subject/body, subject over 200 characters, body over 20,000 characters, and log-only/partial-failure counts.
 
-- [ ] **Step 2: Run action tests and capture RED**
+- [x] **Step 2: Run action tests and capture RED**
 
 Run: `npx vitest run src/app/actions/people-messaging.test.ts`
 
 Expected: FAIL because the actions do not exist.
 
-- [ ] **Step 3: Implement session-derived faculty access**
+- [x] **Step 3: Implement session-derived faculty access**
 
 ```ts
 async function requireFacultyMessagingAccess() {
@@ -471,7 +471,7 @@ async function requireFacultyMessagingAccess() {
 }
 ```
 
-- [ ] **Step 4: Implement bounded search and preview actions**
+- [x] **Step 4: Implement bounded search and preview actions**
 
 `searchPeopleRecipients()` normalizes the query and at most eight recent refs. If both are empty, return `{ ok: true, results: [] }`. `previewPeopleRecipients()` rejects malformed or oversized arrays and returns the public preview only. Both catch internal exceptions, call `reportError()` with a surface and operation but no query or names, and return a stable client-safe error.
 
@@ -500,7 +500,7 @@ export async function previewPeopleRecipients(input: { refs: unknown }) {
 }
 ```
 
-- [ ] **Step 5: Implement send-time reauthorization and existing delivery integration**
+- [x] **Step 5: Implement send-time reauthorization and existing delivery integration**
 
 ```ts
 export async function sendPeopleMessage(input: {
@@ -576,13 +576,13 @@ export async function sendPeopleMessage(input: {
 }
 ```
 
-- [ ] **Step 6: Run action and email tests**
+- [x] **Step 6: Run action and email tests**
 
 Run: `npx vitest run src/app/actions/people-messaging.test.ts src/lib/email/templates.test.ts src/lib/email/send.test.ts && npm run typecheck`
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit actions**
+- [x] **Step 7: Commit actions**
 
 ```bash
 git add src/app/actions/people-messaging.ts src/app/actions/people-messaging.test.ts
@@ -601,7 +601,7 @@ git commit -m "feat: send authorized people messages"
 - Consumes: `searchPeopleRecipients()`, `PeopleRecipientRef`, `PeopleSearchResult`, `peopleRefKey()`, and `PEOPLE_RECENT_LIMIT`.
 - Produces: `PeopleRecipientCombobox({ selected, onChange, disabled })`.
 
-- [ ] **Step 1: Write failing component tests**
+- [x] **Step 1: Write failing component tests**
 
 Use jsdom, Testing Library, fake timers for the 250 ms debounce, and `userEvent`. Cover:
 
@@ -643,13 +643,13 @@ it('ignores a slow response for an older query', async () => {
 
 Add tests for one-character no-search, group headings, disabled no-email results, Escape, duplicate selection prevention, local recent reference persistence without email fields, and reauthorization of recent references on mount.
 
-- [ ] **Step 2: Run the component test and capture RED**
+- [x] **Step 2: Run the component test and capture RED**
 
 Run: `npx vitest run src/components/comms/PeopleRecipientCombobox.test.tsx`
 
 Expected: FAIL because the component does not exist.
 
-- [ ] **Step 3: Implement the combobox state machine**
+- [x] **Step 3: Implement the combobox state machine**
 
 Use a controlled `selected: PeopleSearchResult[]` prop. Keep query, results, open state, active index, pending state, and error locally. Use a monotonically increasing request sequence in a ref; apply results only when the response sequence equals the newest sequence.
 
@@ -686,13 +686,13 @@ Use a controlled `selected: PeopleSearchResult[]` prop. Keep query, results, ope
 
 Store recent refs under `beacon:people-message-recents:v1` as JSON containing only `kind` and `id`. Cap to eight, catch storage errors, and never persist labels, context, recipient names, or email addresses. On mount, call search with an empty query and those recent refs so the server drops stale entries.
 
-- [ ] **Step 4: Run component tests, accessibility-focused assertions, and typecheck**
+- [x] **Step 4: Run component tests, accessibility-focused assertions, and typecheck**
 
 Run: `npx vitest run src/components/comms/PeopleRecipientCombobox.test.tsx && npm run typecheck`
 
 Expected: PASS with no act warnings.
 
-- [ ] **Step 5: Commit the autocomplete**
+- [x] **Step 5: Commit the autocomplete**
 
 ```bash
 git add src/components/comms/PeopleRecipientCombobox.tsx src/components/comms/PeopleRecipientCombobox.test.tsx
@@ -715,7 +715,7 @@ git commit -m "feat: add people recipient autocomplete"
 - Consumes: `PeopleRecipientCombobox`, `previewPeopleRecipients()`, `sendPeopleMessage()`, existing `ComposeMessageForm`, and existing UI primitives.
 - Produces: `PeopleMessageForm({ onDirtyChange })`, `ComposeMessageForm({ classes, canSchoolWide, onDirtyChange })`, and a People-default `CommunicationsComposer` rendered by the Comms page.
 
-- [ ] **Step 1: Write failing People form tests**
+- [x] **Step 1: Write failing People form tests**
 
 ```tsx
 it('previews selected references and blocks send until server resolution is ready', async () => {
@@ -748,7 +748,7 @@ it('preserves the draft and reports pending, partial failure, and success counts
 
 Add tests for student expansion disclosure, unavailable selections, selected/reference cap copy, generic send-time reauthorization error, log-only counts, and full-success form reset.
 
-- [ ] **Step 2: Write failing mode-wrapper tests**
+- [x] **Step 2: Write failing mode-wrapper tests**
 
 ```tsx
 it('opens in People mode and preserves the existing Groups composer', async () => {
@@ -762,19 +762,19 @@ it('opens in People mode and preserves the existing Groups composer', async () =
 
 Add tests that changing modes with a non-empty People or Groups draft asks for confirmation, leaves the draft in place when canceled, and clears the previous mode after confirmation.
 
-- [ ] **Step 3: Run both component suites and capture RED**
+- [x] **Step 3: Run both component suites and capture RED**
 
 Run: `npx vitest run src/components/comms/PeopleMessageForm.test.tsx src/components/comms/CommunicationsComposer.test.tsx`
 
 Expected: FAIL because both components do not exist.
 
-- [ ] **Step 4: Implement People preview and send flow**
+- [x] **Step 4: Implement People preview and send flow**
 
 Keep selected display results controlled by the form. Debounce preview by 150 ms and suppress stale responses with the same request-sequence pattern as search. Render selected count, unique email count, student expansion names, and unavailable reasons. Use `role="alert"` for failures and `role="status"` for pending/success.
 
 On complete success (`failed === 0` and `skipped === 0`), clear refs, subject, and body. On partial failure or log-only delivery, retain the draft so the sender can inspect the outbox and retry.
 
-- [ ] **Step 5: Implement the People/Groups wrapper and page integration**
+- [x] **Step 5: Implement the People/Groups wrapper and page integration**
 
 ```tsx
 export function CommunicationsComposer(props: {
@@ -823,13 +823,13 @@ export function CommunicationsComposer(props: {
 
 Change the existing group heading from `Compose to families` to `Compose to groups`. Add optional `onDirtyChange` to the existing form, set it on the first field/audience change, and clear it after a complete successful send. Replace the page's direct `ComposeMessageForm` render with `CommunicationsComposer`. Keep the page's current faculty role guard and teacher class scoping unchanged.
 
-- [ ] **Step 6: Run Comms component/page tests and typecheck**
+- [x] **Step 6: Run Comms component/page tests and typecheck**
 
 Run: `npx vitest run src/components/comms/PeopleMessageForm.test.tsx src/components/comms/CommunicationsComposer.test.tsx src/components/comms/PeopleRecipientCombobox.test.tsx && npm run typecheck`
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit the composer integration**
+- [x] **Step 7: Commit the composer integration**
 
 ```bash
 git add src/components/comms/PeopleMessageForm.tsx src/components/comms/PeopleMessageForm.test.tsx src/components/comms/CommunicationsComposer.tsx src/components/comms/CommunicationsComposer.test.tsx src/components/comms/ComposeMessageForm.tsx 'src/app/(app)/admin/emails/page.tsx'
@@ -850,7 +850,7 @@ git commit -m "feat: make People the default Comms composer"
 - Consumes: the authenticated teacher fixture, People composer, Supabase REST mock, email outbox path, and existing Playwright configuration.
 - Produces: a mobile end-to-end proof covering search, selection, expansion, deduplication, send state, outbox, and denied unassigned family lookup.
 
-- [ ] **Step 1: Write the failing browser journey**
+- [x] **Step 1: Write the failing browser journey**
 
 Reuse the authenticated-cookie helper pattern from `e2e/pilot-scorecard.spec.ts`. Add one serial local-only test:
 
@@ -881,13 +881,13 @@ test('teacher messages a colleague and assigned family by People autocomplete', 
 
 Add a parent-role assertion that `/admin/emails` redirects to `/dashboard` and never renders the People tab.
 
-- [ ] **Step 2: Run the journey and capture RED**
+- [x] **Step 2: Run the journey and capture RED**
 
 Run: `npm run build && npx playwright test e2e/people-messaging.spec.ts`
 
 Expected: FAIL because the mock does not yet supply directory, class, enrollment, parent-link, outbox insert, and audit rows needed by the feature.
 
-- [ ] **Step 3: Extend the local Supabase fixture without weakening remote-mode tests**
+- [x] **Step 3: Extend the local Supabase fixture without weakening remote-mode tests**
 
 Add one same-school assigned child, one unassigned child, one second linked parent sharing the first parent's email for deduplication coverage, and one outside-school family. Enhance `profileRows()`, `tableRows('classes')`, `tableRows('enrollments')`, `tableRows('parent_students')`, `tableRows('students')`, and write handling for `email_outbox` so they honor `eq`, `in`, and `or` filters used by production code.
 
@@ -901,7 +901,7 @@ EMAIL_TRANSPORTS: 'log',
 
 Keep `test.skip(Boolean(process.env.PLAYWRIGHT_BASE_URL), ...)` so fixture-authenticated tests cannot forge cookies against a hosted environment.
 
-- [ ] **Step 4: Update product documentation**
+- [x] **Step 4: Update product documentation**
 
 Add this Communications bullet to `README.md`:
 
@@ -909,7 +909,7 @@ Add this Communications bullet to `README.md`:
 - **People messaging:** faculty can search and select same-school recipients by name. Teachers can reach all faculty and families in their assigned classes; leadership can reach the full school. Student selections resolve to linked parent emails. Every delivery remains individually visible in the Comms outbox.
 ```
 
-- [ ] **Step 5: Run focused and complete verification**
+- [x] **Step 5: Run focused and complete verification**
 
 Run in this order:
 
@@ -935,7 +935,7 @@ Expected:
 - Hosted public smoke passes without running fixture-authenticated People tests.
 - The worktree contains only intended source, test, documentation, and fixture changes.
 
-- [ ] **Step 6: Review security and privacy boundaries**
+- [x] **Step 6: Review security and privacy boundaries**
 
 Inspect the final diff and verify:
 
@@ -948,7 +948,7 @@ Inspect the final diff and verify:
 - no live email is attempted by the Playwright fixture;
 - no Supabase migration is introduced.
 
-- [ ] **Step 7: Commit the browser proof and docs**
+- [x] **Step 7: Commit the browser proof and docs**
 
 ```bash
 git add e2e/people-messaging.spec.ts scripts/e2e-supabase-mock.mjs playwright.config.ts README.md
@@ -967,7 +967,7 @@ git commit -m "test: verify faculty People messaging journey"
 - Consumes: the complete People messaging implementation and all verification evidence.
 - Produces: a clean, reviewed branch ready for a dedicated pull request after its base dependency is resolved.
 
-- [ ] **Step 1: Confirm base dependency and branch history**
+- [x] **Step 1: Confirm base dependency and branch history**
 
 Run:
 
@@ -980,7 +980,7 @@ git log --oneline origin/main..feature/faculty-people-messaging
 
 Expected: the branch includes the approved pilot/performance commits plus the People messaging commits. Do not open the People PR against `main` until PR #29 is merged, or rebase the People branch onto the updated `origin/main` after that merge.
 
-- [ ] **Step 2: Run the final completion gate on the exact tree**
+- [x] **Step 2: Run the final completion gate on the exact tree**
 
 Run:
 
@@ -993,7 +993,7 @@ git status --short --branch
 
 Expected: all commands pass and the worktree is clean.
 
-- [ ] **Step 3: Review the full feature diff**
+- [x] **Step 3: Review the full feature diff**
 
 Run:
 
@@ -1013,6 +1013,6 @@ git diff a7334f0..HEAD -- \
 
 Expected: no unrelated edits, no debug output, no secrets, and no generated artifacts.
 
-- [ ] **Step 4: Apply the finishing workflow**
+- [x] **Step 4: Apply the finishing workflow**
 
 Use `superpowers:finishing-a-development-branch`. Preserve this worktree for review. After PR #29 lands, update from `origin/main`, re-run the exact-tree completion gate, push `feature/faculty-people-messaging`, and open a dedicated People messaging pull request.
