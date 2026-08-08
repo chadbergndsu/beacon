@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import {
   PEOPLE_RECENT_LIMIT,
   PEOPLE_SEARCH_RESULT_LIMIT,
+  normalizePeopleRefs,
   peopleRefKey,
   type PeopleRecipientRef,
   type PeopleSearchResult,
@@ -20,26 +21,36 @@ type PeopleRecipientComboboxProps = {
   disabled?: boolean
 }
 
-function isRecipientRef(value: unknown): value is PeopleRecipientRef {
-  if (!value || typeof value !== 'object') return false
-  const kind = Reflect.get(value, 'kind')
-  const id = Reflect.get(value, 'id')
-  return (kind === 'profile' || kind === 'student') && typeof id === 'string'
+function clearRecentRefs() {
+  try {
+    window.localStorage.removeItem(RECENTS_STORAGE_KEY)
+  } catch {
+    // Storage is optional and errors must not affect recipient selection.
+  }
 }
 
 function readRecentRefs(): PeopleRecipientRef[] {
   try {
-    const parsed: unknown = JSON.parse(window.localStorage.getItem(RECENTS_STORAGE_KEY) ?? '[]')
-    if (!Array.isArray(parsed)) return []
-    const refs = new Map<string, PeopleRecipientRef>()
-    for (const value of parsed) {
-      if (!isRecipientRef(value)) continue
-      const ref = { kind: value.kind, id: value.id } as PeopleRecipientRef
-      refs.set(peopleRefKey(ref), ref)
-      if (refs.size === PEOPLE_RECENT_LIMIT) break
+    const stored = window.localStorage.getItem(RECENTS_STORAGE_KEY)
+    if (stored == null) return []
+    const parsed: unknown = JSON.parse(stored)
+    if (!Array.isArray(parsed)) {
+      clearRecentRefs()
+      return []
     }
-    return [...refs.values()]
+
+    const refs = normalizePeopleRefs(parsed).slice(0, PEOPLE_RECENT_LIMIT)
+    if (parsed.length > 0 && refs.length === 0) {
+      clearRecentRefs()
+      return []
+    }
+    const sanitized = refs.map((ref) => ({ kind: ref.kind, id: ref.id }))
+    if (JSON.stringify(parsed) !== JSON.stringify(sanitized)) {
+      window.localStorage.setItem(RECENTS_STORAGE_KEY, JSON.stringify(sanitized))
+    }
+    return sanitized
   } catch {
+    clearRecentRefs()
     return []
   }
 }
@@ -76,11 +87,14 @@ export function PeopleRecipientCombobox({
 }: PeopleRecipientComboboxProps) {
   const inputId = useId()
   const listboxId = useId()
+  const inputRef = useRef<HTMLInputElement>(null)
+  const optionRefs = useRef(new Map<string, HTMLDivElement>())
   const latestRequest = useRef(0)
+  const pendingRemovalFocusKey = useRef<string | null>(null)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PeopleSearchResult[]>([])
   const [open, setOpen] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(-1)
+  const [activeKey, setActiveKey] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -89,21 +103,30 @@ export function PeopleRecipientCombobox({
     () => results.filter((result) => !selectedKeys.has(result.key)),
     [results, selectedKeys]
   )
-  const activeResult = visibleResults[activeIndex]
+  const orderedResults = useMemo(
+    () => GROUPS.flatMap((group) => visibleResults.filter((result) => result.group === group)),
+    [visibleResults]
+  )
+  const selectableResults = useMemo(
+    () => orderedResults.filter((result) => !result.disabledReason),
+    [orderedResults]
+  )
+  const activeIndex = activeKey ? orderedResults.findIndex((result) => result.key === activeKey) : -1
+  const activeResult = activeIndex >= 0 ? orderedResults[activeIndex] : undefined
   const selectedAnnouncement = `${selected.length} selected`
   const announcement = error
     ? error
     : pending
       ? `${selectedAnnouncement}. Searching recipients.`
       : open
-        ? `${selectedAnnouncement}. ${visibleResults.length} result${visibleResults.length === 1 ? '' : 's'} available.`
+        ? `${selectedAnnouncement}. ${selectableResults.length} selectable result${selectableResults.length === 1 ? '' : 's'} available.`
         : selectedAnnouncement
 
   const applyResults = useCallback((nextResults: PeopleSearchResult[], request: number) => {
     if (request !== latestRequest.current) return
     const limitedResults = nextResults.slice(0, PEOPLE_SEARCH_RESULT_LIMIT)
     setResults(limitedResults)
-    setActiveIndex(-1)
+    setActiveKey(null)
     setOpen(limitedResults.length > 0)
     setPending(false)
   }, [])
@@ -129,6 +152,24 @@ export function PeopleRecipientCombobox({
         setPending(false)
       })
   }, [applyResults])
+
+  useEffect(() => {
+    return () => {
+      latestRequest.current += 1
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!activeResult) return
+    optionRefs.current.get(activeResult.key)?.scrollIntoView({ block: 'nearest' })
+  }, [activeResult])
+
+  useEffect(() => {
+    const removedKey = pendingRemovalFocusKey.current
+    if (!removedKey || selected.some((result) => result.key === removedKey)) return
+    pendingRemovalFocusKey.current = null
+    inputRef.current?.focus()
+  }, [selected])
 
   useEffect(() => {
     const trimmedQuery = query.trim()
@@ -163,7 +204,7 @@ export function PeopleRecipientCombobox({
       setQuery('')
       setResults([])
       setOpen(false)
-      setActiveIndex(-1)
+      setActiveKey(null)
       setPending(false)
     },
     [disabled, onChange, selected, selectedKeys]
@@ -172,21 +213,27 @@ export function PeopleRecipientCombobox({
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') {
       setOpen(false)
-      setActiveIndex(-1)
+      setActiveKey(null)
       return
     }
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
-      if (visibleResults.length === 0) return
+      if (orderedResults.length === 0) return
       setOpen(true)
-      setActiveIndex((current) => {
-        if (current < 0) {
-          return event.key === 'ArrowDown'
-            ? firstEnabledIndex(visibleResults)
-            : nextEnabledIndex(visibleResults, 0, -1)
-        }
-        return nextEnabledIndex(visibleResults, current, event.key === 'ArrowDown' ? 1 : -1)
-      })
+      if (activeIndex < 0) {
+        const nextIndex =
+          event.key === 'ArrowDown'
+            ? firstEnabledIndex(orderedResults)
+            : nextEnabledIndex(orderedResults, 0, -1)
+        setActiveKey(nextIndex >= 0 ? orderedResults[nextIndex].key : null)
+        return
+      }
+      const nextIndex = nextEnabledIndex(
+        orderedResults,
+        activeIndex,
+        event.key === 'ArrowDown' ? 1 : -1
+      )
+      setActiveKey(nextIndex >= 0 ? orderedResults[nextIndex].key : null)
       return
     }
     if (event.key === 'Enter' && activeResult) {
@@ -200,7 +247,7 @@ export function PeopleRecipientCombobox({
     setQuery(nextQuery)
     setResults([])
     setOpen(false)
-    setActiveIndex(-1)
+    setActiveKey(null)
     setError(null)
     setPending(nextQuery.trim().length >= 2)
   }
@@ -223,7 +270,10 @@ export function PeopleRecipientCombobox({
               aria-label={`Remove ${item.label}`}
               className="min-h-11 min-w-11 rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               disabled={disabled}
-              onClick={() => onChange(selected.filter((selectedItem) => selectedItem.key !== item.key))}
+              onClick={() => {
+                pendingRemovalFocusKey.current = item.key
+                onChange(selected.filter((selectedItem) => selectedItem.key !== item.key))
+              }}
             >
               <span aria-hidden="true">×</span>
             </button>
@@ -231,6 +281,7 @@ export function PeopleRecipientCombobox({
         ))}
         <input
           id={inputId}
+          ref={inputRef}
           type="text"
           role="combobox"
           aria-autocomplete="list"
@@ -256,7 +307,7 @@ export function PeopleRecipientCombobox({
           className="mt-2 max-h-72 overflow-y-auto rounded-lg border border-input bg-background p-1 shadow-sm"
         >
           {GROUPS.map((group) => {
-            const groupResults = visibleResults.filter((result) => result.group === group)
+            const groupResults = orderedResults.filter((result) => result.group === group)
             if (groupResults.length === 0) return null
             return (
               <div key={group} role="group" aria-label={group}>
@@ -264,11 +315,15 @@ export function PeopleRecipientCombobox({
                   {group}
                 </p>
                 {groupResults.map((result) => {
-                  const index = visibleResults.indexOf(result)
+                  const index = orderedResults.indexOf(result)
                   const isDisabled = Boolean(result.disabledReason)
                   return (
                     <div
                       key={result.key}
+                      ref={(node) => {
+                        if (node) optionRefs.current.set(result.key, node)
+                        else optionRefs.current.delete(result.key)
+                      }}
                       id={`${listboxId}-${result.key}`}
                       role="option"
                       aria-selected={index === activeIndex}
