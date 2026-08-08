@@ -23,13 +23,13 @@ export default defineConfig({
       {
         command: 'node scripts/e2e-supabase-mock.mjs',
         url: 'http://127.0.0.1:54329/health',
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
         timeout: 30_000,
       },
       {
         command: `npx next start -p ${port}`,
         url: baseURL,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
         timeout: 120_000,
         env: {
           ...process.env,

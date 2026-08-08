@@ -169,3 +169,78 @@ PASS
 - No external mail transport was configured or attempted; no live, personal, or non-synthetic fixture data was used.
 
 No product concern remains. The only fix-round limitation is the recorded in-app Browser acquisition outage; deterministic Playwright covered every new rendered assertion, including the complete 390×844 flow.
+
+## Fix Round 2 — Owned local Playwright servers
+
+### RED
+
+A focused Vitest regression imported the real `playwright.config.ts` under fresh, controlled local and hosted environments. The local assertion deliberately injected Resend and SMTP settings and required both web servers to be runner-owned.
+
+```text
+npx vitest run src/lib/test/playwright-config.test.ts
+FAIL — local configuration returned reuseExistingServer: true for both the Supabase fixture and Next app
+PASS — hosted configuration returned no local webServer
+```
+
+The failure was specific and behavioral: the loaded Playwright configuration showed that a non-CI local run could silently attach to arbitrary listeners on ports 54329 or 3010, bypassing the owned process environment even though the configured environment itself correctly cleared every live mail input.
+
+### GREEN
+
+Both local web-server entries now set `reuseExistingServer: false`. Default local ports remain deterministic and test-only (`54329` for the loopback Supabase fixture and `3010`, or an explicit `PLAYWRIGHT_PORT`, for the Next app). Hosted mode remains unchanged: setting `PLAYWRIGHT_BASE_URL` produces no local `webServer` entries, and the People suite skips before fixture reset or authentication.
+
+The focused regression now verifies from the imported configuration that:
+
+- both local processes are owned and cannot be reused;
+- the selected app port is carried consistently into its command and URL;
+- Resend plus every SMTP input is empty and the transport is log-only; and
+- hosted mode starts neither local process and uses the hosted base URL.
+
+### Foreign-listener proof
+
+A temporary synthetic HTTP listener was placed on `127.0.0.1:54329`, then the real Playwright launcher was run with an otherwise unused app port:
+
+```text
+PLAYWRIGHT_PORT=3911 npx playwright test e2e/people-messaging.spec.ts --grep 'local Supabase fixture' --workers=1
+EXPECTED FAIL (exit 1) — http://127.0.0.1:54329/health is already used; Playwright instructs the operator to clear the port or opt into reuseExistingServer
+```
+
+The test process did not start and did not reuse the foreign listener. The temporary listener was then stopped before GREEN verification.
+
+### Fix-round verification
+
+```text
+npx vitest run src/lib/test/playwright-config.test.ts
+PASS — 2/2 local ownership/sanitization and hosted no-server tests
+
+npx playwright test e2e/people-messaging.spec.ts --workers=1 --repeat-each=2
+PASS — 8/8 repeat-determinism checks with owned servers
+
+npm run test:e2e
+PASS — 18/18 local browser tests with owned servers
+
+PLAYWRIGHT_BASE_URL=https://beacon.commoncentsip.com npx playwright test e2e/public-smoke.spec.ts
+PASS — 10/10 hosted public smoke tests; no local server started
+
+PLAYWRIGHT_BASE_URL=https://beacon.commoncentsip.com npx playwright test e2e/people-messaging.spec.ts
+PASS — 4/4 skipped before fixture reset/authentication; no local server started
+
+npm run lint
+PASS
+
+npm run typecheck
+PASS
+
+git diff --check
+PASS
+```
+
+### Fix-round self-review
+
+- No application code or production behavior changed.
+- No arbitrary local app or fixture process can be silently reused by the Playwright configuration.
+- Hosted mode remains portable and does not create local fixture processes.
+- The regression imports and observes the real configuration rather than grepping source text.
+- All injected live mail values remain excluded from the owned Next process.
+- No external email, non-synthetic data, dependency, or migration was introduced.
+
+No concern remains for this finding. Occupied deterministic ports now fail clearly by design and must be freed before a local fixture run.
