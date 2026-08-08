@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyParentsOfGradeSave } from '@/lib/email/grade-notify'
+import { recordPilotActivity } from '@/lib/pilot-analytics/activity'
 import { canEnterGrades, effectiveRole } from '@/lib/roles'
 import type { Grade, Role } from '@/lib/types'
 
@@ -121,6 +122,15 @@ export async function saveGrades(
   if (error) {
     const { toClientError } = await import('@/lib/errors/client-error')
     return { ok: false, error: toClientError(error.message) }
+  }
+
+  if (role === 'teacher') {
+    await recordPilotActivity({
+      schoolId: classRow.school_id as string,
+      userId: user.id,
+      actorRole: role,
+      eventType: 'teacher_work',
+    })
   }
 
   await admin.from('audit_logs').insert({

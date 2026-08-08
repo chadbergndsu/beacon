@@ -2,10 +2,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { listPulsesForStudent } from '@/lib/school-modules/store'
 import { loadAttendanceForStudent } from '@/lib/attendance/store'
 import { loadBillingState } from '@/lib/billing/store'
-import { loadMissingWorkForStudent } from '@/lib/insights/load-missing-work'
 import { ATTENDANCE_LABEL } from '@/lib/attendance/types'
 import { PULSE_LEVEL_LABEL } from '@/lib/school-modules/types'
 import { formatMoney } from '@/lib/billing/store'
+import type { MissingWorkSummary } from '@/lib/insights/missing-work'
 
 export type FeedItem = {
   id: string
@@ -23,10 +23,15 @@ export type FeedItem = {
 export async function buildParentFeed(
   parentId: string,
   schoolId: string,
-  children: { id: string; first_name: string; last_name: string }[]
+  children: { id: string; first_name: string; last_name: string }[],
+  missingSummaries: MissingWorkSummary[]
 ): Promise<FeedItem[]> {
   const admin = createAdminClient()
   const items: FeedItem[] = []
+  const childIds = children.map((child) => child.id)
+  const missingByStudent = new Map(
+    missingSummaries.map((summary) => [summary.studentId, summary])
+  )
 
   // Announcements
   const { data: announcements } = await admin
@@ -49,12 +54,39 @@ export async function buildParentFeed(
     })
   }
 
+  const { data: gradeData } = childIds.length
+    ? await admin
+        .from('grades')
+        .select('id, score, is_missing, entered_at, assignment_id, student_id')
+        .in('student_id', childIds)
+        .order('entered_at', { ascending: false })
+        .limit(Math.max(8, childIds.length * 8))
+    : { data: [] }
+  const allGradeRows = gradeData ?? []
+  const assignmentIds = [
+    ...new Set(
+      allGradeRows
+        .map((grade) => grade.assignment_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    ),
+  ]
+  const { data: assignmentRows } = assignmentIds.length
+    ? await admin
+        .from('assignments')
+        .select('id, title, class_id, classes!inner(school_id)')
+        .in('id', assignmentIds)
+        .eq('classes.school_id', schoolId)
+    : { data: [] }
+  const assignmentById = new Map(
+    (assignmentRows ?? []).map((assignment) => [assignment.id, assignment])
+  )
+
   for (const child of children) {
     const name = `${child.first_name} ${child.last_name}`
 
     // Missing work radar signal (market: parents open apps for this first)
-    const missing = await loadMissingWorkForStudent(child.id, name)
-    if (missing.missingCount > 0) {
+    const missing = missingByStudent.get(child.id)
+    if (missing && missing.missingCount > 0) {
       const sample = missing.missing
         .slice(0, 3)
         .map((m) => m.title)
@@ -108,22 +140,14 @@ export async function buildParentFeed(
     }
 
     // Recent grades (sample last entered)
-    const { data: gradeRows } = await admin
-      .from('grades')
-      .select('id, score, is_missing, entered_at, assignment_id, student_id')
-      .eq('student_id', child.id)
-      .order('entered_at', { ascending: false })
-      .limit(8)
-
-    for (const g of gradeRows ?? []) {
+    const childGradeRows = allGradeRows
+      .filter((grade) => grade.student_id === child.id)
+      .slice(0, 8)
+    for (const g of childGradeRows) {
       let assignmentTitle = 'Assignment'
       let classId: string | null = null
       if (g.assignment_id) {
-        const { data: asg } = await admin
-          .from('assignments')
-          .select('title, class_id')
-          .eq('id', g.assignment_id)
-          .maybeSingle()
+        const asg = assignmentById.get(g.assignment_id)
         if (asg) {
           assignmentTitle = asg.title
           classId = asg.class_id

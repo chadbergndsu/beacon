@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { effectiveRole, homePathForRole } from '@/lib/roles'
 import { safeInternalPath } from '@/lib/safe-redirect'
+import { recordPilotActivity } from '@/lib/pilot-analytics/activity'
 import type { Profile } from '@/lib/types'
 
 export type AuthState = {
@@ -45,24 +46,36 @@ export async function login(
     return { error: 'Invalid email or password.' }
   }
 
-  // Resolve home by role when next is default
   let next = safeInternalPath(nextRaw, '')
-  if (!next || next === '/dashboard' || next === '/login') {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (user) {
-        const admin = createAdminClient()
-        const { data } = await admin
-          .from('profiles')
-          .select('id, school_id, role, full_name, email, phone')
-          .eq('id', user.id)
-          .maybeSingle()
-        const role = effectiveRole(data as Profile | null)
+  const resolveHomeByRole = !next || next === '/dashboard' || next === '/login'
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      const admin = createAdminClient()
+      const { data } = await admin
+        .from('profiles')
+        .select('id, school_id, role, full_name, email, phone')
+        .eq('id', user.id)
+        .maybeSingle()
+      const profile = data as Profile | null
+      if (profile?.school_id) {
+        await recordPilotActivity({
+          schoolId: profile.school_id,
+          userId: user.id,
+          actorRole: effectiveRole(profile) ?? profile.role,
+          eventType: 'sign_in',
+        })
+      }
+      if (resolveHomeByRole) {
+        const role = effectiveRole(profile)
         next = homePathForRole(role)
       }
-    } catch {
+    }
+  } catch {
+    if (resolveHomeByRole) {
       next = '/dashboard'
     }
   }

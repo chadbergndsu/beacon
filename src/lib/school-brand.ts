@@ -4,6 +4,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { cache } from 'react'
 
 export type SchoolBrand = {
   schoolId: string | null
@@ -124,7 +125,9 @@ export async function loadSchoolBrandByPublicKey(
   return loadSchoolBrand(null)
 }
 
-export async function loadSchoolBrand(schoolId: string | null | undefined): Promise<SchoolBrand> {
+export const loadSchoolBrand = cache(async function loadSchoolBrand(
+  schoolId: string | null | undefined
+): Promise<SchoolBrand> {
   if (!schoolId) {
     // Single-tenant fallback: only if exactly one school exists
     try {
@@ -163,7 +166,7 @@ export async function loadSchoolBrand(schoolId: string | null | undefined): Prom
   } catch {
     return { ...DEFAULT_BRAND }
   }
-}
+})
 
 export function locationLine(brand: SchoolBrand): string | null {
   const parts = [brand.city, brand.state].filter(Boolean)

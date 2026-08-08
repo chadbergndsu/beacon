@@ -17,6 +17,9 @@ import {
 import { resolveParentsForStudents } from '@/lib/email/recipients'
 import { loadSchoolBrand } from '@/lib/school-brand'
 import { ATTENDANCE_LABEL } from '@/lib/attendance/types'
+import { recordPilotActivity } from '@/lib/pilot-analytics/activity'
+import { effectiveRole } from '@/lib/roles'
+import type { Role } from '@/lib/types'
 
 export async function getAttendance(classId: string, date: string) {
   const access = await requireClassManager(classId)
@@ -62,6 +65,23 @@ export async function saveAttendance(
   if (storeResult.error) {
     const { toClientError } = await import('@/lib/errors/client-error')
     return { ok: false, error: toClientError(storeResult.error) }
+  }
+
+  const role = effectiveRole(
+    access.profile
+      ? {
+          role: access.profile.role as Role,
+          email: access.profile.email as string | null,
+        }
+      : null
+  )
+  if (role === 'teacher') {
+    await recordPilotActivity({
+      schoolId: access.classRow.school_id,
+      userId: access.user.id,
+      actorRole: role,
+      eventType: 'teacher_work',
+    })
   }
 
   const admin = createAdminClient()

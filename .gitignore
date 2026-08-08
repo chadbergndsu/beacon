@@ -44,4 +44,4 @@ tmp-cal.jpg
 coverage
 test-results
 playwright-report
-
+.worktrees/

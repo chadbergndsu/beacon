@@ -132,6 +132,7 @@ npm run test:e2e:install # once: Chromium (+ OS deps in CI)
 npm run test:e2e         # default: http://127.0.0.1:3010
 # Or against a running host:
 # PLAYWRIGHT_BASE_URL=https://beacon.commoncentsip.com npm run test:e2e
+# Remote-host mode runs the portable public smoke tests and skips local fixture-only journeys.
 ```
 
 Coverage thresholds apply only to a **whitelist** (roles, safe-redirect, security/*, badge codes/guards, freeform-policy, class-access) — not the entire tree. See `vitest.config.ts`.
@@ -276,6 +277,7 @@ Full list of names lives in **`.env.example`**. Summary:
 | OAuth state | `BEACON_OAUTH_STATE_SECRET` | QB OAuth HMAC (else falls back to service role key) |
 | App URL | `NEXT_PUBLIC_APP_URL` | Absolute links in email |
 | Sentry | `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | Optional; package installed. Init only when DSN set. Server + browser + `global-error` + `reportError` on email/SMS/aftercare failures |
+| Performance timing | `BEACON_PERF_LOG`, `BEACON_SLOW_OPERATION_MS` | Slow authenticated operations log as structured `[beacon:perf]` records (750ms default); set `BEACON_PERF_LOG=1` temporarily to log all instrumented operations |
 | Playwright | `PLAYWRIGHT_BASE_URL`, `PLAYWRIGHT_PORT` | E2E against custom host/port |
 
 Platform-provided (do not put secrets in git): `VERCEL_URL`, `VERCEL_ENV`, `VERCEL_PROJECT_PRODUCTION_URL`, `NODE_ENV`, `CI`.
@@ -314,6 +316,7 @@ Platform-provided (do not put secrets in git): `VERCEL_URL`, `VERCEL_ENV`, `VERC
 | Email delivery | Comms outbox (`sent` / `failed` / `skipped`) |
 | Staff actions | `audit_logs` |
 | Error product (Sentry) | `@sentry/nextjs` + `instrumentation.ts`; enable with `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` |
+| Server performance | Structured `[beacon:perf]` platform logs for app shell, parent dashboard, and principal data operations; slow threshold defaults to 750ms |
 
 ## Complexity & hidden dependencies (maintainers)
 

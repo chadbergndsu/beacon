@@ -9,6 +9,7 @@ import { resolveActiveNavHref } from '@/lib/nav-active'
 import { canAccessEmailOutbox, isSchoolStaff, roleLabel } from '@/lib/roles'
 import type { Profile } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { NavigationFeedback } from './NavigationFeedback'
 
 type NavItem = { href: string; label: string }
 
@@ -208,6 +209,7 @@ export function AppHeader({
 
   return (
     <header className="sticky top-0 z-50 border-b border-chrome-border bg-chrome/95 text-chrome-foreground backdrop-blur-xl pt-safe">
+      <NavigationFeedback />
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-3 py-2.5 sm:gap-4 sm:px-6">
         <Link
           href={role === 'admin' ? '/principal' : '/dashboard'}

@@ -55,6 +55,11 @@ export const SCREEN_CATALOG: Record<ScreenId, { title: string; sections: Section
         label: 'Family feed',
       },
       {
+        id: 'parent_feedback',
+        label: 'Weekly parent feedback',
+        description: 'One-tap helpfulness check with an optional note',
+      },
+      {
         id: 'announcements',
         label: 'Announcements',
       },
@@ -123,6 +128,11 @@ export const SCREEN_CATALOG: Record<ScreenId, { title: string; sections: Section
     sections: [
       { id: 'daily_tasks', label: 'Daily tasks' },
       { id: 'beacon_signal', label: 'Beacon Signal' },
+      {
+        id: 'pilot_evidence',
+        label: 'Pilot evidence',
+        description: 'Seven-day activity, delivery, and parent feedback signals',
+      },
       { id: 'stats', label: 'School stats' },
       { id: 'quickbooks', label: 'QuickBooks card' },
       { id: 'announcements', label: 'Recent announcements' },

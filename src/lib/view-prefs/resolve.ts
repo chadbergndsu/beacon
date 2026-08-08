@@ -18,14 +18,41 @@ export function resolveScreenLayout(
   )
 
   const savedOrder = (saved?.order ?? []).filter((id) => present.has(id))
-  const rest = defaults.order.filter(
-    (id) => present.has(id) && !savedOrder.includes(id)
-  )
+  const catalogOrder = defaults.order.filter((id) => present.has(id))
+  const order = [...savedOrder]
+
+  for (const id of catalogOrder) {
+    if (order.includes(id)) continue
+
+    const catalogIndex = catalogOrder.indexOf(id)
+    let insertionIndex = -1
+
+    for (let i = catalogIndex - 1; i >= 0; i -= 1) {
+      const previousIndex = order.indexOf(catalogOrder[i])
+      if (previousIndex >= 0) {
+        insertionIndex = previousIndex + 1
+        break
+      }
+    }
+
+    if (insertionIndex < 0) {
+      for (let i = catalogIndex + 1; i < catalogOrder.length; i += 1) {
+        const nextIndex = order.indexOf(catalogOrder[i])
+        if (nextIndex >= 0) {
+          insertionIndex = nextIndex
+          break
+        }
+      }
+    }
+
+    order.splice(insertionIndex < 0 ? order.length : insertionIndex, 0, id)
+  }
+
   // Any present id not in catalog defaults (forward-compat)
   const extras = presentSectionIds.filter(
-    (id) => !savedOrder.includes(id) && !rest.includes(id)
+    (id) => !order.includes(id)
   )
-  const order = [...savedOrder, ...rest, ...extras]
+  order.push(...extras)
 
   const hidden = (saved?.hidden ?? defaults.hidden).filter(
     (id) => present.has(id) && !locked.has(id)

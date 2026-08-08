@@ -10,6 +10,7 @@ import {
 } from '@/lib/insights/load-missing-work'
 import { ParentFeed } from '@/components/parent/ParentFeed'
 import { ParentBillingCard } from '@/components/parent/ParentBillingCard'
+import { ParentExperienceFeedback } from '@/components/parent/ParentExperienceFeedback'
 import { MissingWorkRadar } from '@/components/insights/MissingWorkRadar'
 import { TeacherTodayCard } from '@/components/insights/TeacherTodayCard'
 import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
@@ -21,10 +22,15 @@ import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
 import { buttonClassName } from '@/components/ui/button'
+import { recordPilotActivity } from '@/lib/pilot-analytics/activity'
+import { isoWeekStart } from '@/lib/pilot-analytics/windows'
+import type { ParentExperienceRating } from '@/lib/pilot-analytics/parent-feedback'
+import type { MissingWorkSummary } from '@/lib/insights/missing-work'
+import { measureServerOperation } from '@/lib/ops/server-performance'
 import type { Assignment, Grade, GradeCategory } from '@/lib/types'
 
 export default async function DashboardPage() {
-  const { profile, user } = await getProfile()
+  const { profile, user, supabase } = await getProfile()
   const admin = createAdminClient()
 
   if (!profile) {
@@ -42,6 +48,118 @@ export default async function DashboardPage() {
   const role = profile.role
   const schoolId = profile.school_id
   const firstName = profile.full_name?.trim().split(/\s+/)[0]
+
+  type Child = {
+    id: string
+    first_name: string
+    last_name: string
+    grade_level: string | null
+  }
+  type Announcement = {
+    id: string
+    title: string
+    body: string
+    audience: string
+    published_at: string | null
+  }
+  type ParentInvoices = Awaited<
+    ReturnType<typeof import('@/lib/billing/invoice-email').listOpenInvoicesForParentEmail>
+  >
+
+  const parentActivityPromise =
+    role === 'parent' && schoolId
+      ? recordPilotActivity({
+          schoolId,
+          userId: user.id,
+          actorRole: role,
+          eventType: 'parent_portal',
+        })
+      : Promise.resolve({ recorded: false })
+
+  const parentFeedbackPromise: Promise<{
+    response: {
+      rating: ParentExperienceRating
+      comment: string | null
+    } | null
+    unavailable: boolean
+  }> = role === 'parent' && schoolId
+    ? (async () => {
+        const { data, error } = await supabase
+          .from('parent_experience_feedback')
+          .select('rating, comment')
+          .eq('parent_id', user.id)
+          .eq('school_id', schoolId)
+          .eq('surface', 'parent_dashboard')
+          .eq('week_start', isoWeekStart(new Date()))
+          .maybeSingle()
+
+        if (error) return { response: null, unavailable: true }
+        if (data && (data.rating === 'helpful' || data.rating === 'not_yet')) {
+          return {
+            response: {
+              rating: data.rating,
+              comment: typeof data.comment === 'string' ? data.comment : null,
+            },
+            unavailable: false,
+          }
+        }
+        return { response: null, unavailable: false }
+      })()
+    : Promise.resolve({ response: null, unavailable: false })
+
+  const childrenPromise: Promise<Child[]> =
+    role === 'parent'
+      ? (async () => {
+          const { data: links } = await admin
+            .from('parent_students')
+            .select('student_id')
+            .eq('parent_id', user.id)
+          const ids = (links ?? []).map((link) => link.student_id)
+          if (!ids.length) return []
+
+          const { data } = await admin
+            .from('students')
+            .select('id, first_name, last_name, grade_level')
+            .in('id', ids)
+          return (data ?? []) as Child[]
+        })()
+      : Promise.resolve([])
+
+  const announcementsPromise: Promise<Announcement[]> = schoolId
+    ? (async () => {
+        let query = admin
+          .from('announcements')
+          .select('id, title, body, audience, published_at')
+          .eq('school_id', schoolId)
+          .order('published_at', { ascending: false })
+          .limit(5)
+        if (role === 'parent') {
+          query = query.in('audience', ['parents', 'all'])
+        }
+        const { data } = await query
+        return data ?? []
+      })()
+    : Promise.resolve([])
+
+  const parentInvoicesPromise: Promise<ParentInvoices> =
+    role === 'parent' && schoolId && user.email
+      ? (async () => {
+          try {
+            const { listOpenInvoicesForParentEmail } = await import(
+              '@/lib/billing/invoice-email'
+            )
+            return await listOpenInvoicesForParentEmail(schoolId, user.email!)
+          } catch {
+            return []
+          }
+        })()
+      : Promise.resolve([])
+
+  let initialParentFeedback: {
+    rating: ParentExperienceRating
+    comment: string | null
+  } | null = null
+  let parentFeedbackUnavailable = false
 
   let classes: {
     id: string
@@ -85,48 +203,7 @@ export default async function DashboardPage() {
     }
   }
 
-  type Child = {
-    id: string
-    first_name: string
-    last_name: string
-    grade_level: string | null
-  }
-  let children: Child[] = []
-  if (role === 'parent') {
-    const { data: links } = await admin
-      .from('parent_students')
-      .select('student_id')
-      .eq('parent_id', user.id)
-    const ids = (links ?? []).map((l) => l.student_id)
-    if (ids.length) {
-      const { data } = await admin
-        .from('students')
-        .select('id, first_name, last_name, grade_level')
-        .in('id', ids)
-      children = (data ?? []) as Child[]
-    }
-  }
-
-  let announcements: {
-    id: string
-    title: string
-    body: string
-    audience: string
-    published_at: string | null
-  }[] = []
-  if (schoolId) {
-    let aq = admin
-      .from('announcements')
-      .select('id, title, body, audience, published_at')
-      .eq('school_id', schoolId)
-      .order('published_at', { ascending: false })
-      .limit(5)
-    if (role === 'parent') {
-      aq = aq.in('audience', ['parents', 'all'])
-    }
-    const { data } = await aq
-    announcements = data ?? []
-  }
+  const children = await childrenPromise
 
   const canPost = ['admin', 'staff', 'teacher', 'principal'].includes(role)
   const isPrincipal = role === 'principal'
@@ -134,7 +211,7 @@ export default async function DashboardPage() {
 
   const parentMissing =
     role === 'parent' && children.length
-      ? await loadMissingWorkForParentChildren(children)
+      ? await loadMissingWorkForParentChildren(children, schoolId!)
       : []
   const teacherToday =
     (role === 'teacher' || role === 'admin' || role === 'staff' || role === 'principal') &&
@@ -144,18 +221,6 @@ export default async function DashboardPage() {
 
   const isStaffHome =
     role === 'teacher' || role === 'admin' || role === 'staff' || role === 'principal'
-
-  let parentInvoices: Awaited<
-    ReturnType<typeof import('@/lib/billing/invoice-email').listOpenInvoicesForParentEmail>
-  > = []
-  if (role === 'parent' && schoolId && user.email) {
-    try {
-      const { listOpenInvoicesForParentEmail } = await import('@/lib/billing/invoice-email')
-      parentInvoices = await listOpenInvoicesForParentEmail(schoolId, user.email)
-    } catch {
-      parentInvoices = []
-    }
-  }
 
   const presentSectionIds = [
     'header',
@@ -170,9 +235,19 @@ export default async function DashboardPage() {
     ...(role === 'parent' && schoolId && children.length > 0
       ? (['parent_feed'] as const)
       : []),
+    ...(role === 'parent' && schoolId ? (['parent_feedback'] as const) : []),
   ]
 
-  const viewLayout = await loadScreenLayout(user.id, 'dashboard', [...presentSectionIds])
+  const viewLayoutPromise = loadScreenLayout(user.id, 'dashboard', [...presentSectionIds])
+  const [parentFeedbackResult, announcements, parentInvoices, viewLayout] = await Promise.all([
+    parentFeedbackPromise,
+    announcementsPromise,
+    parentInvoicesPromise,
+    viewLayoutPromise,
+    parentActivityPromise,
+  ])
+  initialParentFeedback = parentFeedbackResult.response
+  parentFeedbackUnavailable = parentFeedbackResult.unavailable
   const teacherEncouragement =
     role === 'teacher' ? teacherEncouragementForDay(user.id) : null
 
@@ -398,7 +473,7 @@ export default async function DashboardPage() {
                     ))}
                   </TBody>
                 </Table>
-                <ParentGradesTable linkedChildren={children} />
+                <ParentGradesTable linkedChildren={children} schoolId={schoolId!} />
               </>
             )}
           </section>
@@ -407,7 +482,21 @@ export default async function DashboardPage() {
 
       {role === 'parent' && schoolId && children.length > 0 ? (
         <ViewSection id="parent_feed" title="Family feed">
-          <ParentFeedSection parentId={user.id} schoolId={schoolId} students={children} />
+          <ParentFeedSection
+            parentId={user.id}
+            schoolId={schoolId}
+            students={children}
+            missingSummaries={parentMissing}
+          />
+        </ViewSection>
+      ) : null}
+
+      {role === 'parent' && schoolId ? (
+        <ViewSection id="parent_feedback" title="Weekly parent feedback">
+          <ParentExperienceFeedback
+            initialResponse={initialParentFeedback}
+            unavailable={parentFeedbackUnavailable}
+          />
         </ViewSection>
       ) : null}
 
@@ -460,78 +549,115 @@ async function ParentFeedSection({
   parentId,
   schoolId,
   students,
+  missingSummaries,
 }: {
   parentId: string
   schoolId: string
   students: { id: string; first_name: string; last_name: string }[]
+  missingSummaries: MissingWorkSummary[]
 }) {
-  const items = await buildParentFeed(parentId, schoolId, students)
+  const items = await measureServerOperation('parent.feed', () =>
+    buildParentFeed(parentId, schoolId, students, missingSummaries)
+  )
   return <ParentFeed items={items} />
 }
 
-async function ParentGradesTable({
+export async function ParentGradesTable({
   linkedChildren,
+  schoolId,
 }: {
   linkedChildren: { id: string; first_name: string; last_name: string }[]
+  schoolId: string
 }) {
-  const admin = createAdminClient()
-  const rows: {
-    studentId: string
-    studentName: string
-    classId: string
-    className: string
-    overall: number | null
-    letter: string | null
-  }[] = []
-
-  for (const child of linkedChildren) {
-    const { data: enrollments } = await admin
-      .from('enrollments')
-      .select('class_id')
-      .eq('student_id', child.id)
-    const classIds = (enrollments ?? []).map((e) => e.class_id)
-    if (!classIds.length) continue
-
-    const { data: classes } = await admin.from('classes').select('id, name').in('id', classIds)
-    if (!classes?.length) continue
-
-    for (const c of classes) {
-      const [{ data: categories }, { data: assignmentsData }] = await Promise.all([
-        admin.from('grade_categories').select('*').eq('class_id', c.id),
-        admin.from('assignments').select('*').eq('class_id', c.id),
-      ])
-      const assignments = (assignmentsData ?? []) as Assignment[]
-      const cats = (categories ?? []) as GradeCategory[]
-      const ids = assignments.map((a) => a.id)
-      let grades: Grade[] = []
-      if (ids.length) {
-        const { data } = await admin
+  return measureServerOperation('parent.grades', async () => {
+    const admin = createAdminClient()
+    const studentIds = linkedChildren.map((child) => child.id)
+    const { data: enrollmentData } = studentIds.length
+      ? await admin
+          .from('enrollments')
+          .select('student_id, class_id')
+          .in('student_id', studentIds)
+      : { data: [] }
+    const enrollments = (enrollmentData ?? []) as Array<{
+      student_id: string
+      class_id: string
+    }>
+    const classIds = [...new Set(enrollments.map((row) => row.class_id))]
+    const { data: classData } = classIds.length
+      ? await admin
+          .from('classes')
+          .select('id, name')
+          .in('id', classIds)
+          .eq('school_id', schoolId)
+      : { data: [] }
+    const classes = (classData ?? []) as Array<{ id: string; name: string }>
+    const scopedClassIds = classes.map((row) => row.id)
+    const [{ data: categoryData }, { data: assignmentData }] = scopedClassIds.length
+      ? await Promise.all([
+          admin.from('grade_categories').select('*').in('class_id', scopedClassIds),
+          admin.from('assignments').select('*').in('class_id', scopedClassIds),
+        ])
+      : [{ data: [] }, { data: [] }]
+    const categories = (categoryData ?? []) as GradeCategory[]
+    const assignments = (assignmentData ?? []) as Assignment[]
+    const assignmentIds = assignments.map((assignment) => assignment.id)
+    const { data: gradeData } = assignmentIds.length
+      ? await admin
           .from('grades')
           .select('*')
-          .eq('student_id', child.id)
-          .in('assignment_id', ids)
-        grades = (data ?? []) as Grade[]
+          .in('assignment_id', assignmentIds)
+          .in('student_id', studentIds)
+      : { data: [] }
+    const grades = (gradeData ?? []) as Grade[]
+    const classById = new Map(classes.map((row) => [row.id, row]))
+    const rows: {
+      studentId: string
+      studentName: string
+      classId: string
+      className: string
+      overall: number | null
+      letter: string | null
+    }[] = []
+
+    for (const child of linkedChildren) {
+      const childClassIds = [
+        ...new Set(
+          enrollments
+            .filter((row) => row.student_id === child.id && classById.has(row.class_id))
+            .map((row) => row.class_id)
+        ),
+      ]
+      for (const classId of childClassIds) {
+        const classRow = classById.get(classId)
+        if (!classRow) continue
+        const classAssignments = assignments.filter((assignment) => assignment.class_id === classId)
+        const assignmentSet = new Set(classAssignments.map((assignment) => assignment.id))
+        const result = calculateTransparentGrade(
+          categories.filter((category) => category.class_id === classId),
+          classAssignments,
+          grades.filter(
+            (grade) => grade.student_id === child.id && assignmentSet.has(grade.assignment_id)
+          )
+        )
+        rows.push({
+          studentId: child.id,
+          studentName: `${child.last_name}, ${child.first_name}`,
+          classId,
+          className: classRow.name,
+          overall: result.overall,
+          letter: result.letter,
+        })
       }
-      const result = calculateTransparentGrade(cats, assignments, grades)
-      rows.push({
-        studentId: child.id,
-        studentName: `${child.last_name}, ${child.first_name}`,
-        classId: c.id,
-        className: c.name,
-        overall: result.overall,
-        letter: result.letter,
-      })
     }
-  }
 
-  if (!rows.length) {
+    if (!rows.length) {
+      return (
+        <p className="text-[12px] text-muted-foreground">No class enrollments with grades yet.</p>
+      )
+    }
+
     return (
-      <p className="text-[12px] text-muted-foreground">No class enrollments with grades yet.</p>
-    )
-  }
-
-  return (
-    <div className="space-y-1.5">
+      <div className="space-y-1.5">
       <p className="text-[12px] font-medium text-muted-foreground">Grades by class</p>
       <Table>
         <THead>
@@ -563,6 +689,7 @@ async function ParentGradesTable({
           ))}
         </TBody>
       </Table>
-    </div>
-  )
+      </div>
+    )
+  })
 }

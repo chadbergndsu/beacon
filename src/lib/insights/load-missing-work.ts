@@ -6,6 +6,7 @@ import {
   type MissingWorkSummary,
 } from '@/lib/insights/missing-work'
 import type { Assignment, Grade } from '@/lib/types'
+import { measureServerOperation } from '@/lib/ops/server-performance'
 
 export async function loadMissingWorkForStudent(
   studentId: string,
@@ -65,13 +66,95 @@ export async function loadMissingWorkForStudent(
 }
 
 export async function loadMissingWorkForParentChildren(
-  children: { id: string; first_name: string; last_name: string }[]
+  children: { id: string; first_name: string; last_name: string }[],
+  schoolId: string
 ): Promise<MissingWorkSummary[]> {
-  return Promise.all(
-    children.map((c) =>
-      loadMissingWorkForStudent(c.id, `${c.first_name} ${c.last_name}`)
-    )
-  )
+  return measureServerOperation('parent.missing_work', async () => {
+    if (children.length === 0) return []
+
+    const admin = createAdminClient()
+    const studentIds = children.map((child) => child.id)
+    const { data: enrollmentRows } = await admin
+      .from('enrollments')
+      .select('student_id, class_id')
+      .in('student_id', studentIds)
+
+    const enrollments = (enrollmentRows ?? []) as Array<{
+      student_id: string
+      class_id: string
+    }>
+    const classIds = [...new Set(enrollments.map((row) => row.class_id))]
+    if (classIds.length === 0) {
+      return children.map((child) =>
+        classifyStudentWork({
+          studentId: child.id,
+          studentName: `${child.first_name} ${child.last_name}`,
+          classes: [],
+        })
+      )
+    }
+
+    const { data: classRows } = await admin
+      .from('classes')
+      .select('id, name')
+      .in('id', classIds)
+      .eq('school_id', schoolId)
+    const classes = (classRows ?? []) as Array<{ id: string; name: string }>
+    const allowedClassIds = new Set(classes.map((row) => row.id))
+    const scopedClassIds = [...allowedClassIds]
+
+    const { data: assignmentRows } = scopedClassIds.length
+      ? await admin
+          .from('assignments')
+          .select('*')
+          .in('class_id', scopedClassIds)
+      : { data: [] }
+    const assignments = (assignmentRows ?? []) as Assignment[]
+    const assignmentIds = assignments.map((assignment) => assignment.id)
+
+    const { data: gradeRows } = assignmentIds.length
+      ? await admin
+          .from('grades')
+          .select('*')
+          .in('assignment_id', assignmentIds)
+          .in('student_id', studentIds)
+      : { data: [] }
+    const grades = (gradeRows ?? []) as Grade[]
+
+    const assignmentsByClass = new Map<string, Assignment[]>()
+    for (const assignment of assignments) {
+      const current = assignmentsByClass.get(assignment.class_id) ?? []
+      current.push(assignment)
+      assignmentsByClass.set(assignment.class_id, current)
+    }
+    const classById = new Map(classes.map((row) => [row.id, row]))
+
+    return children.map((child) => {
+      const childClassIds = [
+        ...new Set(
+          enrollments
+            .filter((row) => row.student_id === child.id && allowedClassIds.has(row.class_id))
+            .map((row) => row.class_id)
+        ),
+      ]
+      return classifyStudentWork({
+        studentId: child.id,
+        studentName: `${child.first_name} ${child.last_name}`,
+        classes: childClassIds.flatMap((classId) => {
+          const classRow = classById.get(classId)
+          if (!classRow) return []
+          return [
+            {
+              classId,
+              className: classRow.name,
+              assignments: assignmentsByClass.get(classId) ?? [],
+              grades,
+            },
+          ]
+        }),
+      })
+    })
+  })
 }
 
 export async function loadTeacherClassMissing(

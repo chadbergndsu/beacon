@@ -1,11 +1,16 @@
 import { requirePrincipal } from '@/lib/principal'
 import { listPilotFeedback } from '@/lib/pilot-feedback/store'
 import { PilotFeedbackInbox } from '@/components/pilot/PilotFeedbackInbox'
+import { ParentExperienceFeedbackInbox } from '@/components/pilot/ParentExperienceFeedbackInbox'
 import { PageHeader } from '@/components/ui/page-header'
+import { listParentExperienceFeedbackForLeadership } from '@/lib/pilot-analytics/parent-feedback'
 
 export default async function PrincipalFeedbackPage() {
   const { schoolId } = await requirePrincipal()
-  const items = await listPilotFeedback(schoolId)
+  const [items, parentExperienceItems] = await Promise.all([
+    listPilotFeedback(schoolId),
+    listParentExperienceFeedbackForLeadership(schoolId),
+  ])
 
   const newCount = items.filter((i) => i.status === 'new').length
 
@@ -30,6 +35,8 @@ export default async function PrincipalFeedbackPage() {
       />
 
       <PilotFeedbackInbox initialItems={items} />
+
+      <ParentExperienceFeedbackInbox initialItems={parentExperienceItems} />
     </div>
   )
 }

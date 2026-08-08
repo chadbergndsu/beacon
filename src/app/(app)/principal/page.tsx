@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { Link2 } from 'lucide-react'
@@ -5,7 +6,9 @@ import { requirePrincipal } from '@/lib/principal'
 import { loadBillingState, formatMoney } from '@/lib/billing/store'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadSchoolBeaconSignal } from '@/lib/insights/load-beacon-signal'
+import { loadPilotScorecard } from '@/lib/pilot-analytics/scorecard'
 import { BeaconSignalCard } from '@/components/insights/BeaconSignalCard'
+import { PilotScorecard } from '@/components/principal/PilotScorecard'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonClassName } from '@/components/ui/button'
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table'
@@ -13,6 +16,7 @@ import { ConfigurableView } from '@/components/view-prefs/ConfigurableView'
 import { ViewSection } from '@/components/view-prefs/ViewSection'
 import { loadScreenLayout } from '@/lib/view-prefs/store'
 import { isOfficeAdmin } from '@/lib/roles'
+import { measureServerOperation } from '@/lib/ops/server-performance'
 
 const OFFICE_ADMIN_TASKS = [
   {
@@ -52,47 +56,238 @@ const OFFICE_ADMIN_TASKS = [
   },
 ] as const
 
+type BillingResult = Awaited<ReturnType<typeof loadBillingState>>
+type SignalResult = Awaited<ReturnType<typeof loadSchoolBeaconSignal>>
+type ScorecardResult = Awaited<ReturnType<typeof loadPilotScorecard>>
+
+async function loadSchoolSummary(schoolId: string) {
+  const admin = createAdminClient()
+  return Promise.all([
+    admin
+      .from('classes')
+      .select('*', { count: 'exact', head: true })
+      .eq('school_id', schoolId)
+      .eq('active', true),
+    admin
+      .from('students')
+      .select('*', { count: 'exact', head: true })
+      .eq('school_id', schoolId)
+      .eq('active', true),
+    admin
+      .from('announcements')
+      .select('id, title, published_at')
+      .eq('school_id', schoolId)
+      .order('published_at', { ascending: false })
+      .limit(3),
+  ])
+}
+
+type SchoolSummaryResult = Awaited<ReturnType<typeof loadSchoolSummary>>
+
+function PrincipalCardFallback({ label, height = 'h-36' }: { label: string; height?: string }) {
+  return (
+    <div
+      role="status"
+      aria-label={`Loading ${label}`}
+      className={`${height} animate-pulse rounded-xl border border-border bg-card p-4`}
+    >
+      <div className="h-4 w-36 rounded bg-muted" />
+      <div className="mt-4 h-3 w-3/4 rounded bg-muted" />
+      <span className="sr-only">Loading {label}…</span>
+    </div>
+  )
+}
+
+async function PrincipalSignal({ signalPromise }: { signalPromise: Promise<SignalResult> }) {
+  return <BeaconSignalCard signal={await signalPromise} />
+}
+
+export async function PrincipalPilotEvidence({
+  scorecardPromise,
+}: {
+  scorecardPromise: Promise<ScorecardResult>
+}) {
+  return <PilotScorecard scorecard={await scorecardPromise} />
+}
+
+async function PrincipalStats({
+  billingPromise,
+  summaryPromise,
+}: {
+  billingPromise: Promise<BillingResult>
+  summaryPromise: Promise<SchoolSummaryResult>
+}) {
+  const [billing, [{ count: classCount }, { count: studentCount }]] = await Promise.all([
+    billingPromise,
+    summaryPromise,
+  ])
+  const openCents = billing.invoices
+    .filter((invoice) => invoice.status === 'open' || invoice.status === 'overdue')
+    .reduce((sum, invoice) => sum + invoice.amountCents, 0)
+  const paidCents = billing.payments
+    .filter((payment) => payment.status === 'succeeded')
+    .reduce((sum, payment) => sum + payment.amountCents, 0)
+
+  return (
+    <Table>
+      <THead>
+        <TR>
+          <TH>Metric</TH>
+          <TH className="text-right">Value</TH>
+        </TR>
+      </THead>
+      <TBody>
+        <TR>
+          <TD>Active classes</TD>
+          <TD className="text-right tabular-nums font-medium">{classCount ?? 0}</TD>
+        </TR>
+        <TR>
+          <TD>Students</TD>
+          <TD className="text-right tabular-nums font-medium">{studentCount ?? 0}</TD>
+        </TR>
+        <TR>
+          <TD>Open tuition</TD>
+          <TD className="text-right tabular-nums font-medium">{formatMoney(openCents)}</TD>
+        </TR>
+        <TR>
+          <TD>Payments collected</TD>
+          <TD className="text-right tabular-nums font-medium">{formatMoney(paidCents)}</TD>
+        </TR>
+      </TBody>
+    </Table>
+  )
+}
+
+async function PrincipalQuickBooks({
+  billingPromise,
+}: {
+  billingPromise: Promise<BillingResult>
+}) {
+  const qb = (await billingPromise).quickbooks
+  return (
+    <div className="rounded-lg border border-border bg-card">
+      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+        <div className="flex items-center gap-2 text-[13px] font-medium">
+          <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+          QuickBooks
+        </div>
+        <Badge
+          variant={
+            qb.status === 'connected'
+              ? 'success'
+              : qb.status === 'demo'
+                ? 'warning'
+                : qb.status === 'error'
+                  ? 'danger'
+                  : 'warning'
+          }
+        >
+          {qb.status}
+        </Badge>
+      </div>
+      <div className="space-y-2 px-3 py-3 text-[13px] text-muted-foreground">
+        {qb.status === 'connected' ? (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Connected to <strong className="text-foreground">{qb.companyName || 'QuickBooks'}</strong>
+              {qb.environment === 'sandbox' ? (
+                <Badge variant="sky" className="ml-2">Sandbox</Badge>
+              ) : null}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Last sync: {qb.lastSyncAt ? new Date(qb.lastSyncAt).toLocaleString() : 'Not yet'}
+            </p>
+          </>
+        ) : qb.status === 'demo' ? (
+          <p className="text-sm text-muted-foreground">
+            <strong className="text-foreground">Demo mode</strong> — not live QuickBooks. Add INTUIT credentials for real OAuth.
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Connect QuickBooks Online so tuition invoices and payments sync to your books — customers, invoices, and payment records.
+          </p>
+        )}
+        <Link href="/principal/payments">
+          <Button variant="primary" size="sm">
+            {qb.status === 'connected' || qb.status === 'demo' ? 'Manage connection' : 'Set up payments'}
+          </Button>
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+async function PrincipalAnnouncements({
+  summaryPromise,
+}: {
+  summaryPromise: Promise<SchoolSummaryResult>
+}) {
+  const [, , { data: announcements }] = await summaryPromise
+  return (
+    <div className="space-y-2">
+      {!announcements?.length ? (
+        <p className="text-[13px] text-muted-foreground">No announcements yet.</p>
+      ) : (
+        <Table>
+          <THead>
+            <TR>
+              <TH>Title</TH>
+              <TH className="text-right">Published</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {announcements.map((announcement) => (
+              <TR key={announcement.id}>
+                <TD>
+                  <Link href={`/announcements/${announcement.id}`} className="font-medium text-foreground hover:text-primary hover:underline">
+                    {announcement.title}
+                  </Link>
+                </TD>
+                <TD className="text-right text-[12px] text-muted-foreground">
+                  {announcement.published_at ? format(new Date(announcement.published_at), 'MMM d, yyyy') : '—'}
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      )}
+      <div className="flex gap-2 pt-1">
+        <Link href="/announcements/new" className={buttonClassName('outline', 'sm')}>New announcement</Link>
+        <Link href="/dashboard" className={buttonClassName('ghost', 'sm')}>Dashboard</Link>
+      </div>
+    </div>
+  )
+}
+
 export default async function PrincipalOverviewPage() {
   const { schoolId, user, profile } = await requirePrincipal()
   const officeAdmin = isOfficeAdmin(profile.role)
-  const admin = createAdminClient()
-  const [billing, signal] = await Promise.all([
-    loadBillingState(schoolId),
-    loadSchoolBeaconSignal(schoolId),
-  ])
-
-  const [{ count: classCount }, { count: studentCount }, { data: announcements }] =
-    await Promise.all([
-      admin
-        .from('classes')
-        .select('*', { count: 'exact', head: true })
-        .eq('school_id', schoolId)
-        .eq('active', true),
-      admin
-        .from('students')
-        .select('*', { count: 'exact', head: true })
-        .eq('school_id', schoolId)
-        .eq('active', true),
-      admin
-        .from('announcements')
-        .select('id, title, published_at')
-        .eq('school_id', schoolId)
-        .order('published_at', { ascending: false })
-        .limit(3),
-    ])
-
-  const openInvoices = billing.invoices.filter((i) => i.status === 'open' || i.status === 'overdue')
-  const paidCents = billing.payments
-    .filter((p) => p.status === 'succeeded')
-    .reduce((s, p) => s + p.amountCents, 0)
-  const openCents = openInvoices.reduce((s, i) => s + i.amountCents, 0)
-
-  const qb = billing.quickbooks
   const defaultLayout = officeAdmin
-    ? ['daily_tasks', 'beacon_signal', 'stats', 'quickbooks', 'announcements', 'shortcuts']
-    : ['beacon_signal', 'stats', 'quickbooks', 'announcements', 'shortcuts']
-  const viewLayout = await loadScreenLayout(user.id, 'principal_overview', defaultLayout)
+    ? [
+        'daily_tasks',
+        'beacon_signal',
+        'pilot_evidence',
+        'stats',
+        'quickbooks',
+        'announcements',
+        'shortcuts',
+      ]
+    : [
+        'beacon_signal',
+        'pilot_evidence',
+        'stats',
+        'quickbooks',
+        'announcements',
+        'shortcuts',
+      ]
 
+  const billingPromise = measureServerOperation('principal.billing', () => loadBillingState(schoolId))
+  const signalPromise = measureServerOperation('principal.signal', () => loadSchoolBeaconSignal(schoolId))
+  const scorecardPromise = measureServerOperation('principal.scorecard', () => loadPilotScorecard(schoolId))
+  const schoolSummaryPromise = measureServerOperation('principal.summary', () => loadSchoolSummary(schoolId))
+  const viewLayout = await measureServerOperation('principal.layout', () =>
+    loadScreenLayout(user.id, 'principal_overview', defaultLayout)
+  )
   return (
     <ConfigurableView screenId="principal_overview" initialLayout={viewLayout}>
       {officeAdmin ? (
@@ -112,140 +307,37 @@ export default async function PrincipalOverviewPage() {
         </ViewSection>
       ) : null}
       <ViewSection id="beacon_signal" title="Beacon Signal">
-        <BeaconSignalCard signal={signal} />
+        <Suspense fallback={<PrincipalCardFallback label="Beacon Signal" />}>
+          <PrincipalSignal signalPromise={signalPromise} />
+        </Suspense>
+      </ViewSection>
+
+      <ViewSection
+        id="pilot_evidence"
+        title="Pilot evidence"
+        description="Seven-day activity, delivery, and parent feedback signals"
+      >
+        <Suspense fallback={<PrincipalCardFallback label="pilot evidence" height="h-64" />}>
+          <PrincipalPilotEvidence scorecardPromise={scorecardPromise} />
+        </Suspense>
       </ViewSection>
 
       <ViewSection id="stats" title="School stats">
-        <Table>
-          <THead>
-            <TR>
-              <TH>Metric</TH>
-              <TH className="text-right">Value</TH>
-            </TR>
-          </THead>
-          <TBody>
-            <TR>
-              <TD>Active classes</TD>
-              <TD className="text-right tabular-nums font-medium">{classCount ?? 0}</TD>
-            </TR>
-            <TR>
-              <TD>Students</TD>
-              <TD className="text-right tabular-nums font-medium">{studentCount ?? 0}</TD>
-            </TR>
-            <TR>
-              <TD>Open tuition</TD>
-              <TD className="text-right tabular-nums font-medium">{formatMoney(openCents)}</TD>
-            </TR>
-            <TR>
-              <TD>Payments collected</TD>
-              <TD className="text-right tabular-nums font-medium">{formatMoney(paidCents)}</TD>
-            </TR>
-          </TBody>
-        </Table>
+        <Suspense fallback={<PrincipalCardFallback label="school stats" />}>
+          <PrincipalStats billingPromise={billingPromise} summaryPromise={schoolSummaryPromise} />
+        </Suspense>
       </ViewSection>
 
       <ViewSection id="quickbooks" title="QuickBooks card">
-        <div className="rounded-lg border border-border bg-card">
-          <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-            <div className="flex items-center gap-2 text-[13px] font-medium">
-              <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
-              QuickBooks
-            </div>
-            <Badge
-              variant={
-                qb.status === 'connected'
-                  ? 'success'
-                  : qb.status === 'demo'
-                    ? 'warning'
-                    : qb.status === 'error'
-                      ? 'danger'
-                      : 'warning'
-              }
-            >
-              {qb.status}
-            </Badge>
-          </div>
-          <div className="space-y-2 px-3 py-3 text-[13px] text-muted-foreground">
-            {qb.status === 'connected' ? (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  Connected to{' '}
-                  <strong className="text-foreground">{qb.companyName || 'QuickBooks'}</strong>
-                  {qb.environment === 'sandbox' && (
-                    <Badge variant="sky" className="ml-2">
-                      Sandbox
-                    </Badge>
-                  )}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Last sync:{' '}
-                  {qb.lastSyncAt ? new Date(qb.lastSyncAt).toLocaleString() : 'Not yet'}
-                </p>
-              </>
-            ) : qb.status === 'demo' ? (
-              <p className="text-sm text-muted-foreground">
-                <strong className="text-foreground">Demo mode</strong> — not live QuickBooks. Add
-                INTUIT credentials for real OAuth.
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Connect QuickBooks Online so tuition invoices and payments sync to your books —
-                customers, invoices, and payment records.
-              </p>
-            )}
-            <Link href="/principal/payments">
-              <Button variant="primary" size="sm">
-                {qb.status === 'connected' || qb.status === 'demo'
-                  ? 'Manage connection'
-                  : 'Set up payments'}
-              </Button>
-            </Link>
-          </div>
-        </div>
+        <Suspense fallback={<PrincipalCardFallback label="QuickBooks" />}>
+          <PrincipalQuickBooks billingPromise={billingPromise} />
+        </Suspense>
       </ViewSection>
 
       <ViewSection id="announcements" title="Recent announcements">
-        <div className="space-y-2">
-          {!announcements?.length ? (
-            <p className="text-[13px] text-muted-foreground">No announcements yet.</p>
-          ) : (
-            <Table>
-              <THead>
-                <TR>
-                  <TH>Title</TH>
-                  <TH className="text-right">Published</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {announcements.map((a) => (
-                  <TR key={a.id}>
-                    <TD>
-                      <Link
-                        href={`/announcements/${a.id}`}
-                        className="font-medium text-foreground hover:text-primary hover:underline"
-                      >
-                        {a.title}
-                      </Link>
-                    </TD>
-                    <TD className="text-right text-[12px] text-muted-foreground">
-                      {a.published_at
-                        ? format(new Date(a.published_at), 'MMM d, yyyy')
-                        : '—'}
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          )}
-          <div className="flex gap-2 pt-1">
-            <Link href="/announcements/new" className={buttonClassName('outline', 'sm')}>
-              New announcement
-            </Link>
-            <Link href="/dashboard" className={buttonClassName('ghost', 'sm')}>
-              Dashboard
-            </Link>
-          </div>
-        </div>
+        <Suspense fallback={<PrincipalCardFallback label="announcements" />}>
+          <PrincipalAnnouncements summaryPromise={schoolSummaryPromise} />
+        </Suspense>
       </ViewSection>
 
       <ViewSection id="shortcuts" title="Office shortcuts">
