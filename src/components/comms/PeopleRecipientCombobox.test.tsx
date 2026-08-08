@@ -341,7 +341,8 @@ describe('PeopleRecipientCombobox', () => {
 
   it('continues selection when recent storage rejects a write', async () => {
     mocks.searchPeopleRecipients.mockResolvedValue({ ok: true, results: [avaStudent] })
-    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    const storageTarget = window.localStorage instanceof Storage ? Storage.prototype : window.localStorage
+    const setItem = vi.spyOn(storageTarget, 'setItem').mockImplementation(() => {
       throw new Error('quota')
     })
     const onChange = vi.fn()

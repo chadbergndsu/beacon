@@ -223,3 +223,28 @@ Node 26.7 exposes an experimental global Web Storage implementation without a pe
 - A queued retry never creates another transport claim from the button: the same client key reaches the same case-normalized unique claim, and the send layer returns the existing queued row without transport.
 - No misleading resend-success copy is shown for queued replay. The neutral processing message directs the user to current outbox state without claiming delivery.
 - No blocking concern remains. Existing Node/Next/Playwright environment warnings are unchanged.
+
+## node26-test-environment
+
+### Root cause and scope
+
+- On Node 26.7.0 with no `--localstorage-file`, Node exposes experimental Web Storage but its getter returns `undefined`. Vitest's jsdom globals inherit that unavailable value, so `window.localStorage.clear()` failed in every People/Comms jsdom `beforeEach`.
+- This was test-runner plumbing only. No production component, browser behavior, or runtime configuration changed.
+
+### TDD RED/GREEN evidence
+
+- RED: `src/test/local-storage-environment.test.ts` failed under plain Node 26/Vitest with `Cannot read properties of undefined (reading 'clear')`; the same test passed only when Node Web Storage was disabled externally.
+- GREEN: Vitest now loads `src/test/setup/local-storage.ts`. In a jsdom worker it keeps a verified native Storage when available; otherwise it installs one in-memory standards-shaped instance on both `window.localStorage` and `globalThis.localStorage`. The fallback supports `length`, `key`, `getItem`, `setItem`, `removeItem`, and `clear`, with JavaScript string coercion and test-case reset isolation. Node-environment tests do nothing because the setup is guarded by `typeof window !== 'undefined'`.
+- The existing quota-error regression now chooses the native `Storage.prototype` when available and the fallback instance otherwise, preserving the production behavior it covers across both storage implementations.
+
+### Verification
+
+- Focused regression plus the three formerly failing suites: 4 files / 37 tests passed under plain Node 26.7.0.
+- The same focused 4 files / 37 tests passed under Node 22.23.2 with no environment flag, confirming the engine-range-compatible native-storage path.
+- Full `npm run ci` without `NODE_OPTIONS`: lint, typecheck, 106 test files / 547 tests, coverage thresholds, and production build passed.
+- Full `npm run test:e2e`: 18/18 passed.
+- `git diff --check`: passed.
+
+### Concern
+
+- Node 26 still emits its own experimental-Web-Storage warning when Vitest initializes jsdom without a persistence file. The repository-level setup makes storage usable and no test command requires an environment flag; the warning is upstream Node behavior only.
