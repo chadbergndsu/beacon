@@ -177,19 +177,26 @@ export async function resolveParentsForStudents(
   if (!links?.length) return map
 
   const parentIds = [...new Set(links.map((l) => l.parent_id))]
-  let pq = admin.from('profiles').select('id, email, full_name, school_id').in('id', parentIds)
-  if (schoolId) pq = pq.eq('school_id', schoolId)
-  const { data: parents } = await pq
+  // Do not filter school_id in SQL — linked parents may still have null school_id
+  // (legacy seeds). Block only explicit cross-tenant school_id mismatches below.
+  const { data: parents } = await admin
+    .from('profiles')
+    .select('id, email, full_name, school_id')
+    .in('id', parentIds)
 
   const parentById = new Map((parents ?? []).map((p) => [p.id, p]))
 
   for (const link of links) {
     const p = parentById.get(link.parent_id)
     if (!p?.email) continue
+    const email = String(p.email).trim().toLowerCase()
+    if (!email.includes('@')) continue
+    // Explicit other-school profiles must not receive this school's digests
+    if (schoolId && p.school_id && p.school_id !== schoolId) continue
     const arr = map.get(link.student_id) || []
     arr.push({
       parentId: p.id,
-      email: p.email.trim().toLowerCase(),
+      email,
       name: p.full_name,
     })
     map.set(link.student_id, arr)

@@ -171,17 +171,25 @@ export async function queueAndSendBatch(
   for (let i = 0; i < emails.length; i++) {
     const r = await queueAndSendEmail(emails[i], { brand: opts?.brand })
     if (r.status === 'sent') sent++
-    else if (r.status === 'failed') failed++
-    else if (r.status === 'skipped') {
+    else if (r.status === 'failed') {
+      failed++
+      if (!note && r.error) note = r.error
+    } else if (r.status === 'skipped') {
       skipped++
       if (!note) {
         note =
-          'Emails logged only — configure RESEND_API_KEY and/or SMTP_* for live delivery.'
+          r.error ||
+          'Emails logged only — configure RESEND_API_KEY and a verified EMAIL_FROM for live delivery.'
       }
     }
     if (delay > 0 && i < emails.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
+  }
+
+  if (sent === 0 && skipped > 0 && !note) {
+    note =
+      'Emails logged only — configure RESEND_API_KEY and a verified EMAIL_FROM for live delivery.'
   }
 
   return { sent, failed, skipped, total: emails.length, note }

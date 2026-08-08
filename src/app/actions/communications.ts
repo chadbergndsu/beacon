@@ -443,12 +443,17 @@ export async function emailStudentDinnerDigest(
     return { ok: false, error: result.note || 'No emails sent.' }
   }
 
+  // Log-only / skipped still "worked" for ops — surface an honest note, not silence
   return {
     ok: true,
     emailed: result.sent,
     failed: result.failed,
     skipped: result.skipped,
-    emailNote: result.note,
+    emailNote:
+      result.note ||
+      (result.sent > 0
+        ? `Emailed Dinner Table Digest to ${result.sent} parent(s).`
+        : undefined),
   }
 }
 
