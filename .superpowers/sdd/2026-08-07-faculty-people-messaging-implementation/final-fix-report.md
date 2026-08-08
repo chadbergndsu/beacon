@@ -257,3 +257,10 @@ Node 26.7 exposes an experimental global Web Storage implementation without a pe
 - The fallback uses non-enumerable Storage methods and the Web IDL unsigned-long conversion for `key()` (including NaN, fractions, negatives, and 32-bit wrapping). It deliberately does not emulate Storage's named-property enumeration because no application code relies on it; the exercised API surface is covered directly.
 - Focused review coverage: 5 files / 43 tests passed under both plain Node 26.7.0 and Node 22.23.2, with no environment flag.
 - Full plain `npm run ci`: lint, typecheck, 107 test files / 553 tests, coverage thresholds, and production build passed. Full `npm run test:e2e`: 18/18 passed. `git diff --check` passed.
+
+### Round 2 review follow-up
+
+- RED: a native candidate whose `clear()` emptied (or partially emptied) its entries and then threw lost the original snapshot because restoration called `clear()` again. Both direct regressions proved originals disappeared.
+- GREEN: restoration now enumerates current keys and removes them with `removeItem()` when possible, then always re-sets the exact original ordered entries. It never invokes `clear()` during recovery. Probe keys are removed before clear validation; on any failed cleanup/verification the candidate is rejected and the shared in-memory fallback is installed without throwing setup.
+- Focused review coverage: 5 files / 45 tests passed under plain Node 26.7.0 and Node 22.23.2, including full-clear and partial-clear mutation/throw regressions.
+- Full plain `npm run ci`: lint, typecheck, 107 test files / 555 tests, coverage thresholds, and production build passed. Full `npm run test:e2e`: 18/18 passed. `git diff --check` passed.

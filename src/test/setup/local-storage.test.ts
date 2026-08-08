@@ -58,6 +58,53 @@ describe('localStorage test setup', () => {
     expect(windowTarget.localStorage).toBe(globalTarget.localStorage)
   })
 
+  it.each([
+    ['empties', (values: Map<string, string>) => values.clear()],
+    ['partially removes', (values: Map<string, string>) => values.delete('first')],
+  ])('restores entries and removes probes when clear %s before throwing', (_, mutate) => {
+    const values = new Map([
+      ['first', 'one'],
+      ['second', 'two'],
+    ])
+    const brokenStorage = {
+      get length() {
+        return values.size
+      },
+      clear() {
+        mutate(values)
+        throw new Error('clear failed after mutation')
+      },
+      getItem(key: string) {
+        return values.get(key) ?? null
+      },
+      key(index: number) {
+        return [...values.keys()][index] ?? null
+      },
+      removeItem(key: string) {
+        values.delete(key)
+      },
+      setItem(key: string, value: string) {
+        values.set(key, value)
+      },
+    }
+    const windowTarget = storageHost(brokenStorage)
+    const globalTarget: StorageHost = {}
+
+    expect(() => installLocalStorage(windowTarget, globalTarget)).not.toThrow()
+
+    expect(windowTarget.localStorage).not.toBe(brokenStorage)
+    expect(windowTarget.localStorage).toBe(globalTarget.localStorage)
+    expect(values).toEqual(
+      new Map([
+        ['first', 'one'],
+        ['second', 'two'],
+      ])
+    )
+    expect([...values.keys()].some((key) => key.startsWith('__beacon_vitest_local_storage_probe__'))).toBe(
+      false
+    )
+  })
+
   it('falls back from partial and individually broken storage capabilities', () => {
     const partialStorage = {
       get length() {

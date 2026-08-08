@@ -91,10 +91,32 @@ function snapshotStorage(storage: StorageLike): Array<[string, string]> {
   return entries
 }
 
-function restoreStorage(storage: StorageLike, entries: Array<[string, string]>) {
-  storage.clear()
+function restoreStorage(storage: StorageLike, entries: Array<[string, string]>): boolean {
+  let removedCurrentEntries = false
+
+  try {
+    const currentEntries = snapshotStorage(storage)
+    removedCurrentEntries = true
+    for (const [key] of currentEntries) {
+      storage.removeItem(key)
+    }
+  } catch {
+    // Keep restoring original entries even when the broken storage cannot be cleaned fully.
+  }
+
+  let restoredEntries = true
   for (const [key, value] of entries) {
-    storage.setItem(key, value)
+    try {
+      storage.setItem(key, value)
+    } catch {
+      restoredEntries = false
+    }
+  }
+
+  try {
+    return removedCurrentEntries && restoredEntries && entriesMatch(storage, entries)
+  } catch {
+    return false
   }
 }
 
