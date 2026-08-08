@@ -26,6 +26,22 @@
 - Touch targets are at least 44 by 44 CSS pixels and the combobox supports keyboard and screen-reader operation.
 - No new message, directory, or recent-recipient database table is introduced.
 
+### YardGUARD IT baseline applied to this feature
+
+Beacon follows the applicable requirements from the August 7, 2026 YardGUARD leadership/IT readiness review and P0 hardening verification as a cross-project engineering baseline:
+
+- authentication and authorization fail closed on absent, null, unassigned, or mismatched identities;
+- every People read, preview, and send revalidates the server session and applies an explicit school boundary;
+- cross-school access and forged references are proven with real local Supabase/PostgREST tests, not mock-only assertions;
+- permissions and test fixtures use least privilege and do not mutate shared database grants;
+- errors exposed to users are stable and do not reveal tenant, database, or recipient details;
+- audit records identify the actor and aggregate outcome without message bodies, email addresses, recipient names, or selected IDs;
+- browser fixtures remain synthetic/local and cannot send live email;
+- keyboard, screen-reader, non-color, and mobile behavior are part of acceptance, not post-launch polish;
+- documentation describes a controlled pilot honestly and does not imply SSO/MFA, production approval, retention, recovery, SLA, or compliance commitments that Beacon has not established.
+
+Broader YardGUARD enterprise gates—managed SSO/MFA and provisioning, backup/restore and RTO/RPO exercises, incident response, vendor/privacy approval, penetration testing, and signed operational acceptance—remain Beacon production-launch requirements outside this bounded messaging implementation.
+
 ---
 
 ## File Structure
