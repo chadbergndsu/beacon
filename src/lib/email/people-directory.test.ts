@@ -3,6 +3,7 @@ import { createMockAdmin, type MockTableHandler } from '@/lib/test/mock-supabase
 
 const mocks = vi.hoisted(() => ({
   admin: null as ReturnType<typeof createMockAdmin> | null,
+  getUser: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
@@ -11,6 +12,9 @@ vi.mock('@/lib/supabase/admin', () => ({
     if (!mocks.admin) throw new Error('admin mock not set')
     return mocks.admin
   },
+}))
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: async () => ({ auth: { getUser: mocks.getUser } }),
 }))
 
 import {
@@ -32,6 +36,8 @@ const secondAssignedParentId = 'parent-assigned-2'
 const noEmailParentId = 'parent-no-email'
 const unassignedParentId = 'parent-unassigned'
 const outsideParentId = 'parent-outside'
+const noClassesTeacherId = 'teacher-no-classes'
+const nullSchoolPrincipalId = 'principal-null-school'
 
 const teacherSender: PeopleSender = { id: teacherId, schoolId, role: 'teacher' }
 const principalSender: PeopleSender = { id: principalId, schoolId, role: 'principal' }
@@ -39,7 +45,7 @@ const principalSender: PeopleSender = { id: principalId, schoolId, role: 'princi
 type Query = { table: string; filters: Record<string, unknown> }
 type ProfileRow = {
   id: string
-  school_id: string
+  school_id: string | null
   role: string
   full_name: string | null
   email: string | null
@@ -65,8 +71,9 @@ function firstNameOrPattern(value: unknown) {
   return match?.[1].replace(/\\(["\\])/g, '$1')
 }
 
-function makeDirectoryDatabase(extraParentCount = 0) {
+function makeDirectoryDatabase(extraParentCount = 0, authenticatedSender = teacherSender) {
   const queries: Query[] = []
+  mocks.getUser.mockResolvedValue({ data: { user: { id: authenticatedSender.id } }, error: null })
   const extraParents: ProfileRow[] = Array.from({ length: extraParentCount }, (_, index) => ({
     id: `parent-extra-${index}`,
     school_id: schoolId,
@@ -78,6 +85,8 @@ function makeDirectoryDatabase(extraParentCount = 0) {
     { id: teacherId, school_id: schoolId, role: 'teacher', full_name: 'Taylor Teacher', email: 'teacher@school.test' },
     { id: otherTeacherId, school_id: schoolId, role: 'teacher', full_name: 'Riley Reed', email: 'riley@school.test' },
     { id: principalId, school_id: schoolId, role: 'principal', full_name: 'Parker Principal', email: 'principal@school.test' },
+    { id: noClassesTeacherId, school_id: schoolId, role: 'teacher', full_name: 'No Classes Teacher', email: 'no-classes@school.test' },
+    { id: nullSchoolPrincipalId, school_id: null, role: 'principal', full_name: 'Null School Principal', email: 'null-school@school.test' },
     { id: assignedParentId, school_id: schoolId, role: 'parent', full_name: 'Pat Parent', email: 'PAT@school.test' },
     { id: secondAssignedParentId, school_id: schoolId, role: 'parent', full_name: 'Chris Parent', email: 'chris@school.test' },
     { id: noEmailParentId, school_id: schoolId, role: 'parent', full_name: 'No Email Parent', email: null },
@@ -139,6 +148,7 @@ function makeDirectoryDatabase(extraParentCount = 0) {
     profiles: log('profiles', ({ filters }) => ({
       data: profiles.filter((row) =>
         (!filters.school_id || row.school_id === filters.school_id) &&
+        (!filters.id || row.id === filters.id) &&
         (!filters.role || row.role === filters.role) &&
         (!filters['in:role'] || (filters['in:role'] as string[]).includes(row.role)) &&
         (!filters['in:id'] || (filters['in:id'] as string[]).includes(row.id)) &&
@@ -167,6 +177,7 @@ function makeDirectoryDatabase(extraParentCount = 0) {
 describe('authorized people directory', () => {
   beforeEach(() => {
     mocks.admin = null
+    mocks.getUser.mockReset()
   })
 
   it('lets a teacher find all same-school faculty and only assigned families', async () => {
@@ -189,7 +200,7 @@ describe('authorized people directory', () => {
   })
 
   it('lets leadership resolve school-wide families but never another school', async () => {
-    const { queries } = makeDirectoryDatabase()
+    const { queries } = makeDirectoryDatabase(0, principalSender)
     const resolution = await resolvePeopleDirectory(principalSender, [
       { kind: 'student', id: assignedStudentId },
       { kind: 'profile', id: outsideParentId },
@@ -248,7 +259,7 @@ describe('authorized people directory', () => {
   })
 
   it('uses opaque disabled previews for authorized profiles without email', async () => {
-    makeDirectoryDatabase()
+    makeDirectoryDatabase(0, principalSender)
     const resolution = await resolvePeopleDirectory(principalSender, [
       { kind: 'profile', id: noEmailParentId },
     ])
@@ -282,11 +293,50 @@ describe('authorized people directory', () => {
         resolvePeopleDirectory(invalidSender, [{ kind: 'student', id: assignedStudentId }])
       ).rejects.toThrow('Invalid People sender')
       expect(queries).toEqual([])
+      expect(mocks.getUser).not.toHaveBeenCalled()
     }
   )
 
-  it('quotes PostgREST reserved search characters and escapes SQL wildcards in the student filter', async () => {
+  it.each([
+    ['forged user id', { ...principalSender, id: 'forged-principal' }],
+    ['mismatched school', { ...principalSender, schoolId: outsideSchoolId }],
+    ['mismatched role', { ...principalSender, role: 'admin' as const }],
+  ])('rejects a valid-looking sender with %s after session verification', async (_case, sender) => {
+    const { queries } = makeDirectoryDatabase(0, principalSender)
+
+    await expect(searchPeopleDirectory(sender, 'Reed')).rejects.toThrow('Invalid People sender')
+    await expect(
+      resolvePeopleDirectory(sender, [{ kind: 'student', id: assignedStudentId }])
+    ).rejects.toThrow('Invalid People sender')
+    expect(queries.map((query) => query.table)).toEqual(['profiles', 'profiles'])
+  })
+
+  it('rejects an authenticated user without a profile', async () => {
     const { queries } = makeDirectoryDatabase()
+    mocks.getUser.mockResolvedValue({ data: { user: { id: 'missing-profile' } }, error: null })
+
+    await expect(searchPeopleDirectory(teacherSender, 'Reed')).rejects.toThrow('Invalid People sender')
+    expect(queries.map((query) => query.table)).toEqual(['profiles'])
+  })
+
+  it('rejects an authenticated profile without a school', async () => {
+    const { queries } = makeDirectoryDatabase()
+    mocks.getUser.mockResolvedValue({ data: { user: { id: nullSchoolPrincipalId } }, error: null })
+
+    await expect(searchPeopleDirectory(principalSender, 'Reed')).rejects.toThrow('Invalid People sender')
+    expect(queries.map((query) => query.table)).toEqual(['profiles'])
+  })
+
+  it('rejects when there is no authenticated user before admin data access', async () => {
+    const { queries } = makeDirectoryDatabase()
+    mocks.getUser.mockResolvedValue({ data: { user: null }, error: null })
+
+    await expect(searchPeopleDirectory(teacherSender, 'Reed')).rejects.toThrow('Invalid People sender')
+    expect(queries).toEqual([])
+  })
+
+  it('quotes PostgREST reserved search characters and escapes SQL wildcards in the student filter', async () => {
+    const { queries } = makeDirectoryDatabase(0, principalSender)
     await searchPeopleDirectory(principalSender, 'Re%,_()"\\ed')
 
     expect(queries.find((query) => query.table === 'students')?.filters.or).toBe(
@@ -295,10 +345,11 @@ describe('authorized people directory', () => {
   })
 
   it('guards empty teacher scope IDs instead of emitting empty in filters', async () => {
-    const { queries } = makeDirectoryDatabase()
-    await searchPeopleDirectory({ ...teacherSender, id: 'teacher-without-classes' }, 'Reed')
+    const sender = { ...teacherSender, id: noClassesTeacherId }
+    const { queries } = makeDirectoryDatabase(0, sender)
+    await searchPeopleDirectory(sender, 'Reed')
 
-    expect(queries.map((query) => query.table)).toEqual(['classes', 'profiles'])
+    expect(queries.map((query) => query.table)).toEqual(['profiles', 'classes', 'profiles'])
     expect(queries.flatMap((query) => Object.values(query.filters))).not.toContainEqual([])
   })
 
@@ -316,7 +367,9 @@ describe('authorized people directory', () => {
     expect(queries.filter((query) => query.table === 'enrollments')).toHaveLength(1)
     expect(queries.filter((query) => query.table === 'parent_students')).toHaveLength(2)
     expect(queries.filter((query) => query.table === 'students')).toHaveLength(1)
-    expect(queries.filter((query) => query.table === 'profiles')).toHaveLength(2)
-    expect(queries.find((query) => query.table === 'profiles')?.filters['in:id']).toHaveLength(21)
+    expect(queries.filter((query) => query.table === 'profiles')).toHaveLength(3)
+    expect(
+      queries.find((query) => query.table === 'profiles' && query.filters['in:id'])?.filters['in:id']
+    ).toHaveLength(21)
   })
 })

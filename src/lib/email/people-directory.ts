@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import {
   PEOPLE_RECENT_LIMIT,
   PEOPLE_SEARCH_RESULT_LIMIT,
@@ -57,6 +58,39 @@ function assertValidPeopleSender(sender: PeopleSender) {
 
 function throwOnError(error: unknown) {
   if (error) throw new Error('People directory query failed')
+}
+
+async function verifyPeopleSender(sender: PeopleSender) {
+  assertValidPeopleSender(sender)
+
+  const supabase = await createServerClient()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) throw new Error('Invalid People sender')
+
+  const admin = createAdminClient()
+  const { data: profiles, error: profileError } = await admin
+    .from('profiles')
+    .select('id, school_id, role')
+    .eq('id', user.id)
+    .limit(1)
+  throwOnError(profileError)
+
+  const profile = (profiles ?? [])[0]
+  if (
+    !profile?.school_id ||
+    !FACULTY_ROLES.includes(profile.role as FacultyRole) ||
+    sender.id !== user.id ||
+    sender.id !== profile.id ||
+    sender.schoolId !== profile.school_id ||
+    sender.role !== profile.role
+  ) {
+    throw new Error('Invalid People sender')
+  }
+
+  return {
+    admin,
+    sender: { id: profile.id, schoolId: profile.school_id, role: profile.role as FacultyRole },
+  }
 }
 
 async function loadSenderScope(admin: AdminClient, sender: PeopleSender): Promise<SenderScope> {
@@ -240,10 +274,15 @@ export async function searchPeopleDirectory(
   query: string,
   recentRefs: PeopleRecipientRef[] = []
 ): Promise<PeopleSearchResult[]> {
-  assertValidPeopleSender(sender)
+  const access = await verifyPeopleSender(sender)
+  const verifiedSender = access.sender
 
   if (recentRefs.length > 0) {
-    const resolution = await resolvePeopleDirectory(sender, recentRefs.slice(0, PEOPLE_RECENT_LIMIT))
+    const resolution = await resolveVerifiedPeopleDirectory(
+      access.admin,
+      verifiedSender,
+      recentRefs.slice(0, PEOPLE_RECENT_LIMIT)
+    )
     return resolution.preview.selections.map((selection) => ({
       key: selection.key,
       ref: selection.ref,
@@ -258,8 +297,8 @@ export async function searchPeopleDirectory(
   const normalizedQuery = normalizePeopleQuery(query)
   if (!normalizedQuery) return []
 
-  const admin = createAdminClient()
-  const scope = await loadSenderScope(admin, sender)
+  const admin = access.admin
+  const scope = await loadSenderScope(admin, verifiedSender)
   const escapedQuery = escapeSqlLikePattern(normalizedQuery)
   const pattern = `%${escapedQuery}%`
   const quotedOrPattern = quotePostgrestValue(pattern)
@@ -267,7 +306,7 @@ export async function searchPeopleDirectory(
   const facultyRequest = admin
     .from('profiles')
     .select('id, email, full_name, role')
-    .eq('school_id', sender.schoolId)
+    .eq('school_id', verifiedSender.schoolId)
     .in('role', FACULTY_ROLES)
     .ilike('full_name', pattern)
     .limit(PEOPLE_SEARCH_RESULT_LIMIT)
@@ -278,7 +317,7 @@ export async function searchPeopleDirectory(
         let request = admin
           .from('profiles')
           .select('id, email, full_name, role')
-          .eq('school_id', sender.schoolId)
+          .eq('school_id', verifiedSender.schoolId)
           .eq('role', 'parent')
           .ilike('full_name', pattern)
         if (scope.parentIds) request = request.in('id', [...scope.parentIds])
@@ -291,7 +330,7 @@ export async function searchPeopleDirectory(
         let request = admin
           .from('students')
           .select('id, first_name, last_name, grade_level')
-          .eq('school_id', sender.schoolId)
+          .eq('school_id', verifiedSender.schoolId)
           .eq('active', true)
           .or(`first_name.ilike.${quotedOrPattern},last_name.ilike.${quotedOrPattern}`)
         if (scope.studentIds) request = request.in('id', [...scope.studentIds])
@@ -311,8 +350,8 @@ export async function searchPeopleDirectory(
   const parents = (parentResponse?.data ?? []) as ProfileRow[]
   const students = (studentResponse?.data ?? []) as StudentRow[]
   const [childNamesByParent, parentsByStudent] = await Promise.all([
-    loadSearchParentContext(admin, sender, parents, scope),
-    loadSearchStudentParents(admin, sender, students),
+    loadSearchParentContext(admin, verifiedSender, parents, scope),
+    loadSearchStudentParents(admin, verifiedSender, students),
   ])
 
   return [
@@ -342,12 +381,11 @@ function addDelivery(
   })
 }
 
-export async function resolvePeopleDirectory(
+async function resolveVerifiedPeopleDirectory(
+  admin: AdminClient,
   sender: PeopleSender,
   refs: PeopleRecipientRef[]
 ): Promise<ResolvedPeopleDirectory> {
-  assertValidPeopleSender(sender)
-
   if (refs.length === 0) {
     return {
       preview: { selectedCount: 0, recipientCount: 0, selections: [], unavailableCount: 0 },
@@ -356,7 +394,6 @@ export async function resolvePeopleDirectory(
     }
   }
 
-  const admin = createAdminClient()
   const scope = await loadSenderScope(admin, sender)
   const profileIds = [...new Set(refs.filter((ref) => ref.kind === 'profile').map((ref) => ref.id))]
   const studentIds = [...new Set(refs.filter((ref) => ref.kind === 'student').map((ref) => ref.id))]
@@ -490,4 +527,12 @@ export async function resolvePeopleDirectory(
     deliveries: resolvedDeliveries,
     rejectedKeys,
   }
+}
+
+export async function resolvePeopleDirectory(
+  sender: PeopleSender,
+  refs: PeopleRecipientRef[]
+): Promise<ResolvedPeopleDirectory> {
+  const access = await verifyPeopleSender(sender)
+  return resolveVerifiedPeopleDirectory(access.admin, access.sender, refs)
 }
