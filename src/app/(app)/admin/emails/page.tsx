@@ -31,10 +31,11 @@ export default async function CommunicationsPage() {
     redirect('/dashboard')
   }
   const schoolId = profile.school_id
+  const outboxFilter = profile.role === 'teacher' ? { senderId: user.id } : undefined
 
   const [emails, stats, brand] = await Promise.all([
-    listEmailOutbox(schoolId, 100),
-    getEmailDeliveryStats(schoolId),
+    listEmailOutbox(schoolId, 100, outboxFilter),
+    getEmailDeliveryStats(schoolId, outboxFilter),
     loadSchoolBrand(schoolId),
   ])
 
@@ -347,7 +348,8 @@ export default async function CommunicationsPage() {
                       ) : null}
                     </TD>
                     <TD>
-                      {canManual && (e.status === 'failed' || e.status === 'skipped') ? (
+                      {(canManual || (profile.role === 'teacher' && e.sender_id === user.id)) &&
+                      (e.status === 'failed' || e.status === 'skipped') ? (
                         <ResendEmailButton outboxId={e.id} />
                       ) : null}
                     </TD>

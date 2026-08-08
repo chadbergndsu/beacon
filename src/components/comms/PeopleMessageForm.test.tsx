@@ -234,7 +234,30 @@ describe('PeopleMessageForm', () => {
       ).getAttribute('role')
     ).toBe('status')
     expect((screen.getByLabelText('Subject') as HTMLInputElement).value).toBe('Field trip reminder')
-    expect((screen.getByRole('button', { name: 'Send to 2 recipients' }) as HTMLButtonElement).disabled).toBe(false)
+    expect((screen.getByRole('button', { name: 'Send to 2 recipients' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('uses a synchronous latch and one stable attempt key for an unchanged draft', async () => {
+    const delivery = deferred<{ ok: true; sent: number; failed: number; skipped: number }>()
+    mocks.sendPeopleMessage.mockReturnValue(delivery.promise)
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync })
+    render(<PeopleMessageForm />)
+    await fillValidPeopleMessage(user)
+    const button = screen.getByRole('button', { name: 'Send to 2 recipients' })
+
+    button.click()
+    button.click()
+
+    expect(mocks.sendPeopleMessage).toHaveBeenCalledTimes(1)
+    const firstAttempt = mocks.sendPeopleMessage.mock.calls[0][0].attempt_key
+    expect(firstAttempt).toMatch(/^[0-9a-f-]{36}$/i)
+    await act(async () => delivery.resolve({ ok: true, sent: 1, failed: 1, skipped: 0 }))
+    expect((button as HTMLButtonElement).disabled).toBe(true)
+
+    await user.type(screen.getByLabelText('Message'), ' Changed')
+    expect((button as HTMLButtonElement).disabled).toBe(false)
+    await user.click(button)
+    expect(mocks.sendPeopleMessage.mock.calls[1][0].attempt_key).not.toBe(firstAttempt)
   })
 
   it('shows a stable send-time reauthorization error and preserves the draft', async () => {

@@ -330,7 +330,7 @@ export function PeopleRecipientCombobox({
                       }}
                       id={`${listboxId}-${result.key}`}
                       role="option"
-                      aria-selected={index === activeIndex}
+                      aria-selected={false}
                       aria-disabled={isDisabled || undefined}
                       className={`min-h-11 cursor-pointer rounded-md px-3 py-2 text-sm ${
                         index === activeIndex ? 'bg-muted' : ''

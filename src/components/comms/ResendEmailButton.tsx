@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { resendFailedEmail } from '@/app/actions/communications'
 
@@ -8,6 +8,8 @@ export function ResendEmailButton({ outboxId }: { outboxId: string }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [err, setErr] = useState<string | null>(null)
+  const attemptKey = useRef(crypto.randomUUID())
+  const clickLatch = useRef(false)
 
   return (
     <span className="inline-flex flex-col items-start gap-0.5">
@@ -15,14 +17,21 @@ export function ResendEmailButton({ outboxId }: { outboxId: string }) {
         type="button"
         disabled={pending}
         onClick={() => {
+          if (clickLatch.current) return
+          clickLatch.current = true
           setErr(null)
           startTransition(async () => {
-            const r = await resendFailedEmail(outboxId)
-            if (!r.ok) {
-              setErr(r.error)
-              return
+            try {
+              const r = await resendFailedEmail(outboxId, attemptKey.current)
+              if (!r.ok) {
+                setErr(r.error)
+                return
+              }
+              attemptKey.current = crypto.randomUUID()
+              router.refresh()
+            } finally {
+              clickLatch.current = false
             }
-            router.refresh()
           })
         }}
         className="text-xs font-medium text-primary hover:underline disabled:opacity-50"

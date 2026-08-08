@@ -29,6 +29,7 @@ import { createClient } from '@/lib/supabase/server'
 
 const FACULTY_ROLES: FacultyRole[] = ['admin', 'staff', 'principal', 'teacher']
 const AUDIT_FAILURE_NOTE = 'Delivery completed. Activity history may be incomplete.'
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function emptyPeoplePreview(): PeoplePreview {
   return {
@@ -141,6 +142,7 @@ export async function sendPeopleMessage(input: {
   refs: unknown
   subject: unknown
   body: unknown
+  attempt_key: unknown
 }): Promise<PeopleMessageResult> {
   try {
     const access = await requireFacultyMessagingAccess()
@@ -151,6 +153,11 @@ export async function sendPeopleMessage(input: {
     const refs = parsed.refs
     const subject = typeof input.subject === 'string' ? input.subject.trim() : ''
     const body = typeof input.body === 'string' ? input.body.trim() : ''
+    const attemptKey = typeof input.attempt_key === 'string' ? input.attempt_key : ''
+
+    if (!UUID.test(attemptKey)) {
+      return { ok: false, error: 'Unable to send message right now. Refresh and try again.' }
+    }
 
     if (refs.length === 0) {
       return { ok: false, error: 'Choose at least one recipient.' }
@@ -162,8 +169,11 @@ export async function sendPeopleMessage(input: {
     if (body.length > 20_000) return { ok: false, error: 'Message is too long.' }
 
     const resolution = await resolvePeopleDirectory(access.sender, refs)
-    if (resolution.rejectedKeys.length > 0) {
-      return { ok: false, error: 'One or more recipients is no longer available.' }
+    if (resolution.rejectedKeys.length > 0 || resolution.preview.unavailableCount > 0) {
+      return {
+        ok: false,
+        error: 'One or more recipients is no longer available. Preview again before sending.',
+      }
     }
     if (resolution.deliveries.length === 0) {
       return { ok: false, error: 'No selected recipient has a usable email address.' }
@@ -186,6 +196,8 @@ export async function sendPeopleMessage(input: {
     })
     const emails = resolution.deliveries.map((recipient) => ({
       school_id: access.sender.schoolId,
+      sender_id: access.sender.id,
+      attempt_key: attemptKey,
       kind: 'message' as const,
       to_email: recipient.email,
       to_name: recipient.name,

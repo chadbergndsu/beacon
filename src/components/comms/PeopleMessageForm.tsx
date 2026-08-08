@@ -26,6 +26,8 @@ type PreviewState = {
 export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) {
   const latestPreviewRequest = useRef(0)
   const mounted = useRef(true)
+  const submitLatch = useRef(false)
+  const attemptKey = useRef(crypto.randomUUID())
   const [selected, setSelected] = useState<PeopleSearchResult[]>([])
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
@@ -34,6 +36,7 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
   const [sendError, setSendError] = useState<string | null>(null)
   const [sendStatus, setSendStatus] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
+  const [attemptLocked, setAttemptLocked] = useState(false)
 
   const refsKey = selected.map((item) => item.key).join('|')
   const readyPreview = preview?.forKey === refsKey ? preview.value : null
@@ -48,8 +51,14 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
       selected.length <= PEOPLE_SELECTION_LIMIT &&
       subject.trim() &&
       body.trim() &&
-      !sending
+      !sending &&
+      !attemptLocked
   )
+
+  function draftChanged() {
+    attemptKey.current = crypto.randomUUID()
+    setAttemptLocked(false)
+  }
 
   useEffect(() => {
     mounted.current = true
@@ -85,6 +94,7 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
   function updateSelected(next: PeopleSearchResult[]) {
     if (next.length > PEOPLE_SELECTION_LIMIT) return
     latestPreviewRequest.current += 1
+    draftChanged()
     setSelected(next)
     setPreview(null)
     setPreviewError(null)
@@ -94,6 +104,7 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
   }
 
   function updateSubject(next: string) {
+    draftChanged()
     setSubject(next)
     setSendError(null)
     setSendStatus(null)
@@ -101,6 +112,7 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
   }
 
   function updateBody(next: string) {
+    draftChanged()
     setBody(next)
     setSendError(null)
     setSendStatus(null)
@@ -109,7 +121,8 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
 
   async function submitMessage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!canSend) return
+    if (!canSend || submitLatch.current) return
+    submitLatch.current = true
     setSending(true)
     setSendError(null)
     setSendStatus(null)
@@ -118,12 +131,15 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
         refs: selected.map((item) => item.ref),
         subject,
         body,
+        attempt_key: attemptKey.current,
       })
       if (!mounted.current) return
       if (!result.ok) {
         setSendError(result.error)
         return
       }
+
+      setAttemptLocked(true)
 
       const status = [
         `Sent ${result.sent}`,
@@ -143,11 +159,14 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
         setBody('')
         setPreview(null)
         setPreviewError(null)
+        attemptKey.current = crypto.randomUUID()
+        setAttemptLocked(false)
         onDirtyChange?.(false)
       }
     } catch {
       if (mounted.current) setSendError('Unable to send message right now.')
     } finally {
+      submitLatch.current = false
       if (mounted.current) setSending(false)
     }
   }

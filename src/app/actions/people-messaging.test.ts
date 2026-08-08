@@ -67,6 +67,7 @@ const validInput = {
   refs: [{ kind: 'student', id: studentId }],
   subject: 'Field trip reminder',
   body: 'Please return the form Friday.',
+  attempt_key: '99999999-9999-4999-8999-999999999999',
 }
 
 const emptyPreview = {
@@ -298,9 +299,31 @@ describe('People messaging actions', () => {
 
     expect(result).toEqual({
       ok: false,
-      error: 'One or more recipients is no longer available.',
+      error: 'One or more recipients is no longer available. Preview again before sending.',
     })
     expect(mocks.queueAndSendBatch).not.toHaveBeenCalled()
+  })
+
+  it('fails the whole send when any selected reference becomes unavailable', async () => {
+    mocks.resolvePeopleDirectory.mockResolvedValue({
+      preview: { selectedCount: 2, recipientCount: 1, selections: [], unavailableCount: 1 },
+      deliveries: [{ email: 'parent@school.test', name: 'Parent', role: 'parent', sourceKeys: [] }],
+      rejectedKeys: [],
+    })
+
+    await expect(sendPeopleMessage(validInput)).resolves.toEqual({
+      ok: false,
+      error: 'One or more recipients is no longer available. Preview again before sending.',
+    })
+    expect(mocks.queueAndSendBatch).not.toHaveBeenCalled()
+  })
+
+  it('validates the opaque attempt key before resolving recipients', async () => {
+    await expect(sendPeopleMessage({ ...validInput, attempt_key: 'not-a-uuid' })).resolves.toEqual({
+      ok: false,
+      error: 'Unable to send message right now. Refresh and try again.',
+    })
+    expect(mocks.resolvePeopleDirectory).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -370,7 +393,7 @@ describe('People messaging actions', () => {
 
     await expect(sendPeopleMessage(validInput)).resolves.toEqual({
       ok: false,
-      error: 'No selected recipient has a usable email address.',
+      error: 'One or more recipients is no longer available. Preview again before sending.',
     })
     expect(mocks.queueAndSendBatch).not.toHaveBeenCalled()
   })

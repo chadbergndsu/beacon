@@ -16,6 +16,10 @@ export type EmailStatus = 'queued' | 'sent' | 'failed' | 'skipped'
 
 export type OutboundEmail = {
   school_id: string | null
+  /** Verified originating faculty profile. Optional for legacy/system sends. */
+  sender_id?: string | null
+  /** Opaque delivery-attempt UUID. Optional for legacy/system sends. */
+  attempt_key?: string | null
   kind: EmailKind
   to_email: string
   to_name?: string | null

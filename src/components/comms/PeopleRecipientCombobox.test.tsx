@@ -356,6 +356,18 @@ describe('PeopleRecipientCombobox', () => {
     expect(setItem).toHaveBeenCalled()
   })
 
+  it('exposes active focus separately from option selection', async () => {
+    mocks.searchPeopleRecipients.mockResolvedValue({ ok: true, results: [avaStudent] })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync })
+    render(<PeopleRecipientCombobox selected={[]} onChange={vi.fn()} />)
+    await user.type(screen.getByRole('combobox', { name: 'To' }), 'Av')
+    await advanceDebounce()
+    const option = screen.getByRole('option', { name: /Ava Reed/i })
+    expect(option.getAttribute('aria-selected')).toBe('false')
+    await user.keyboard('{ArrowDown}')
+    expect(option.getAttribute('aria-selected')).toBe('false')
+  })
+
   it('does not apply an in-flight search response after unmount', async () => {
     const response = deferred<{ ok: true; results: PeopleSearchResult[] }>()
     mocks.searchPeopleRecipients.mockReturnValueOnce(response.promise)

@@ -479,7 +479,7 @@ function tableRows(table, url) {
   if (table === 'email_outbox') {
     return emailOutbox.filter(
       (row) =>
-        matchesEqAndIn(row, url, ['id', 'school_id', 'status', 'kind']) &&
+        matchesEqAndIn(row, url, ['id', 'school_id', 'sender_id', 'attempt_key', 'status', 'kind']) &&
         matchesIlike(row, url, 'subject')
     )
   }
@@ -573,6 +573,19 @@ async function handleRest(request, response, url) {
       201,
       inserted.map((row) => ({ id: row.id, status: row.status }))
     )
+    return
+  }
+
+  if (table === 'email_outbox' && request.method === 'PATCH') {
+    const patch = await requestBody(request)
+    const updated = []
+    emailOutbox = emailOutbox.map((row) => {
+      if (!matchesEqAndIn(row, url, ['id', 'school_id', 'sender_id', 'attempt_key'])) return row
+      const next = { ...row, ...patch }
+      updated.push(next)
+      return next
+    })
+    json(response, 200, updated.map((row) => ({ id: row.id, status: row.status })))
     return
   }
 

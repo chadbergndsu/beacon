@@ -161,6 +161,7 @@ export async function composeFamilyMessage(input: {
 
   const batch = recipients.map((r) => ({
     school_id: access.profile.school_id,
+    sender_id: access.user.id,
     kind: 'message' as const,
     to_email: r.email,
     to_name: r.name,
@@ -354,41 +355,50 @@ export async function sendTestSlack(): Promise<CommsResult> {
   }
 }
 
-export async function resendFailedEmail(outboxId: string): Promise<CommsResult> {
+export async function resendFailedEmail(outboxId: string, attemptKey: string): Promise<CommsResult> {
   const access = await requireStaff()
   if (!access.ok) return access
-  if (!canSendSystemEmail(access.profile.role)) {
-    return { ok: false, error: 'Only leadership can resend failed emails.' }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(attemptKey)) {
+    return { ok: false, error: 'Unable to retry this email. Refresh and try again.' }
   }
 
-  const { data: row } = await access.admin
+  let rowQuery = access.admin
     .from('email_outbox')
     .select('*')
     .eq('id', outboxId)
+    .eq('school_id', access.profile.school_id)
+  if (access.profile.role === 'teacher') {
+    rowQuery = rowQuery.eq('sender_id', access.user.id)
+  } else if (!canSendSystemEmail(access.profile.role)) {
+    return { ok: false, error: 'Not allowed to retry emails.' }
+  }
+  const { data: row } = await rowQuery
     .maybeSingle()
 
   if (!row || row.school_id !== access.profile.school_id) {
     return { ok: false, error: 'Outbox row not found.' }
   }
-  if (row.status === 'sent') {
-    return { ok: false, error: 'That message already sent successfully.' }
+  if (row.status !== 'failed' && row.status !== 'skipped') {
+    return { ok: false, error: 'Only failed or log-only emails can be retried.' }
   }
 
   const brand = await loadSchoolBrand(access.profile.school_id)
-  const result = await resendOutboxRow(row, brand)
+  const result = await resendOutboxRow(row, brand, attemptKey)
 
   revalidatePath('/admin/emails')
 
   if (result.status === 'failed') {
-    return { ok: false, error: result.error || 'Resend failed.' }
+    return { ok: false, error: 'Retry failed. Check the outbox and try again later.' }
   }
 
   return {
     ok: true,
-    emailed: 1,
+    emailed: result.status === 'queued' ? 0 : 1,
     emailNote:
       result.status === 'skipped'
         ? 'Still log-only — configure RESEND_API_KEY.'
+        : result.status === 'queued'
+          ? 'Retry is already queued or in progress.'
         : 'Resent successfully.',
   }
 }

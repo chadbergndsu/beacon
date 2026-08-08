@@ -113,29 +113,24 @@ describe('AppHeader navigation feedback', () => {
     const [moreButton] = screen.getAllByRole('button', { name: 'More' })
     fireEvent.click(moreButton)
 
-    expect(moreButton.getAttribute('aria-haspopup')).toBe('menu')
+    expect(moreButton.getAttribute('aria-haspopup')).toBeNull()
     expect(moreButton.getAttribute('aria-expanded')).toBe('true')
-    const menu = screen.getAllByRole('menu')[0]
-    expect(menu).toBeTruthy()
-    expect(menu.textContent).toContain('Lessons')
-    expect(menu.textContent).toContain('Calendar')
-    expect(menu.textContent).toContain('Printables')
-    expect(menu.textContent).toContain('Scan')
-    expect(menu.textContent).toContain('Craft')
-    expect(menu.textContent).toContain('Comms')
-    expect(menu.textContent).toContain('School site')
-    expect(screen.getAllByRole('menuitem')).toHaveLength(7)
-
-    fireEvent.click(screen.getAllByRole('menuitem', { name: 'Lessons' })[0])
+    const disclosure = screen.getAllByRole('navigation', { name: 'More links' })[0]
+    expect(disclosure.textContent).toContain('Lessons')
     expect(screen.queryByRole('menu')).toBeNull()
+    expect(screen.queryByRole('menuitem')).toBeNull()
+
+    fireEvent.click(screen.getAllByRole('link', { name: 'Lessons' })[0])
+    expect(screen.queryByRole('navigation', { name: 'More links' })).toBeNull()
 
     fireEvent.click(moreButton)
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(screen.queryByRole('menu')).toBeNull()
+    expect(screen.queryByRole('navigation', { name: 'More links' })).toBeNull()
+    expect(document.activeElement).toBe(moreButton)
 
     fireEvent.click(moreButton)
     fireEvent.mouseDown(document.body)
-    expect(screen.queryByRole('menu')).toBeNull()
+    expect(screen.queryByRole('navigation', { name: 'More links' })).toBeNull()
     expect(moreButton.getAttribute('aria-expanded')).toBe('false')
   })
 })

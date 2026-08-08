@@ -124,11 +124,11 @@ async function expectMoreMenuWithinViewport(page: Page, width: number, height: n
   await expect(more).toBeVisible()
   await more.click()
 
-  const menu = page.getByRole('menu')
+  const menu = page.getByRole('navigation', { name: 'More links' })
   await expect(menu).toBeVisible()
-  await expect(menu.getByRole('menuitem')).toHaveCount(7)
+  await expect(menu.getByRole('link')).toHaveCount(7)
   for (const label of moreLabels) {
-    await expect(menu.getByRole('menuitem', { name: label })).toBeVisible()
+    await expect(menu.getByRole('link', { name: label })).toBeVisible()
   }
 
   const triggerBox = await more.boundingBox()
@@ -156,7 +156,7 @@ async function runTeacherPeopleJourney(
   await openAs(page, 'teacher', '/dashboard', baseURL)
 
   const menu = await expectMoreMenuWithinViewport(page, viewport.width, viewport.height)
-  await menu.getByRole('menuitem', { name: 'Comms' }).click()
+  await menu.getByRole('link', { name: 'Comms' }).click()
   await page.waitForURL(/\/admin\/emails$/)
   await expect(
     page.getByText('Log-only mode — not yet reaching inboxes', { exact: true })

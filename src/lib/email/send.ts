@@ -48,7 +48,15 @@ function buildFromHeader(brand?: Pick<SchoolBrand, 'name' | 'shortName'> | null)
 export async function queueAndSendEmail(
   email: OutboundEmail,
   opts?: { brand?: Pick<SchoolBrand, 'name' | 'shortName' | 'email'> | null }
-): Promise<{ id: string; status: EmailStatus; error?: string; providerId?: string; provider?: string }> {
+): Promise<{
+  id: string
+  status: EmailStatus
+  error?: string
+  providerId?: string
+  provider?: string
+  note?: string
+  replayed?: boolean
+}> {
   const admin = createAdminClient()
   const brand = opts?.brand
   const replyTo = email.reply_to || (brand ? resolveReplyTo(brand) : undefined) || undefined
@@ -59,17 +67,96 @@ export async function queueAndSendEmail(
     to_name: email.to_name ? sanitizeHeaderValue(email.to_name, 80) : email.to_name,
   }
 
+  const queuedRow = {
+    school_id: safeEmail.school_id,
+    sender_id: safeEmail.sender_id ?? null,
+    attempt_key: safeEmail.attempt_key ?? null,
+    kind: safeEmail.kind,
+    to_email: safeEmail.to_email.trim().toLowerCase(),
+    to_name: safeEmail.to_name ?? null,
+    subject: safeEmail.subject,
+    body_text: safeEmail.body_text,
+    body_html: safeEmail.body_html ?? null,
+    status: 'queued' as const,
+    provider: null,
+    error: null,
+    related_table: safeEmail.related_table ?? null,
+    related_id: safeEmail.related_id ?? null,
+    meta: safeEmail.meta ?? {},
+    sent_at: null,
+  }
+
+  const { data: claim, error: queueError } = await admin
+    .from('email_outbox')
+    .insert(queuedRow)
+    .select('id, status')
+    .maybeSingle()
+
+  if (queueError) {
+    if (queueError.code === '23505' && safeEmail.school_id && safeEmail.attempt_key) {
+      const { data: prior } = await admin
+        .from('email_outbox')
+        .select('id, status, provider, error, sent_at')
+        .eq('school_id', safeEmail.school_id)
+        .eq('attempt_key', safeEmail.attempt_key)
+        .eq('to_email', queuedRow.to_email)
+        .maybeSingle()
+      if (prior) {
+        return {
+          id: prior.id,
+          status: prior.status as EmailStatus,
+          ...(prior.error ? { error: prior.error } : {}),
+          ...(prior.provider ? { provider: prior.provider } : {}),
+          replayed: true,
+          ...(prior.status === 'queued'
+            ? { note: 'Delivery is already queued or in progress.' }
+            : {}),
+        }
+      }
+    }
+    const { reportError } = await import('@/lib/ops/report-error')
+    reportError(new Error('Email queue persistence failed'), {
+      surface: 'email',
+      kind: safeEmail.kind,
+      stage: 'queue',
+      schoolId: safeEmail.school_id,
+      count: 1,
+    })
+    return { id: 'unknown', status: 'failed', error: 'Unable to queue email delivery.' }
+  }
+
+  if (!claim?.id) {
+    const { reportError } = await import('@/lib/ops/report-error')
+    reportError(new Error('Email queue claim missing'), {
+      surface: 'email',
+      kind: safeEmail.kind,
+      stage: 'queue',
+      schoolId: safeEmail.school_id,
+      count: 1,
+    })
+    return { id: 'unknown', status: 'failed', error: 'Unable to queue email delivery.' }
+  }
+
   // Production: never send live mail as Resend onboarding@ (spoof/deliverability risk)
   const prod = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production'
   let sendResult
-  if (prod && isInsecureEmailFrom(from)) {
-    sendResult = await deliverWithCascade(safeEmail, from, replyTo, {
-      forceLogOnly: true,
-      forceLogReason:
-        'EMAIL_FROM is still onboarding@resend.dev — set a verified domain sender before live mail.',
-    })
-  } else {
-    sendResult = await deliverWithCascade(safeEmail, from, replyTo)
+  try {
+    if (prod && isInsecureEmailFrom(from)) {
+      sendResult = await deliverWithCascade(safeEmail, from, replyTo, {
+        forceLogOnly: true,
+        forceLogReason:
+          'EMAIL_FROM is still onboarding@resend.dev — set a verified domain sender before live mail.',
+      })
+    } else {
+      sendResult = await deliverWithCascade(safeEmail, from, replyTo)
+    }
+  } catch {
+    sendResult = {
+      status: 'failed' as const,
+      provider: 'none',
+      error: 'Email delivery failed.',
+      attempts: [],
+    }
   }
 
   const meta = {
@@ -79,66 +166,42 @@ export async function queueAndSendEmail(
     from,
     transport_attempts: sendResult.attempts,
   }
-
-  const row = {
-    school_id: safeEmail.school_id,
-    kind: safeEmail.kind,
-    to_email: safeEmail.to_email,
-    to_name: safeEmail.to_name ?? null,
-    subject: safeEmail.subject,
-    body_text: safeEmail.body_text,
-    body_html: safeEmail.body_html ?? null,
+  const finalRow = {
     status: sendResult.status,
     provider: sendResult.provider,
     error: sendResult.error ?? null,
-    related_table: safeEmail.related_table ?? null,
-    related_id: safeEmail.related_id ?? null,
     meta,
     sent_at: sendResult.status === 'sent' ? new Date().toISOString() : null,
   }
-
-  const { data, error } = await admin
+  const { data: finalized, error: updateError } = await admin
     .from('email_outbox')
-    .insert(row)
+    .update(finalRow)
+    .eq('id', claim.id)
     .select('id, status')
     .maybeSingle()
 
-  if (error) {
-    // Table may not exist yet — fall back to audit_logs
-    const { data: audit } = await admin
-      .from('audit_logs')
-      .insert({
-        school_id: email.school_id,
-        user_id: null,
-        action: `email.${sendResult.status}`,
-        table_name: 'email_outbox',
-        record_id: email.related_id ?? null,
-        details: { ...row, fallback: true },
-      })
-      .select('id')
-      .maybeSingle()
-
-    if (sendResult.status === 'failed') {
-      const { reportError } = await import('@/lib/ops/report-error')
-      reportError(new Error(sendResult.error || error.message), {
+  if (updateError || !finalized) {
+    const { reportError } = await import('@/lib/ops/report-error')
+    reportError(new Error('Email outbox finalization failed'), {
         surface: 'email',
         kind: safeEmail.kind,
-        provider: sendResult.provider,
+        stage: 'finalize',
+        schoolId: safeEmail.school_id,
+        count: 1,
       })
-    }
-
     return {
-      id: audit?.id ?? 'unknown',
+      id: claim.id,
       status: sendResult.status,
-      error: sendResult.error || error.message,
+      ...(sendResult.status === 'failed' ? { error: 'Email delivery failed.' } : {}),
       providerId: sendResult.providerId,
       provider: sendResult.provider,
+      note: 'Delivery completed. Outbox status may be delayed.',
     }
   }
 
   if (sendResult.status === 'failed') {
     const { reportError } = await import('@/lib/ops/report-error')
-    reportError(new Error(sendResult.error || 'email failed'), {
+    reportError(new Error('Email delivery failed'), {
       surface: 'email',
       kind: safeEmail.kind,
       provider: sendResult.provider,
@@ -146,9 +209,9 @@ export async function queueAndSendEmail(
   }
 
   return {
-    id: data?.id ?? 'unknown',
-    status: (data?.status as EmailStatus) ?? sendResult.status,
-    error: sendResult.error,
+    id: claim.id,
+    status: sendResult.status,
+    error: sendResult.status === 'failed' ? 'Email delivery failed.' : undefined,
     providerId: sendResult.providerId,
     provider: sendResult.provider,
   }
@@ -178,7 +241,11 @@ export async function queueAndSendBatch(
         note =
           'Emails logged only — configure RESEND_API_KEY and/or SMTP_* for live delivery.'
       }
+    } else if (r.status === 'queued') {
+      skipped++
+      if (!note) note = r.note || 'Delivery is already queued or in progress.'
     }
+    if (r.note && !note) note = r.note
     if (delay > 0 && i < emails.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
@@ -190,7 +257,7 @@ export async function queueAndSendBatch(
 export async function listEmailOutbox(
   schoolId: string | null,
   limit = 50,
-  filter?: { status?: string; kind?: string }
+  filter?: { status?: string; kind?: string; senderId?: string }
 ): Promise<EmailOutboxRow[]> {
   // Fail closed: never unscoped service-role read across tenants
   if (!schoolId) return []
@@ -206,11 +273,16 @@ export async function listEmailOutbox(
 
   if (filter?.status) q = q.eq('status', filter.status)
   if (filter?.kind) q = q.eq('kind', filter.kind)
+  if (filter?.senderId) q = q.eq('sender_id', filter.senderId)
 
   const { data, error } = await q
   if (!error && data) {
     return data as EmailOutboxRow[]
   }
+
+  // Legacy audit rows do not carry verified sender ownership. Never expose
+  // that school-wide fallback to a sender-scoped teacher request.
+  if (filter?.senderId) return []
 
   // Fallback: audit_logs
   const aq = admin
@@ -246,9 +318,10 @@ export async function listEmailOutbox(
 }
 
 export async function getEmailDeliveryStats(
-  schoolId: string | null
+  schoolId: string | null,
+  filter?: { senderId?: string }
 ): Promise<EmailDeliveryStats> {
-  const emails = await listEmailOutbox(schoolId, 500)
+  const emails = await listEmailOutbox(schoolId, 500, filter)
   const dayAgo = Date.now() - 24 * 60 * 60 * 1000
   const stats: EmailDeliveryStats = {
     total: emails.length,
@@ -281,11 +354,14 @@ export { describeEmailStack }
  */
 export async function resendOutboxRow(
   row: EmailOutboxRow,
-  brand?: Pick<SchoolBrand, 'name' | 'shortName' | 'email'> | null
+  brand?: Pick<SchoolBrand, 'name' | 'shortName' | 'email'> | null,
+  attemptKey?: string
 ): Promise<{ id: string; status: EmailStatus; error?: string }> {
   return queueAndSendEmail(
     {
       school_id: row.school_id,
+      sender_id: row.sender_id ?? null,
+      attempt_key: attemptKey ?? null,
       kind: row.kind,
       to_email: row.to_email,
       to_name: row.to_name,
