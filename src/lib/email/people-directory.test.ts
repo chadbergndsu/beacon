@@ -59,6 +59,12 @@ function includesCaseInsensitive(value: string | null, pattern: unknown) {
   return (value ?? '').toLocaleLowerCase().includes(needle.toLocaleLowerCase())
 }
 
+function firstNameOrPattern(value: unknown) {
+  if (typeof value !== 'string') return undefined
+  const match = value.match(/first_name\.ilike\."((?:\\.|[^"])*)"/)
+  return match?.[1].replace(/\\(["\\])/g, '$1')
+}
+
 function makeDirectoryDatabase(extraParentCount = 0) {
   const queries: Query[] = []
   const extraParents: ProfileRow[] = Array.from({ length: extraParentCount }, (_, index) => ({
@@ -142,7 +148,7 @@ function makeDirectoryDatabase(extraParentCount = 0) {
     })),
     students: log('students', ({ filters }) => {
       const rawOr = typeof filters.or === 'string' ? filters.or : null
-      const pattern = rawOr?.match(/first_name\.ilike\.([^,]+)/)?.[1]
+      const pattern = firstNameOrPattern(rawOr)
       return {
         data: students.filter((row) =>
           (!filters.school_id || row.school_id === filters.school_id) &&
@@ -265,12 +271,26 @@ describe('authorized people directory', () => {
     expect(results.map((result) => result.key)).toEqual([`profile:${assignedParentId}`])
   })
 
-  it('escapes PostgREST reserved search characters before building the student filter', async () => {
+  it.each(['parent', null, 'unknown', 'Teacher'])(
+    'fails closed before data access for the invalid runtime role %s',
+    async (role) => {
+      const { queries } = makeDirectoryDatabase()
+      const invalidSender = { ...teacherSender, role } as unknown as PeopleSender
+
+      await expect(searchPeopleDirectory(invalidSender, 'Reed')).rejects.toThrow('Invalid People sender')
+      await expect(
+        resolvePeopleDirectory(invalidSender, [{ kind: 'student', id: assignedStudentId }])
+      ).rejects.toThrow('Invalid People sender')
+      expect(queries).toEqual([])
+    }
+  )
+
+  it('quotes PostgREST reserved search characters and escapes SQL wildcards in the student filter', async () => {
     const { queries } = makeDirectoryDatabase()
-    await searchPeopleDirectory(principalSender, 'Re%,_()ed')
+    await searchPeopleDirectory(principalSender, 'Re%,_()"\\ed')
 
     expect(queries.find((query) => query.table === 'students')?.filters.or).toBe(
-      'first_name.ilike.%Re\\%\\,\\_\\(\\)ed%,last_name.ilike.%Re\\%\\,\\_\\(\\)ed%'
+      'first_name.ilike."%Re\\\\%,\\\\_()\\"\\\\\\\\ed%",last_name.ilike."%Re\\\\%,\\\\_()\\"\\\\\\\\ed%"'
     )
   })
 

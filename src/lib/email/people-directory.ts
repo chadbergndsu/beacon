@@ -49,6 +49,12 @@ type SenderScope = { studentIds: Set<string> | null; parentIds: Set<string> | nu
 
 const FACULTY_ROLES: FacultyRole[] = ['admin', 'staff', 'principal', 'teacher']
 
+function assertValidPeopleSender(sender: PeopleSender) {
+  if (!sender || !FACULTY_ROLES.includes(sender.role)) {
+    throw new Error('Invalid People sender')
+  }
+}
+
 function throwOnError(error: unknown) {
   if (error) throw new Error('People directory query failed')
 }
@@ -89,8 +95,12 @@ async function loadSenderScope(admin: AdminClient, sender: PeopleSender): Promis
   }
 }
 
-function escapePostgrestPattern(value: string) {
-  return value.replace(/[\\%_,()]/g, (character) => `\\${character}`)
+function escapeSqlLikePattern(value: string) {
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`)
+}
+
+function quotePostgrestValue(value: string) {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 }
 
 function normalizeEmail(value: string | null | undefined) {
@@ -230,6 +240,8 @@ export async function searchPeopleDirectory(
   query: string,
   recentRefs: PeopleRecipientRef[] = []
 ): Promise<PeopleSearchResult[]> {
+  assertValidPeopleSender(sender)
+
   if (recentRefs.length > 0) {
     const resolution = await resolvePeopleDirectory(sender, recentRefs.slice(0, PEOPLE_RECENT_LIMIT))
     return resolution.preview.selections.map((selection) => ({
@@ -248,8 +260,9 @@ export async function searchPeopleDirectory(
 
   const admin = createAdminClient()
   const scope = await loadSenderScope(admin, sender)
-  const escapedQuery = escapePostgrestPattern(normalizedQuery)
+  const escapedQuery = escapeSqlLikePattern(normalizedQuery)
   const pattern = `%${escapedQuery}%`
+  const quotedOrPattern = quotePostgrestValue(pattern)
 
   const facultyRequest = admin
     .from('profiles')
@@ -280,7 +293,7 @@ export async function searchPeopleDirectory(
           .select('id, first_name, last_name, grade_level')
           .eq('school_id', sender.schoolId)
           .eq('active', true)
-          .or(`first_name.ilike.${pattern},last_name.ilike.${pattern}`)
+          .or(`first_name.ilike.${quotedOrPattern},last_name.ilike.${quotedOrPattern}`)
         if (scope.studentIds) request = request.in('id', [...scope.studentIds])
         return request.limit(PEOPLE_SEARCH_RESULT_LIMIT)
       })()
@@ -333,6 +346,8 @@ export async function resolvePeopleDirectory(
   sender: PeopleSender,
   refs: PeopleRecipientRef[]
 ): Promise<ResolvedPeopleDirectory> {
+  assertValidPeopleSender(sender)
+
   if (refs.length === 0) {
     return {
       preview: { selectedCount: 0, recipientCount: 0, selections: [], unavailableCount: 0 },

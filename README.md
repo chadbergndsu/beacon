@@ -120,6 +120,7 @@ npm run lint:fix      # ESLint --fix only (no separate Prettier/Biome)
 npm run typecheck
 npm test                 # vitest unit tests
 npm run test:coverage    # vitest + coverage thresholds (gated files in vitest.config.ts)
+npm run test:people-directory-integration # requires a running local Supabase stack
 npm run build
 npm run ci               # lint + typecheck + test:coverage + build  (no e2e)
 ```
