@@ -51,7 +51,9 @@ describe('ResendEmailButton attempt lifecycle', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Resend' }))
     expect(await screen.findByText('Retry is still processing. Check the outbox for its current status.')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Resend' }))
+    const resendButton = await screen.findByRole('button', { name: 'Resend' })
+    await waitFor(() => expect(resendButton).not.toHaveProperty('disabled', true))
+    fireEvent.click(resendButton)
     await waitFor(() => expect(mocks.resendFailedEmail).toHaveBeenCalledTimes(2))
     expect(mocks.resendFailedEmail.mock.calls[1][1]).toBe(mocks.resendFailedEmail.mock.calls[0][1])
     expect(mocks.refresh).not.toHaveBeenCalled()
