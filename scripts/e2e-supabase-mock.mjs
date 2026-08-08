@@ -6,6 +6,8 @@ const outsideSchoolId = '00000000-0000-4000-8000-000000000002'
 const childId = '00000000-0000-4000-8000-000000000201'
 const unassignedChildId = '00000000-0000-4000-8000-000000000202'
 const outsideChildId = '00000000-0000-4000-8000-000000000203'
+const reservedChildId = '00000000-0000-4000-8000-000000000204'
+const reservedChildDecoyId = '00000000-0000-4000-8000-000000000205'
 const parentId = '00000000-0000-4000-8000-000000000101'
 const secondLinkedParentId = '00000000-0000-4000-8000-000000000105'
 const unassignedParentId = '00000000-0000-4000-8000-000000000106'
@@ -58,13 +60,14 @@ const actors = {
 
 let savedParentFeedback = null
 let emailOutbox = []
+let emailOutboxSequence = 0
 
 const profiles = [
   ...Object.entries(actors).map(([id, actor]) => ({ id, school_id: schoolId, ...actor })),
   {
     id: secondLinkedParentId,
     school_id: schoolId,
-    email: 'pilot-family@beacon.test',
+    email: 'PILOT-FAMILY@BEACON.TEST',
     full_name: 'Chris Parent',
     role: 'parent',
   },
@@ -108,6 +111,22 @@ const students = [
     school_id: outsideSchoolId,
     first_name: 'Outside',
     last_name: 'Student',
+    grade_level: '5',
+    active: true,
+  },
+  {
+    id: reservedChildId,
+    school_id: schoolId,
+    first_name: 'Re%,_()"\\ed',
+    last_name: 'Reserved',
+    grade_level: '5',
+    active: true,
+  },
+  {
+    id: reservedChildDecoyId,
+    school_id: schoolId,
+    first_name: 'ReX,ZA)"Xed',
+    last_name: 'Decoy',
     grade_level: '5',
     active: true,
   },
@@ -230,12 +249,12 @@ function inFilter(url, name) {
 function ilikeFilter(url, name) {
   const value = url.searchParams.get(name)
   if (!value?.startsWith('ilike.')) return null
-  return value.slice(6).replace(/^"|"$/g, '').replaceAll('%', '').replaceAll('\\', '').toLowerCase()
+  return value.slice(6)
 }
 
 function matchesIlike(row, url, name) {
-  const query = ilikeFilter(url, name)
-  return !query || String(row[name] ?? '').toLowerCase().includes(query)
+  const pattern = ilikeFilter(url, name)
+  return pattern === null || matchesPostgrestIlike(row[name], pattern)
 }
 
 function matchesEqAndIn(row, url, names) {
@@ -252,13 +271,135 @@ function matchesEqAndIn(row, url, names) {
 function matchesStudentOr(row, url) {
   const value = url.searchParams.get('or')
   if (!value) return true
-  const filters = [
-    ...value.replace(/^\(|\)$/g, '').matchAll(/(?:^|,)([a-z_]+)\.ilike\."?([^",]+)"?/g),
-  ]
-  return filters.some(([, name, pattern]) =>
-    String(row[name] ?? '')
-      .toLowerCase()
-      .includes(pattern.replaceAll('%', '').replaceAll('\\', '').toLowerCase())
+  return splitPostgrestList(stripOuterParens(value)).some((filter) => {
+    const match = filter.match(/^([a-z_][a-z0-9_]*)\.ilike\.(.+)$/i)
+    return Boolean(match && matchesPostgrestIlike(row[match[1]], match[2]))
+  })
+}
+
+function stripOuterParens(value) {
+  if (!value.startsWith('(') || !value.endsWith(')')) return value
+  let depth = 0
+  let quoted = false
+  let escaped = false
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index]
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (quoted && character === '\\') {
+      escaped = true
+      continue
+    }
+    if (character === '"') {
+      quoted = !quoted
+      continue
+    }
+    if (quoted) continue
+    if (character === '(') depth++
+    if (character === ')' && --depth === 0 && index < value.length - 1) return value
+  }
+  return depth === 0 ? value.slice(1, -1) : value
+}
+
+function splitPostgrestList(value) {
+  const parts = []
+  let start = 0
+  let depth = 0
+  let quoted = false
+  let escaped = false
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index]
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (quoted && character === '\\') {
+      escaped = true
+      continue
+    }
+    if (character === '"') {
+      quoted = !quoted
+      continue
+    }
+    if (quoted) continue
+    if (character === '(') depth++
+    else if (character === ')') depth--
+    else if (character === ',' && depth === 0) {
+      parts.push(value.slice(start, index))
+      start = index + 1
+    }
+  }
+  parts.push(value.slice(start))
+  return parts
+}
+
+function decodePostgrestValue(value) {
+  if (!value.startsWith('"') || !value.endsWith('"')) return value
+  let decoded = ''
+  for (let index = 1; index < value.length - 1; index++) {
+    const character = value[index]
+    if (character === '\\' && index + 1 < value.length - 1) {
+      decoded += value[++index]
+    } else {
+      decoded += character
+    }
+  }
+  return decoded
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function matchesPostgrestIlike(value, encodedPattern) {
+  const pattern = decodePostgrestValue(encodedPattern)
+  let source = '^'
+  for (let index = 0; index < pattern.length; index++) {
+    const character = pattern[index]
+    if (character === '\\' && index + 1 < pattern.length) {
+      source += escapeRegExp(pattern[++index])
+    } else if (character === '%' || character === '*') {
+      source += '.*'
+    } else if (character === '_') {
+      source += '.'
+    } else {
+      source += escapeRegExp(character)
+    }
+  }
+  return new RegExp(`${source}$`, 'iu').test(String(value ?? ''))
+}
+
+function applyQueryModifiers(rows, url) {
+  const result = [...rows]
+  const order = url.searchParams.get('order')
+  if (order) {
+    const orderings = splitPostgrestList(order).map((part) => {
+      const [name, direction = 'asc'] = part.split('.')
+      return { name, descending: direction === 'desc' }
+    })
+    result.sort((left, right) => {
+      for (const { name, descending } of orderings) {
+        const compared = String(left[name] ?? '').localeCompare(String(right[name] ?? ''))
+        if (compared !== 0) return descending ? -compared : compared
+      }
+      return 0
+    })
+  }
+
+  const rawLimit = url.searchParams.get('limit')
+  const limit = Number(rawLimit)
+  const limited = rawLimit !== null && Number.isSafeInteger(limit) && limit >= 0
+    ? result.slice(0, limit)
+    : result
+  const select = url.searchParams.get('select')
+  if (!select || select === '*') return limited
+  const selectedColumns = splitPostgrestList(select).filter((column) => /^[a-z_][a-z0-9_]*$/i.test(column))
+  return limited.map((row) =>
+    Object.fromEntries(
+      selectedColumns.filter((column) => Object.hasOwn(row, column)).map((column) => [column, row[column]])
+    )
   )
 }
 
@@ -417,11 +558,12 @@ async function handleRest(request, response, url) {
 
   if (table === 'email_outbox' && request.method === 'POST') {
     const raw = await requestBody(request)
-    const inserted = (Array.isArray(raw) ? raw : [raw]).filter(Boolean).map((row, index) => {
+    const inserted = (Array.isArray(raw) ? raw : [raw]).filter(Boolean).map((row) => {
+      emailOutboxSequence++
       const outboxRow = {
         ...row,
-        id: `00000000-0000-0000-0000-${String(emailOutbox.length + index + 1).padStart(12, '0')}`,
-        created_at: new Date().toISOString(),
+        id: `00000000-0000-4000-8000-${String(emailOutboxSequence).padStart(12, '0')}`,
+        created_at: new Date(Date.UTC(2026, 0, 1, 0, 0, emailOutboxSequence)).toISOString(),
       }
       return outboxRow
     })
@@ -440,10 +582,11 @@ async function handleRest(request, response, url) {
     return
   }
 
-  const rows = tableRows(table, url)
+  const filteredRows = tableRows(table, url)
+  const rows = applyQueryModifiers(filteredRows, url)
   const wantsCount = request.headers.prefer?.includes('count=')
   json(response, 200, rows, {
-    count: wantsCount ? rows.length : undefined,
+    count: wantsCount ? filteredRows.length : undefined,
     head: request.method === 'HEAD',
   })
 }
@@ -458,6 +601,12 @@ const server = createServer(async (request, response) => {
       return
     }
     if (url.pathname === '/health') {
+      json(response, 200, { ok: true })
+      return
+    }
+    if (request.method === 'POST' && url.pathname === '/__e2e/reset') {
+      emailOutbox = []
+      emailOutboxSequence = 0
       json(response, 200, { ok: true })
       return
     }
