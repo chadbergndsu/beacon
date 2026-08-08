@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import { redirect } from 'next/navigation'
 import { Mail, Radio, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { SystemEmailForm } from '@/components/announcements/SystemEmailForm'
-import { ComposeMessageForm } from '@/components/comms/ComposeMessageForm'
+import { CommunicationsComposer } from '@/components/comms/CommunicationsComposer'
 import { TestEmailButton } from '@/components/comms/TestEmailButton'
 import { TestSlackButton } from '@/components/comms/TestSlackButton'
 import { ResendEmailButton } from '@/components/comms/ResendEmailButton'
@@ -225,7 +225,7 @@ export default async function CommunicationsPage() {
       <ViewSection id="compose" title="Compose message">
         <Card>
           <CardContent className="pt-6">
-            <ComposeMessageForm classes={classes} canSchoolWide={canManual} />
+            <CommunicationsComposer classes={classes} canSchoolWide={canManual} />
           </CardContent>
         </Card>
       </ViewSection>

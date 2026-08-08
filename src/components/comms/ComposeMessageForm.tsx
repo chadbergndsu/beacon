@@ -17,9 +17,11 @@ type ClassOption = { id: string; name: string }
 export function ComposeMessageForm({
   classes,
   canSchoolWide,
+  onDirtyChange,
 }: {
   classes: ClassOption[]
   canSchoolWide: boolean
+  onDirtyChange?: (dirty: boolean) => void
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -67,7 +69,8 @@ export function ComposeMessageForm({
       className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault()
-        const fd = new FormData(e.currentTarget)
+        const form = e.currentTarget
+        const fd = new FormData(form)
         setError(null)
         setOk(null)
         startTransition(async () => {
@@ -88,15 +91,18 @@ export function ComposeMessageForm({
             result.emailNote,
           ].filter(Boolean)
           setOk(parts.join(' · '))
-          e.currentTarget.reset()
-          setAudience('parents')
-          setClassId(canSchoolWide ? '' : classes[0]?.id || '')
-          setAlsoSlack(false)
+          if ((result.failed ?? 0) === 0 && (result.skipped ?? 0) === 0) {
+            form.reset()
+            setAudience('parents')
+            setClassId(canSchoolWide ? '' : classes[0]?.id || '')
+            setAlsoSlack(false)
+            onDirtyChange?.(false)
+          }
         })
       }}
     >
       <div>
-        <h3 className="text-lg font-semibold tracking-tight">Compose to families</h3>
+        <h3 className="text-lg font-semibold tracking-tight">Compose to groups</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Pick who gets it, see the recipient count, send once. Delivery is logged in the outbox —
           no silent failures.
@@ -110,7 +116,10 @@ export function ComposeMessageForm({
             id="audience"
             name="audience"
             value={audience}
-            onChange={(e) => setAudience(e.target.value)}
+            onChange={(e) => {
+              setAudience(e.target.value)
+              onDirtyChange?.(true)
+            }}
           >
             <option value="parents">Parents</option>
             <option value="teachers">Teachers</option>
@@ -125,7 +134,10 @@ export function ComposeMessageForm({
             id="class_id"
             name="class_id"
             value={classId}
-            onChange={(e) => setClassId(e.target.value)}
+            onChange={(e) => {
+              setClassId(e.target.value)
+              onDirtyChange?.(true)
+            }}
           >
             {canSchoolWide ? <option value="">Whole school</option> : null}
             {classes.map((c) => (
@@ -171,6 +183,7 @@ export function ComposeMessageForm({
           required
           maxLength={200}
           placeholder="e.g. Picture day reminder — Friday"
+          onChange={() => onDirtyChange?.(true)}
         />
       </Field>
 
@@ -183,6 +196,7 @@ export function ComposeMessageForm({
           rows={6}
           maxLength={20000}
           placeholder="Write what families need to know in plain language…"
+          onChange={() => onDirtyChange?.(true)}
         />
       </Field>
 
@@ -192,7 +206,10 @@ export function ComposeMessageForm({
             type="checkbox"
             className="mt-0.5"
             checked={alsoSlack}
-            onChange={(e) => setAlsoSlack(e.target.checked)}
+            onChange={(e) => {
+              setAlsoSlack(e.target.checked)
+              onDirtyChange?.(true)
+            }}
           />
           <span>
             <span className="font-medium text-foreground">Also post to Slack</span>
