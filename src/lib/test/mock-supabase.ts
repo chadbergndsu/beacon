@@ -69,6 +69,14 @@ export function createMockAdmin(handlers: Record<string, MockTableHandler>) {
       state.filters[`ilike:${col}`] = val
       return chain()
     }
+    api.or = (value: string) => {
+      state.filters.or = value
+      return chain()
+    }
+    api.is = (column: string, value: unknown) => {
+      state.filters[`is:${column}`] = value
+      return chain()
+    }
     api.order = () => chain()
     api.limit = (n: number) => {
       state.limitN = n
