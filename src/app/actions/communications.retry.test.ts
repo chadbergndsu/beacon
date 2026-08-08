@@ -99,6 +99,23 @@ describe('sender-owned outbox retry', () => {
     expect(mocks.resendOutboxRow).not.toHaveBeenCalled()
   })
 
+  it('marks a completed failed retry so the client can safely rotate its claim key', async () => {
+    mocks.resendOutboxRow.mockResolvedValueOnce({
+      id: 'retry-failed', status: 'failed', attemptCompleted: true,
+    })
+
+    await expect(resendFailedEmail('row-1', attemptKey)).resolves.toEqual({
+      ok: false,
+      error: 'Retry failed. Check the outbox and try again later.',
+      attemptCompleted: true,
+    })
+    const nextKey = '66666666-6666-4666-8666-666666666666'
+    mocks.resendOutboxRow.mockResolvedValueOnce({ id: 'retry-next', status: 'sent' })
+    await resendFailedEmail('row-1', nextKey)
+    expect(mocks.resendOutboxRow).toHaveBeenNthCalledWith(1, expect.anything(), expect.anything(), attemptKey)
+    expect(mocks.resendOutboxRow).toHaveBeenNthCalledWith(2, expect.anything(), expect.anything(), nextKey)
+  })
+
   it('tags every Groups manual compose row with the verified sender', async () => {
     await expect(composeFamilyMessage({
       subject: 'Faculty update', body: 'Private update', audience: 'teachers', class_id: null,

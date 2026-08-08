@@ -127,6 +127,26 @@ describe('durable email delivery lifecycle', () => {
     expect(mocks.deliverWithCascade).toHaveBeenCalledTimes(1)
   })
 
+  it('distinguishes a completed failed transport from a pre-transport queue failure', async () => {
+    const insert = thenable({ data: { id: 'row-1', status: 'queued' }, error: null })
+    const update = thenable({ data: { id: 'row-1', status: 'failed' }, error: null })
+    let calls = 0
+    mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => (++calls === 1 ? insert : update)) })
+    mocks.deliverWithCascade.mockResolvedValueOnce({
+      status: 'failed', provider: 'test', error: 'private provider failure', attempts: [],
+    })
+
+    await expect(queueAndSendEmail(email)).resolves.toMatchObject({
+      status: 'failed', attemptCompleted: true, error: 'Email delivery failed.',
+    })
+
+    const queueFailure = thenable({ data: null, error: { code: '42501', message: 'private db error' } })
+    mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => queueFailure) })
+    const result = await queueAndSendEmail({ ...email, attempt_key: '44444444-4444-4444-8444-444444444444' })
+    expect(result.status).toBe('failed')
+    expect(result.attemptCompleted).toBeUndefined()
+  })
+
   it('applies sender ownership to service-role outbox reads', async () => {
     const query = thenable({ data: [], error: null })
     mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => query) })

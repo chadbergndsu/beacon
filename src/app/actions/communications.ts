@@ -36,7 +36,7 @@ export type CommsResult =
       count?: number
       sample?: string[]
     }
-  | { ok: false; error: string }
+  | { ok: false; error: string; attemptCompleted?: true }
 
 async function requireStaff() {
   const supabase = await createClient()
@@ -388,7 +388,11 @@ export async function resendFailedEmail(outboxId: string, attemptKey: string): P
   revalidatePath('/admin/emails')
 
   if (result.status === 'failed') {
-    return { ok: false, error: 'Retry failed. Check the outbox and try again later.' }
+    return {
+      ok: false,
+      error: 'Retry failed. Check the outbox and try again later.',
+      ...(result.attemptCompleted ? { attemptCompleted: true as const } : {}),
+    }
   }
 
   return {

@@ -190,7 +190,14 @@ async function runTeacherPeopleJourney(
   await expect(status).toContainText('configure RESEND_API_KEY and/or SMTP_*')
   await expect(subject).toHaveValue(subjectText)
   await expect(message).toHaveValue(messageText)
+  await expect(to).toBeDisabled()
+  await expect(subject).toBeDisabled()
+  await expect(message).toBeDisabled()
 
+  await page.getByRole('button', { name: 'Start a new message' }).click()
+  await expect(to).toBeFocused()
+  await expect(subject).toHaveValue('')
+  await expect(message).toHaveValue('')
   await to.fill('Outside')
   await expect(page.getByText('No permitted people found')).toBeVisible()
   expect(

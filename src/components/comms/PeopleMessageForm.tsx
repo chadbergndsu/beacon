@@ -24,10 +24,12 @@ type PreviewState = {
 }
 
 export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) {
+  const formRef = useRef<HTMLFormElement>(null)
   const latestPreviewRequest = useRef(0)
   const mounted = useRef(true)
   const submitLatch = useRef(false)
   const attemptKey = useRef(crypto.randomUUID())
+  const focusNewDraft = useRef(false)
   const [selected, setSelected] = useState<PeopleSearchResult[]>([])
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
@@ -67,6 +69,12 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
       latestPreviewRequest.current += 1
     }
   }, [])
+
+  useEffect(() => {
+    if (!focusNewDraft.current || attemptLocked) return
+    focusNewDraft.current = false
+    formRef.current?.querySelector<HTMLInputElement>('[role="combobox"]')?.focus()
+  }, [attemptLocked, selected.length])
 
   useEffect(() => {
     if (selected.length === 0) return
@@ -119,6 +127,21 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
     onDirtyChange?.(selected.length > 0 || subject.length > 0 || next.length > 0)
   }
 
+  function startNewMessage() {
+    latestPreviewRequest.current += 1
+    attemptKey.current = crypto.randomUUID()
+    focusNewDraft.current = true
+    setSelected([])
+    setSubject('')
+    setBody('')
+    setPreview(null)
+    setPreviewError(null)
+    setSendError(null)
+    setSendStatus(null)
+    setAttemptLocked(false)
+    onDirtyChange?.(false)
+  }
+
   async function submitMessage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!canSend || submitLatch.current) return
@@ -151,18 +174,6 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
         .join(' · ')
       setSendStatus(status)
 
-      const complete = result.failed === 0 && result.skipped === 0 && !result.note
-      if (complete) {
-        latestPreviewRequest.current += 1
-        setSelected([])
-        setSubject('')
-        setBody('')
-        setPreview(null)
-        setPreviewError(null)
-        attemptKey.current = crypto.randomUUID()
-        setAttemptLocked(false)
-        onDirtyChange?.(false)
-      }
     } catch {
       if (mounted.current) setSendError('Unable to send message right now.')
     } finally {
@@ -176,7 +187,7 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
   const recipientCount = readyPreview?.recipientCount ?? 0
 
   return (
-    <form className="space-y-4" onSubmit={submitMessage}>
+    <form ref={formRef} className="space-y-4" onSubmit={submitMessage}>
       <div>
         <h3 className="text-lg font-semibold tracking-tight">Message specific people</h3>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -185,7 +196,11 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
       </div>
 
       <div>
-        <PeopleRecipientCombobox selected={selected} onChange={updateSelected} disabled={sending} />
+        <PeopleRecipientCombobox
+          selected={selected}
+          onChange={updateSelected}
+          disabled={sending || attemptLocked}
+        />
         <p className="mt-1.5 text-xs text-muted-foreground">Choose up to 50 people.</p>
       </div>
 
@@ -249,7 +264,7 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
           required
           maxLength={200}
           value={subject}
-          disabled={sending}
+          disabled={sending || attemptLocked}
           onChange={(event) => updateSubject(event.target.value)}
           placeholder="e.g. Field trip reminder"
         />
@@ -264,7 +279,7 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
           rows={6}
           maxLength={20_000}
           value={body}
-          disabled={sending}
+          disabled={sending || attemptLocked}
           onChange={(event) => updateBody(event.target.value)}
           placeholder="Write what they need to know in plain language…"
         />
@@ -282,6 +297,12 @@ export function PeopleMessageForm({ onDirtyChange }: { onDirtyChange?: (dirty: b
         >
           {sendStatus}
         </p>
+      ) : null}
+
+      {attemptLocked ? (
+        <Button type="button" variant="outline" className="min-h-11" onClick={startNewMessage}>
+          Start a new message
+        </Button>
       ) : null}
 
       <Button

@@ -40,7 +40,7 @@ The old full-row `audit_logs` email fallback was removed from the send path. Sen
 - RED: `send.lifecycle.test.ts` showed transport preceding persistence (`transport`, then `insert:sent`), queue failure still transporting, duplicate `23505` replay transporting again, and finalization failure returning queued/ambiguous status.
 - GREEN: 6/6 focused lifecycle tests pass. Queue precedes transport, queue failure calls zero transports, replay calls zero transports and returns the prior row, finalization failure preserves transport truth, and sender-scoped fallback fails closed.
 - RED: People form partial/log-only outcomes left Send enabled; synchronous double click reached the action twice and no attempt key existed.
-- GREEN: `PeopleMessageForm.test.tsx` 10/10 passes with a synchronous ref latch, stable unchanged-draft attempt UUID, accepted-outcome lock, and new UUID/unlock only after recipients/subject/body changes. Action/network rejection retains the same key.
+- GREEN: `PeopleMessageForm.test.tsx` 10/10 passes with a synchronous ref latch, stable unchanged-draft attempt UUID, and accepted-outcome lock. Action/network rejection retains the same key. Round 2 below strengthens reset/unlock so it occurs only through the explicit new-message action.
 - RED: the local pgTAP test failed on missing `sender_id`/`attempt_key`; the unique case-normalized recipient claim did not exist.
 - GREEN: fresh reset plus pgTAP 9/9 passes; a separate local Postgres concurrency test proves exactly one of two simultaneous claims for case-variant email addresses succeeds and the loser receives `23505`.
 
@@ -131,3 +131,51 @@ Node 26.7 exposes an experimental global Web Storage implementation without a pe
 - Upgrade note: historical teacher-originated rows cannot be safely backfilled because the old schema did not record origin. They remain available to leadership only; new People/Groups/retry rows are owner-aware.
 - Operational note: a crash after the queued insert but before finalization leaves a truthful durable `queued` row. Replaying the same attempt does not deliver again and reports in-progress; operational reconciliation of indefinitely queued rows is a future outbox-worker concern, not weakened here.
 - No irreconcilable conflict with existing email callers was found; optional fields preserve their behavior while the People/retry boundary remains strict.
+
+## Final Fix Round 2 — completed-attempt lifecycle
+
+### Architecture and behavior
+
+- Every People action result with `ok: true`, including a fully sent result, now leaves the exact recipients, subject, body, status, and preview visible in a completed, locked state. Recipient search and message fields are disabled, and Send cannot issue another action call.
+- `Start a new message` is the only completed-attempt reset boundary. It clears recipients, subject, body, preview, status, and errors; rotates the client attempt UUID; marks the composer clean; unlocks the controls; and restores focus to To. Partial, log-only, skipped-note, and full-success outcomes share this lifecycle.
+- An `ok: false` People rejection or unknown/network failure remains editable/retryable and preserves the same attempt UUID, allowing server replay safety to resolve an uncertain request.
+- Retry results now carry the private boolean discriminator `attemptCompleted: true` only when the send layer completed or replayed a transport lifecycle. A completed failed retry rotates the retry-action UUID before the next click, enabling a new durable delivery claim. Queue/action rejection and unknown failure omit the discriminator, retaining the same UUID for safe replay. Success and skipped behavior are unchanged.
+- No schema or migration change was needed. The discriminator is action-control state only and is not persisted as recipient data.
+
+### TDD RED/GREEN evidence
+
+- RED — full-success People lifecycle: the stateful form test expected the successful draft to remain visible and locked, but recipients/subject/body were cleared and no `Start a new message` control existed. It also proved the old lifecycle silently rotated/unlocked after success.
+- GREEN — full-success People lifecycle: `PeopleMessageForm.test.tsx` now proves recipients/subject/body are retained and disabled, repeat submission produces zero additional action calls, explicit new-message reset clears and focuses To, and the next valid draft uses a different attempt UUID. The existing rejection case was strengthened to prove an `ok: false` retry reuses the same UUID.
+- RED — completed failed resend: the action test expected `attemptCompleted: true` after a real failed transport, and the button test expected a second click to use a new UUID. The action returned no discriminator and the button replayed the failed claim forever.
+- GREEN — completed failed resend: send lifecycle, retry action, and new `ResendEmailButton.test.tsx` tests prove completed failed transport returns the discriminator and rotates the next claim; an actually rejected action renders a sanitized error and reuses its UUID; and a synchronous double click remains latched to one action call.
+- RED — browser contract: the original People E2E attempted to edit To immediately after accepted log-only completion and timed out because the strengthened completed draft correctly disabled the combobox.
+- GREEN — browser contract: the journey now verifies the completed fields are retained and disabled, activates `Start a new message`, verifies focus and cleared fields, and proceeds with the new draft. Focused People browser 4/4 and full Playwright 18/18 pass.
+
+### Round 2 verification
+
+- Focused form/retry/action/send tests: 6 files / 57 tests passed.
+- Full `npm run ci`: lint, typecheck, 105 test files / 538 tests, coverage thresholds, and Next production build passed.
+- Focused People Playwright: 4/4 passed after the explicit-new-message journey update.
+- Full local Playwright: 18/18 passed.
+- Full local pgTAP: 4 files / 99 tests passed. No database files changed in Round 2.
+- `git diff --check`: passed before final commit.
+
+### Round 2 files
+
+- `src/components/comms/PeopleMessageForm.tsx`
+- `src/components/comms/PeopleMessageForm.test.tsx`
+- `src/components/comms/ResendEmailButton.tsx`
+- `src/components/comms/ResendEmailButton.test.tsx`
+- `src/app/actions/communications.ts`
+- `src/app/actions/communications.retry.test.ts`
+- `src/lib/email/send.ts`
+- `src/lib/email/send.lifecycle.test.ts`
+- `e2e/people-messaging.spec.ts`
+
+### Round 2 self-review and concerns
+
+- Attempt boundaries are explicit and asymmetric by design: accepted People outcomes lock until deliberate reset; uncertain People failures reuse the original claim; completed failed resend transport rotates before a new retry claim.
+- The new discriminator does not expose the attempt key, recipient address, message content, provider detail, or operational failure text. Client-visible errors remain sanitized.
+- The focus transition is tied to explicit reset state and verified in both component and browser tests. No automatic draft loss remains after any accepted People outcome.
+- Existing non-People send callers remain compatible because `attemptCompleted` is an optional return-only field. No database upgrade or remote operation was required.
+- Known environment-only warnings remain unchanged: Node's experimental Web Storage requires `NODE_OPTIONS=--no-webstorage` for jsdom, Next reports the existing multiple-lockfile root warning, and Playwright reports Node deprecation/color warnings. None affected gate results.

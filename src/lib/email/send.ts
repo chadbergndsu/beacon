@@ -56,6 +56,7 @@ export async function queueAndSendEmail(
   provider?: string
   note?: string
   replayed?: boolean
+  attemptCompleted?: true
 }> {
   const admin = createAdminClient()
   const brand = opts?.brand
@@ -108,6 +109,7 @@ export async function queueAndSendEmail(
           ...(prior.error ? { error: prior.error } : {}),
           ...(prior.provider ? { provider: prior.provider } : {}),
           replayed: true,
+          ...(prior.status !== 'queued' ? { attemptCompleted: true as const } : {}),
           ...(prior.status === 'queued'
             ? { note: 'Delivery is already queued or in progress.' }
             : {}),
@@ -196,6 +198,7 @@ export async function queueAndSendEmail(
       providerId: sendResult.providerId,
       provider: sendResult.provider,
       note: 'Delivery completed. Outbox status may be delayed.',
+      attemptCompleted: true,
     }
   }
 
@@ -214,6 +217,7 @@ export async function queueAndSendEmail(
     error: sendResult.status === 'failed' ? 'Email delivery failed.' : undefined,
     providerId: sendResult.providerId,
     provider: sendResult.provider,
+    attemptCompleted: true,
   }
 }
 
@@ -356,7 +360,7 @@ export async function resendOutboxRow(
   row: EmailOutboxRow,
   brand?: Pick<SchoolBrand, 'name' | 'shortName' | 'email'> | null,
   attemptKey?: string
-): Promise<{ id: string; status: EmailStatus; error?: string }> {
+): Promise<{ id: string; status: EmailStatus; error?: string; attemptCompleted?: true }> {
   return queueAndSendEmail(
     {
       school_id: row.school_id,

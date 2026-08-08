@@ -237,7 +237,7 @@ describe('PeopleMessageForm', () => {
     expect((screen.getByRole('button', { name: 'Send to 2 recipients' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
-  it('uses a synchronous latch and one stable attempt key for an unchanged draft', async () => {
+  it('uses a synchronous latch and keeps a completed partial attempt locked until new message', async () => {
     const delivery = deferred<{ ok: true; sent: number; failed: number; skipped: number }>()
     mocks.sendPeopleMessage.mockReturnValue(delivery.promise)
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync })
@@ -254,17 +254,21 @@ describe('PeopleMessageForm', () => {
     await act(async () => delivery.resolve({ ok: true, sent: 1, failed: 1, skipped: 0 }))
     expect((button as HTMLButtonElement).disabled).toBe(true)
 
-    await user.type(screen.getByLabelText('Message'), ' Changed')
-    expect((button as HTMLButtonElement).disabled).toBe(false)
-    await user.click(button)
-    expect(mocks.sendPeopleMessage.mock.calls[1][0].attempt_key).not.toBe(firstAttempt)
+    button.click()
+    expect(mocks.sendPeopleMessage).toHaveBeenCalledTimes(1)
+    await user.click(screen.getByRole('button', { name: 'Start a new message' }))
+    expect((screen.getByLabelText('Subject') as HTMLInputElement).value).toBe('')
+    expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'To' }))
+    expect((screen.getByRole('button', { name: 'Send message' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('shows a stable send-time reauthorization error and preserves the draft', async () => {
-    mocks.sendPeopleMessage.mockResolvedValueOnce({
-      ok: false,
-      error: 'One or more recipients is no longer available.',
-    })
+    mocks.sendPeopleMessage
+      .mockResolvedValueOnce({
+        ok: false,
+        error: 'One or more recipients is no longer available.',
+      })
+      .mockResolvedValueOnce({ ok: true, sent: 2, failed: 0, skipped: 0 })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync })
     render(<PeopleMessageForm />)
     await fillValidPeopleMessage(user)
@@ -274,9 +278,12 @@ describe('PeopleMessageForm', () => {
       'One or more recipients is no longer available.'
     )
     expect((screen.getByLabelText('Subject') as HTMLInputElement).value).toBe('Field trip reminder')
+    const firstAttempt = mocks.sendPeopleMessage.mock.calls[0][0].attempt_key
+    await user.click(screen.getByRole('button', { name: 'Send to 2 recipients' }))
+    expect(mocks.sendPeopleMessage.mock.calls[1][0].attempt_key).toBe(firstAttempt)
   })
 
-  it('clears the form only after a complete success without a delivery note', async () => {
+  it('retains and locks a full-success draft until an explicit new message rotates the attempt', async () => {
     mocks.sendPeopleMessage.mockResolvedValueOnce({ ok: true, sent: 2, failed: 0, skipped: 0 })
     const onDirtyChange = vi.fn()
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync })
@@ -285,10 +292,24 @@ describe('PeopleMessageForm', () => {
     await user.click(screen.getByRole('button', { name: 'Send to 2 recipients' }))
 
     expect((await screen.findByText('Sent 2')).getAttribute('role')).toBe('status')
+    expect((screen.getByLabelText('Subject') as HTMLInputElement).value).toBe('Field trip reminder')
+    expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('Please return the form Friday.')
+    expect(screen.getByRole('button', { name: 'Remove Ava Reed' })).toBeTruthy()
+    const completedButton = screen.getByRole('button', { name: 'Send to 2 recipients' })
+    expect((completedButton as HTMLButtonElement).disabled).toBe(true)
+    completedButton.click()
+    expect(mocks.sendPeopleMessage).toHaveBeenCalledTimes(1)
+
+    const firstAttempt = mocks.sendPeopleMessage.mock.calls[0][0].attempt_key
+    await user.click(screen.getByRole('button', { name: 'Start a new message' }))
     await waitFor(() => expect((screen.getByLabelText('Subject') as HTMLInputElement).value).toBe(''))
-    expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('')
     expect(screen.queryByRole('button', { name: 'Remove Ava Reed' })).toBeNull()
     expect(onDirtyChange).toHaveBeenLastCalledWith(false)
+
+    mocks.sendPeopleMessage.mockResolvedValueOnce({ ok: true, sent: 2, failed: 0, skipped: 0 })
+    await fillValidPeopleMessage(user)
+    await user.click(screen.getByRole('button', { name: 'Send to 2 recipients' }))
+    expect(mocks.sendPeopleMessage.mock.calls[1][0].attempt_key).not.toBe(firstAttempt)
   })
 
   it('uses alerts for preview failures and keeps send unavailable', async () => {

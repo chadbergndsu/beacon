@@ -24,11 +24,14 @@ export function ResendEmailButton({ outboxId }: { outboxId: string }) {
             try {
               const r = await resendFailedEmail(outboxId, attemptKey.current)
               if (!r.ok) {
+                if (r.attemptCompleted) attemptKey.current = crypto.randomUUID()
                 setErr(r.error)
                 return
               }
               attemptKey.current = crypto.randomUUID()
               router.refresh()
+            } catch {
+              setErr('Unable to retry this email right now.')
             } finally {
               clickLatch.current = false
             }
