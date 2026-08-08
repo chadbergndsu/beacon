@@ -32,8 +32,8 @@ export function CommunicationsComposer({
   }
 
   function moveWithKeyboard(event: React.KeyboardEvent<HTMLButtonElement>, next: ComposerMode) {
-    if (!chooseMode(next)) return
     event.preventDefault()
+    if (!chooseMode(next)) return
     if (next === 'people') peopleTabRef.current?.focus()
     else groupsTabRef.current?.focus()
   }

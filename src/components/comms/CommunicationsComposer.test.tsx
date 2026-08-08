@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -74,6 +74,19 @@ describe('CommunicationsComposer', () => {
     expect(groupsTab.getAttribute('aria-selected')).toBe('true')
     expect(peopleTab.getAttribute('tabindex')).toBe('-1')
     expect(groupsTab.getAttribute('tabindex')).toBe('0')
+  })
+
+  it('prevents browser movement when a dirty keyboard mode switch is canceled', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const user = userEvent.setup()
+    render(<CommunicationsComposer classes={classes} canSchoolWide />)
+    await user.type(screen.getByLabelText('Subject'), 'Keep this draft')
+    const peopleTab = screen.getByRole('tab', { name: 'People' })
+    peopleTab.focus()
+
+    expect(fireEvent.keyDown(peopleTab, { key: 'ArrowRight' })).toBe(false)
+    expect(document.activeElement).toBe(peopleTab)
+    expect(peopleTab.getAttribute('aria-selected')).toBe('true')
   })
 
   it('cancels a People mode switch without losing the draft, then clears it after confirmation', async () => {
